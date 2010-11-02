@@ -1,0 +1,1442 @@
+#include "hlbsp.h"
+
+#include <gl/glu.h>
+#include <gl/glext.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+
+#include "inline.h"
+
+#define WAD_DIR "data\\wads"
+#define SKY_DIR "data\\textures\\sky"
+
+#define RENDER_MODE_NORMAL   0
+#define RENDER_MODE_COLOR    1
+#define RENDER_MODE_TEXTURE  2
+#define RENDER_MODE_GLOW     3
+#define RENDER_MODE_SOLID    4
+#define RENDER_MODE_ADDITIVE 5
+
+extern PFNGLACTIVETEXTUREARBPROC glActiveTextureARB;
+extern PFNGLMULTITEXCOORD2FARBPROC glMultiTexCoord2fARB;
+extern bool g_bTextures;
+extern bool g_bLightmaps;
+extern bool g_bRenderStaticBSP;
+extern bool g_bRenderBrushEntities;
+extern bool g_bRenderSkybox;
+
+extern unsigned int g_nWinWidth;
+extern unsigned int g_nWinHeight;
+
+extern bool g_bTexNPO2Support;
+
+/**
+ *============================================================================================
+ *                                       PRIVATE
+ *============================================================================================
+**/
+
+
+
+void CBSP::AdjustTextureToPowerOfTwo(IMAGE* pImg)
+{
+    if (g_bTexNPO2Support)
+        return;
+
+    if (((pImg->nWidth & (pImg->nWidth - 1)) == 0) && ((pImg->nHeight & (pImg->nHeight - 1)) == 0))
+        return;
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    int nPOT = 1;
+    while (nPOT < pImg->nHeight || nPOT < pImg->nWidth)
+        nPOT *= 2;
+
+    // Scale image
+    unsigned char* pNewData = (unsigned char*) MALLOC(nPOT * nPOT * pImg->nChannels * sizeof(unsigned char));
+
+    gluScaleImage(pImg->nChannels == 4 ? GL_RGBA : GL_RGB, pImg->nWidth, pImg->nHeight, GL_UNSIGNED_BYTE, pImg->pData, nPOT, nPOT, GL_UNSIGNED_BYTE, pNewData);
+
+    free(pImg->pData);
+    pImg->nWidth = nPOT;
+    pImg->nHeight = nPOT;
+    pImg->pData = pNewData;
+}
+
+bool CBSP::LoadSkyTextures()
+{
+    LOG("Loading sky textures ...\n");
+
+    pdlSkyBox = NULL;
+
+    const char* pszSkyName = FindEntity("worldspawn")->FindProperty("skyname");
+    if (pszSkyName == NULL)
+        return true; //we don't have a sky texture
+
+    char aszSide[6][3] = {"ft", "bk", "rt", "lf", "up", "dn"};
+
+    GLuint nSkyTex[6];
+
+    glGenTextures(6, nSkyTex);
+
+    char szFileName[64];
+    IMAGE* pImg;
+
+    for (int i=0;i<6;i++)
+    {
+        sprintf(szFileName, SKY_DIR "\\%s%s.tga", pszSkyName, aszSide[i]);
+
+        pImg = LoadTGA(szFileName);
+        if (pImg == NULL)
+        {
+            MSGBOX_ERROR("Failed to load skytexture from file: %s", szFileName);
+            return false;
+        }
+
+        glBindTexture(GL_TEXTURE_2D, nSkyTex[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, pImg->nWidth, pImg->nHeight, 0, pImg->nChannels == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, pImg->pData);
+    }
+
+    //Create Displaylist
+    pdlSkyBox = (GLuint*) MALLOC(sizeof(GLuint));
+
+    *pdlSkyBox = glGenLists(1);
+    glNewList(*pdlSkyBox, GL_COMPILE);
+
+    //http://enter.diehlsworld.de/ogl/skyboxartikel/skybox.htm
+    glActiveTextureARB(GL_TEXTURE0_ARB);
+    glEnable(GL_TEXTURE_2D);
+    //glDisable(GL_DEPTH_TEST);
+
+    float fAHalf = 100; //half length of the edge of the cube
+
+    //front
+    glBindTexture(GL_TEXTURE_2D, nSkyTex[0]);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(fAHalf, -fAHalf, -fAHalf);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(fAHalf, -fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(-fAHalf, -fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(-fAHalf, -fAHalf, -fAHalf);
+    glEnd();
+
+    //back
+    glBindTexture(GL_TEXTURE_2D, nSkyTex[1]);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(-fAHalf, fAHalf, -fAHalf);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(-fAHalf, fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(fAHalf, fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(fAHalf, fAHalf, -fAHalf);
+    glEnd();
+
+    //right
+    glBindTexture(GL_TEXTURE_2D, nSkyTex[2]);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(fAHalf, fAHalf, -fAHalf);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(fAHalf, fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(fAHalf, -fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(fAHalf, -fAHalf, -fAHalf);
+    glEnd();
+
+    //left
+    glBindTexture(GL_TEXTURE_2D, nSkyTex[3]);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(-fAHalf, -fAHalf, -fAHalf);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(-fAHalf, -fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(-fAHalf, fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(-fAHalf, fAHalf, -fAHalf);
+    glEnd();
+
+    //up
+    glBindTexture(GL_TEXTURE_2D, nSkyTex[4]);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(fAHalf, fAHalf, fAHalf);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(-fAHalf, fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(-fAHalf, -fAHalf, fAHalf);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(fAHalf, -fAHalf, fAHalf);
+    glEnd();
+
+    //down
+    glBindTexture(GL_TEXTURE_2D, nSkyTex[5]);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(-fAHalf, fAHalf, -fAHalf);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(fAHalf, fAHalf, -fAHalf);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(fAHalf, -fAHalf, -fAHalf);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(-fAHalf, -fAHalf, -fAHalf);
+    glEnd();
+
+    glDisable(GL_TEXTURE_2D);
+    //glEnable(GL_DEPTH_TEST);
+
+    glEndList();
+
+    return true;
+}
+
+bool CBSP::LoadWadFiles(const char* pszWadstr)
+{
+    nWadFiles = 0;
+    for (unsigned int i=0;i<strlen(pszWadstr);i++)
+    {
+        if (pszWadstr[i] == ';')
+            nWadFiles++;
+    }
+
+    pWadFiles = new CWAD[nWadFiles]; // new to execute ctor
+
+    char* pszWadFiles = (char*) MALLOC((strlen(pszWadstr) + 1) * sizeof(char));
+    strcpy(pszWadFiles, pszWadstr);
+    char* pch = strtok(pszWadFiles, ";");
+
+    int nWadCount = 0;
+    int nWadErrors = 0;
+
+    while (pch != NULL)
+    {
+        char path[256];
+        strcpy(path, WAD_DIR);
+
+        bool bFirst = true;
+        for(unsigned int i=strlen(pch)-1;i<strlen(pch);i--)
+            if(pch[i] == '\\')
+                if(bFirst)
+                    bFirst = false;
+                else
+                {
+                    pch = pch + i;
+                    break;
+                }
+
+        strcat(path, pch);
+
+        if (!pWadFiles[nWadCount++].Open(path))
+        {
+            LOG("#%2d ERROR loading %s\n", nWadCount, path);
+            nWadErrors++;
+        }
+        else
+            LOG("#%2d Loaded %s\n", nWadCount, path);
+
+        pch = strtok(NULL, ";");
+    }
+
+    free(pszWadFiles);
+
+    LOG("Loaded %d WADs, %d failed ", nWadCount, nWadErrors);
+    if (nWadErrors == 0)
+        LOG("OK\n");
+    else
+        LOG("ERRORS\n");
+
+    return true;
+}
+
+void CBSP::UnloadWadFiles()
+{
+    for (int i=0;i<nWadFiles;i++)
+    {
+        pWadFiles[i].Close();
+    }
+}
+
+void CBSP::LoadTextures(FILE* pFile)
+{
+    CEntity* worldSpawn = FindEntity("worldspawn");
+
+    LOG("Loading WADs ...\n");
+    LoadWadFiles(worldSpawn->FindProperty("wad"));
+
+    LOG("Loading textures ...\n");
+    // Find unbound texture slots
+    glGenTextures(textureHeader.nMipTextures, (GLuint*)pnTextureLookUp);
+
+    int nTexError = 0;
+
+    for (unsigned int i=0; i<textureHeader.nMipTextures; i++)
+    {
+        if (pMipTextures[i].nOffsets[0] == 0) //miptexture is stored externally
+        {
+            MIPTEXTURE* pMipTex = LoadTextureFromWad(pMipTextures[i].szName);
+            if (!pMipTex)
+            {
+                nTexError++;
+                LOG("#%3d ERROR loading texture %s\n", i + 1, pMipTextures[i].szName);
+                continue;
+            }
+
+            // Bind the texture
+            glBindTexture(GL_TEXTURE_2D, pnTextureLookUp[i]);
+
+            // Set up Texture Filtering Parameters
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPLEVELS - 1);
+
+            for (int j=0;j<MIPLEVELS;j++)
+            {
+                AdjustTextureToPowerOfTwo(&pMipTex->Img[j]);
+                glTexImage2D(GL_TEXTURE_2D, j, GL_RGBA, pMipTex->Img[j].nWidth, pMipTex->Img[j].nHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pMipTex->Img[j].pData);
+            }
+
+            FreeMipTexturePointer(pMipTex);
+
+            LOG("#%3d Loaded texture %15s from WAD file\n", i + 1, pMipTextures[i].szName);
+        }
+        else //Internal texture
+        {
+            int nDataSize = sizeof(unsigned char) * (pMipTextures[i].nOffsets[3] + (pMipTextures[i].nHeight / 8) * (pMipTextures[i].nWidth / 8) + 2 + 768);
+            unsigned char* pImgData = (unsigned char*) MALLOC(nDataSize);
+
+            fseek(pFile, header.lump[LUMP_TEXTURES].nOffset + pMipTextureOffsets[i], SEEK_SET);
+            fread(pImgData, sizeof(unsigned char), nDataSize, pFile);
+
+            MIPTEXTURE MipTex;
+
+            CWAD wad;
+            wad.CreateMipTexture(pImgData, &MipTex);
+
+            free(pImgData);
+
+            // Bind the texture
+            glBindTexture(GL_TEXTURE_2D, pnTextureLookUp[i]);
+
+            // Set up Texture Filtering Parameters
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPLEVELS - 1);
+
+            for (int j=0;j<MIPLEVELS;j++)
+            {
+                AdjustTextureToPowerOfTwo(&MipTex.Img[j]);
+                glTexImage2D(GL_TEXTURE_2D, j, GL_RGBA, MipTex.Img[j].nWidth, MipTex.Img[j].nHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, MipTex.Img[j].pData);
+            }
+            FreeMipTexture(MipTex);
+
+            LOG("#%3d Loaded texture %15s from bsp file\n", i + 1, pMipTextures[i].szName);
+        }
+    }
+
+    UnloadWadFiles();
+
+    LOG("Loaded %d textures, %d failed ", textureHeader.nMipTextures, nTexError);
+    if (nTexError == 0)
+        LOG("OK\n");
+    else
+        LOG("ERRORS\n");
+
+    // Calculate Texture Coordinates
+    pFaceTexCoords = (BSPFACETEXCOORDS*) MALLOC(nFaces * sizeof(BSPFACETEXCOORDS));
+    for (int i=0; i<nFaces; ++i)
+    {
+        pFaceTexCoords[i].pTexCoords = (BSPTEXCOORDS*) MALLOC(pFaces[i].nEdges * sizeof(BSPTEXCOORDS));
+
+        BSPTEXTUREINFO curTexInfo = pTextureInfos[pFaces[i].iTextureInfo];
+
+        for (int j=0; j<pFaces[i].nEdges; j++)
+        {
+            int iEdge = pSurfEdges[pFaces[i].iFirstEdge+j]; // This gives the index into the edge lump
+
+            if (iEdge > 0)
+            {
+                pFaceTexCoords[i].pTexCoords[j].fS = (DotProduct(pVertices[pEdges[iEdge].iVertex[0]], curTexInfo.vS) + curTexInfo.fSShift) / pMipTextures[curTexInfo.iMiptex].nWidth;
+                pFaceTexCoords[i].pTexCoords[j].fT = (DotProduct(pVertices[pEdges[iEdge].iVertex[0]], curTexInfo.vT) + curTexInfo.fTShift) / pMipTextures[curTexInfo.iMiptex].nHeight;
+            }
+            else
+            {
+                iEdge *= -1;
+                pFaceTexCoords[i].pTexCoords[j].fS = (DotProduct(pVertices[pEdges[iEdge].iVertex[1]], curTexInfo.vS) + curTexInfo.fSShift) / pMipTextures[curTexInfo.iMiptex].nWidth;
+                pFaceTexCoords[i].pTexCoords[j].fT = (DotProduct(pVertices[pEdges[iEdge].iVertex[1]], curTexInfo.vT) + curTexInfo.fTShift) / pMipTextures[curTexInfo.iMiptex].nHeight;
+            }
+        }
+    }
+}
+
+MIPTEXTURE* CBSP::LoadTextureFromWad(const char* pszName)
+{
+    for (int i=0;i<nWadFiles;i++)
+    {
+        MIPTEXTURE* pMipMapTex = pWadFiles[i].LoadTexture(pszName);
+        if (pMipMapTex != NULL)
+            return pMipMapTex;
+    }
+
+    return NULL;
+}
+
+void CBSP::LoadLightMaps(unsigned char* pLightMapData)
+{
+    int nLoadedData = 0;
+    int nLoadedLightmaps = 0;
+    //int nErrors = 0;
+
+    for (int i=0;i<nFaces;i++)
+    {
+        if (pFaces[i].nStyles[0] == 0 && (signed)pFaces[i].nLightmapOffset >= -1)
+        {
+            //Allocate pLightmapCoords
+            pFaceTexCoords[i].pLightmapCoords = (BSPTEXCOORDS*) MALLOC(sizeof(BSPTEXCOORDS) * pFaces[i].nEdges);
+
+            /************ QRAD ***********/
+
+            float fMinU = 999999;
+            float fMinV = 999999;
+            float fMaxU = -99999;
+            float fMaxV = -99999;
+
+            BSPTEXTUREINFO* pTexInfo = &pTextureInfos[pFaces[i].iTextureInfo];
+            for (int j=0; j<pFaces[i].nEdges; j++)
+            {
+                int iEdge = pSurfEdges[pFaces[i].iFirstEdge+j];
+                BSPVERTEX* pVertex;
+                if (iEdge >= 0)
+                    pVertex = &pVertices[pEdges[iEdge].iVertex[0]];
+                else
+                    pVertex = &pVertices[pEdges[-iEdge].iVertex[1]];
+
+                float fU = DotProduct(pTexInfo->vS, *pVertex) + pTexInfo->fSShift;
+                if (fU < fMinU)
+                    fMinU = fU;
+                if (fU > fMaxU)
+                    fMaxU = fU;
+
+                float fV = DotProduct(pTexInfo->vT, *pVertex) + pTexInfo->fTShift;
+                if (fV < fMinV)
+                    fMinV = fV;
+                if (fV > fMaxV)
+                    fMaxV = fV;
+            }
+
+            float fTexMinU = (float)floor(fMinU / 16.0f);
+            float fTexMinV = (float)floor(fMinV / 16.0f);
+            float fTexMaxU = (float)ceil(fMaxU / 16.0f);
+            float fTexMaxV = (float)ceil(fMaxV / 16.0f);
+
+            int nWidth = (int)(fTexMaxU - fTexMinU) + 1;
+            int nHeight = (int)(fTexMaxV - fTexMinV) + 1;
+
+            /************ end QRAD ***********/
+
+            /*********** http://www.gamedev.net/community/forums/topic.asp?topic_id=538713 (last refresh: 20.02.2010) ***********/
+
+            float fMidPolyU = (fMinU + fMaxU) / 2.0;
+            float fMidPolyV = (fMinV + fMaxV) / 2.0;
+            float fMidTexU = (float)(nWidth) / 2.0;
+            float fMidTexV = (float)(nHeight) / 2.0;
+
+            for (int j=0; j<pFaces[i].nEdges; ++j)
+            {
+                int iEdge = pSurfEdges[pFaces[i].iFirstEdge+j];
+                BSPVERTEX* pVertex;
+                if (iEdge >= 0)
+                    pVertex = pVertices + pEdges[iEdge].iVertex[0];
+                else
+                    pVertex = pVertices + pEdges[-iEdge].iVertex[1];
+
+                float fU = DotProduct(pTexInfo->vS, *pVertex) + pTexInfo->fSShift;
+                float fV = DotProduct(pTexInfo->vT, *pVertex) + pTexInfo->fTShift;
+
+                float fLightMapU = fMidTexU + (fU - fMidPolyU) / 16.0f;
+                float fLightMapV = fMidTexV + (fV - fMidPolyV) / 16.0f;
+
+                pFaceTexCoords[i].pLightmapCoords[j].fS = fLightMapU / (float)nWidth;
+                pFaceTexCoords[i].pLightmapCoords[j].fT = fLightMapV / (float)nHeight;
+            }
+
+            /*********** end http://www.gamedev.net/community/forums/topic.asp?topic_id=538713 ***********/
+
+            // Find unbound texture slots
+            glGenTextures(1, &pnLightmapLookUp[i]);
+
+            IMAGE* pImg = CreateImage(3, nWidth, nHeight);
+            memcpy(pImg->pData, &pLightMapData[pFaces[i].nLightmapOffset], nWidth * nHeight * 3 * sizeof(unsigned char));
+
+            AdjustTextureToPowerOfTwo(pImg);
+
+            // Bind the texture
+            glBindTexture(GL_TEXTURE_2D, pnLightmapLookUp[i]);
+
+            // Set up Texture Filtering Parameters
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, pImg->nWidth, pImg->nHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, pImg->pData);
+
+            FreeImagePointer(pImg);
+
+            LOG("#%4d Loaded lightmap %2d x %2d\n", ++nLoadedLightmaps, nWidth, nHeight);
+
+            //lm data diff
+            /*unsigned int nNextOffset = 0xFFFFFFFF;
+            for (int j=0;j<nFaces;j++)
+            {
+                if (pFaces[j].nLightmapOffset > pFaces[i].nLightmapOffset && pFaces[j].nLightmapOffset < nNextOffset)
+                    nNextOffset = pFaces[j].nLightmapOffset;
+            }
+
+            if (nNextOffset == 0xFFFFFFFF)
+                nNextOffset = header.lump[LUMP_LIGHTING].nLength;
+
+            int nDataDiff = nWidth * nHeight * 3 - (nNextOffset - pFaces[i].nLightmapOffset);
+
+            LOG("DataDiff: %d ", nDataDiff);
+
+            if (nDataDiff == 0)
+                LOG("OK\n");
+            else
+            {
+                LOG("ERROR\n");
+                nErrors++;
+            }*/
+
+            nLoadedData += nWidth * nHeight * 3;
+        }
+        else
+        {
+            pnLightmapLookUp[i] = 0;
+        }
+    }
+    //LOG("Loaded %d lightmaps, %d Errors, lightmapdatadiff: %d Bytes ", nFaces, nErrors, nLoadedData - header.lump[LUMP_LIGHTING].nLength);
+    LOG("Loaded %d lightmaps, lightmapdatadiff: %d Bytes ", nLoadedLightmaps, nLoadedData - header.lump[LUMP_LIGHTING].nLength);
+    //if (((nLoadedData - header.lump[LUMP_LIGHTING].nLength) == 0) && (nErrors == 0))
+    if ((nLoadedData - header.lump[LUMP_LIGHTING].nLength) == 0)
+        LOG("OK\n");
+    else
+        LOG("ERRORS\n");
+}
+
+// Compare function for brush entity sorting
+int BrushEntityCmp(const void* a, const void* b)
+{
+    unsigned char nRenderMode1 = atoi((*((CEntity**)(a)))->FindProperty("rendermode"));
+    unsigned char nRenderMode2 = atoi((*((CEntity**)(b)))->FindProperty("rendermode"));
+
+    if (nRenderMode1 == RENDER_MODE_TEXTURE)
+        return 1;
+
+    if (nRenderMode2 == RENDER_MODE_TEXTURE)
+        return -1;
+
+    return 0;
+}
+
+void CBSP::ParseEntities(const char* pszEntities)
+{
+    // Count entities
+    char* pchPos = (char*) pszEntities;
+    nEntities = 0;
+
+    while (true)
+    {
+        pchPos = strchr(pchPos, '{');
+        if (pchPos == NULL)
+            break;
+        else
+        {
+            nEntities++;
+            pchPos++;
+        }
+    }
+
+    // Allocate memory for the pEntities
+    pEntities = new CEntity[nEntities]; // new to execute ctor
+
+    nBrushEntities = 0;
+    nSpecialEntities = 0;
+
+    // Start over
+    pchPos = (char*) pszEntities;
+    // Loop for each entity and parse it. count number of solid and special pEntities
+    for (int i=0; i<nEntities; i++)
+    {
+        pchPos = strchr(pchPos, '{');
+        char* pchClose = strchr(pchPos, '}');
+
+        int nLen = pchClose - pchPos - 1;
+        char* szIndividualEntity = (char*) MALLOC(sizeof(char) * (nLen + 1));
+        strncpy(szIndividualEntity, pchPos + 1, nLen);
+        szIndividualEntity[nLen] = 0;
+
+        pEntities[i].ParseProperties(szIndividualEntity);
+
+        free(szIndividualEntity);
+
+        if (IsBrushEntity(&pEntities[i]))
+            nBrushEntities++;
+        else
+            nSpecialEntities++;
+
+        pchPos++;
+    }
+
+    ppBrushEntities = (CEntity**) MALLOC(nBrushEntities * sizeof(CEntity*));
+    ppSpecialEntities = (CEntity**) MALLOC(nSpecialEntities * sizeof(CEntity*));
+
+    int iBrush = 0;
+    int iSpecial = 0;
+    for (int i=0;i<nEntities;i++)
+    {
+        if (IsBrushEntity(&pEntities[i]))
+        {
+            ppBrushEntities[iBrush] = &pEntities[i];
+
+            //if CEntity has property "origin" apply to model struct for rendering
+            const char* szOrigin;
+            if ((szOrigin = pEntities[i].FindProperty("origin")) != NULL)
+            {
+                int iModel = atoi(&pEntities[i].FindProperty("model")[1]);
+                sscanf(szOrigin, "%f %f %f", &pModels[iModel].vOrigin.x, &pModels[iModel].vOrigin.y, &pModels[iModel].vOrigin.z);
+            }
+
+            iBrush++;
+        }
+        else
+        {
+            ppSpecialEntities[iSpecial] = &pEntities[i];
+            iSpecial++;
+        }
+    }
+
+    // sort brush entities so that these with rendermode texture are at the back
+    qsort(ppBrushEntities, nBrushEntities, sizeof(CEntity*), BrushEntityCmp);
+}
+
+bool CBSP::IsBrushEntity(CEntity* pEnt)
+{
+    if (pEnt->FindProperty("model") == NULL)
+        return false;
+
+    const char* pzsClassName = pEnt->FindProperty("classname");
+    if (!strcmp(pzsClassName, "func_door_rotating") ||
+        !strcmp(pzsClassName, "func_door") ||
+        !strcmp(pzsClassName, "func_illusionary") ||
+        !strcmp(pzsClassName, "func_wall") ||
+        !strcmp(pzsClassName, "func_breakable") ||
+        !strcmp(pzsClassName, "func_button"))
+        return true;
+    else
+        return false;
+}
+
+void CBSP::CountVisLeafs(int iNode)
+{
+	if (iNode < 0)
+	{
+        // decision node
+	    if(iNode == -1)
+            return;
+
+	    if(pLeafs[~iNode].nContents == CONTENTS_SOLID)
+            return;
+
+        nVisLeafs++;
+        return;
+	}
+
+    CountVisLeafs(pNodes[iNode].iChildren[0]);
+    CountVisLeafs(pNodes[iNode].iChildren[1]);
+
+    return;
+}
+
+bool* CBSP::GetPVS(int iLeaf, unsigned char* pVisList)
+{
+    bool* pbPVS = (bool*) MALLOC((nLeafs - 1) * sizeof(bool));
+
+    memset(pbPVS, false, (nLeafs - 1) * sizeof(bool));
+
+    unsigned char* pCurVisList = &pVisList[pLeafs[iLeaf].nVisOffset]; // Pointer to the begin of the current vis list
+
+    bool* pbWriter = pbPVS; // Pointer that moves through the destination bool array (pbPVS)
+
+    for (unsigned int iCurByte = 0; pbWriter - pbPVS < nVisLeafs; iCurByte++)
+    {
+        // Check for a run of 0s
+        if (pCurVisList[iCurByte] == 0)
+        {
+            // Advance past this run of 0s
+            iCurByte++;
+            // Move the write pointer the number of compressed 0s
+            pbWriter += 8 * pCurVisList[iCurByte];
+        }
+        else
+        {
+            // Iterate through this byte with bit shifting till the one of the bit has moved beyond the 8th digit (bit == 0)
+            for (unsigned char bit = 1; bit != 0; pbWriter++, bit <<= 1)
+            {
+                // Test a bit of the compressed PVS with the bit mask
+                if ((pCurVisList[iCurByte] & bit) && (pbWriter - pbPVS < nLeafs))
+                {
+                    *pbWriter = true;
+                }
+            }
+        }
+    }
+
+    return pbPVS;
+}
+
+int CBSP::TraverseBSPTree(VECTOR3D vPos, int iNode)
+{
+    // Run once for each child
+    for (int i=0;i<2;i++)
+    {
+        // If the index is positive  it is an index into the nodes array
+        if ((pNodes[iNode].iChildren[i]) >= 0)
+        {
+            if(PointInBox(vPos, pNodes[pNodes[iNode].iChildren[i]].nMins, pNodes[pNodes[iNode].iChildren[i]].nMaxs))
+                return TraverseBSPTree(vPos, pNodes[iNode].iChildren[i]);
+        }
+        // Else, bitwise inversed, it is an index into the leaf array
+        // Do not test solid leaf 0
+        else if (~pNodes[iNode].iChildren[i] != 0)
+        {
+            if(PointInBox(vPos, pLeafs[~(pNodes[iNode].iChildren[i])].nMins, pLeafs[~(pNodes[iNode].iChildren[i])].nMaxs))
+                return ~(pNodes[iNode].iChildren[i]);
+        }
+    }
+
+    return -1;
+}
+
+void CBSP::RenderSkybox(VECTOR3D vPos)
+{
+    glPushMatrix();
+    glTranslatef(vPos.x, vPos.y, vPos.z);
+
+    glCallList(*pdlSkyBox);
+
+    glPopMatrix();
+}
+
+void CBSP::RenderFace(int iFace)
+{
+    if (pbFacesDrawn[iFace])
+        return;
+    else
+        pbFacesDrawn[iFace] = true;
+
+    if (pFaces[iFace].nStyles[0] == 0xFF)
+       return;
+
+    // If the light type is normal continue AND If the light map offset is not -1, there is a light map
+    if ((signed)pFaces[iFace].nLightmapOffset != -1 && header.lump[LUMP_LIGHTING].nLength > 0)
+    {
+        // Multi-texturing
+
+        // Base texture map
+        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glBindTexture(GL_TEXTURE_2D, pnTextureLookUp[pTextureInfos[pFaces[iFace].iTextureInfo].iMiptex]);
+
+        // Light map
+        glActiveTextureARB(GL_TEXTURE1_ARB);
+        glBindTexture(GL_TEXTURE_2D, pnLightmapLookUp[iFace]);
+
+        glBegin(GL_TRIANGLE_FAN);
+        for (int i=0; i<pFaces[iFace].nEdges; i++)
+        {
+            glMultiTexCoord2fARB(GL_TEXTURE0_ARB, pFaceTexCoords[iFace].pTexCoords[i].fS, pFaceTexCoords[iFace].pTexCoords[i].fT);
+            glMultiTexCoord2fARB(GL_TEXTURE1_ARB, pFaceTexCoords[iFace].pLightmapCoords[i].fS, pFaceTexCoords[iFace].pLightmapCoords[i].fT);
+
+            // normal
+            VECTOR3D vNormal = pPlanes[pFaces[iFace].iPlane].vNormal;
+            if (pFaces[iFace].nPlaneSide)
+                vNormal = vNormal * -1;
+            glNormal3f(vNormal.x, vNormal.y, vNormal.z);
+
+            int iEdge = pSurfEdges[pFaces[iFace].iFirstEdge + i]; // This gives the index into the edge lump
+
+            if (iEdge > 0)
+            {
+                glVertex3f(pVertices[pEdges[iEdge].iVertex[0]].x, pVertices[pEdges[iEdge].iVertex[0]].y, pVertices[pEdges[iEdge].iVertex[0]].z);
+            }
+            else
+            {
+                iEdge *= -1;
+                glVertex3f(pVertices[pEdges[iEdge].iVertex[1]].x, pVertices[pEdges[iEdge].iVertex[1]].y, pVertices[pEdges[iEdge].iVertex[1]].z);
+            }
+        }
+        glEnd();
+    }
+    else
+    {
+        // There is no lightmap
+        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glBindTexture(GL_TEXTURE_2D, pnTextureLookUp[pTextureInfos[pFaces[iFace].iTextureInfo].iMiptex]);
+
+        glBegin(GL_TRIANGLE_FAN);
+        for (int i=0; i<pFaces[iFace].nEdges; i++)
+        {
+            glTexCoord2f(pFaceTexCoords[iFace].pTexCoords[i].fS, pFaceTexCoords[iFace].pTexCoords[i].fT);
+
+            // normal
+            VECTOR3D vNormal = pPlanes[pFaces[iFace].iPlane].vNormal;
+            if (pFaces[iFace].nPlaneSide)
+                vNormal = vNormal * -1;
+            glNormal3f(vNormal.x, vNormal.y, vNormal.z);
+
+            int iEdge = pSurfEdges[pFaces[iFace].iFirstEdge + i]; // This gives the index into the edge lump
+
+            if (iEdge > 0)
+            {
+                glVertex3f(pVertices[pEdges[iEdge].iVertex[0]].x, pVertices[pEdges[iEdge].iVertex[0]].y, pVertices[pEdges[iEdge].iVertex[0]].z);
+            }
+            else
+            {
+                iEdge *= -1;
+                glVertex3f(pVertices[pEdges[iEdge].iVertex[1]].x, pVertices[pEdges[iEdge].iVertex[1]].y, pVertices[pEdges[iEdge].iVertex[1]].z);
+            }
+        }
+        glEnd();
+    }
+}
+
+void CBSP::RenderLeaf(int iLeaf)
+{
+    // Loop through each face in this leaf
+    for (int i=0; i<pLeafs[iLeaf].nMarkSurfaces; i++)
+        RenderFace(pMarkSurfaces[pLeafs[iLeaf].iFirstMarkSurface + i]);
+}
+
+void CBSP::RenderBSP(int iNode, int iCurrentLeaf, VECTOR3D vPos)
+{
+    if (iNode < 0)
+    {
+        if (iNode == -1)
+            return;
+
+        if (iCurrentLeaf > 0)
+            if (header.lump[LUMP_VISIBILITY].nLength != 0 && ppbVisLists != NULL && ppbVisLists[iCurrentLeaf - 1] != NULL && !ppbVisLists[iCurrentLeaf - 1][~iNode - 1])
+                return;
+
+        RenderLeaf(~iNode);
+
+        return;
+    }
+
+    float location;
+
+    switch (pPlanes[pNodes[iNode].iPlane].nType)
+    {
+    case PLANE_X:
+        location = vPos.x - pPlanes[pNodes[iNode].iPlane].fDist;
+    case PLANE_Y:
+        location = vPos.y - pPlanes[pNodes[iNode].iPlane].fDist;
+    case PLANE_Z:
+        location = vPos.z - pPlanes[pNodes[iNode].iPlane].fDist;
+    default:
+        location = DotProduct(pPlanes[pNodes[iNode].iPlane].vNormal, vPos) - pPlanes[pNodes[iNode].iPlane].fDist;
+    }
+
+    if (location > 0.0f)
+    {
+        RenderBSP(pNodes[iNode].iChildren[1], iCurrentLeaf, vPos);
+        RenderBSP(pNodes[iNode].iChildren[0], iCurrentLeaf, vPos);
+    }
+    else
+    {
+        RenderBSP(pNodes[iNode].iChildren[0], iCurrentLeaf, vPos);
+        RenderBSP(pNodes[iNode].iChildren[1], iCurrentLeaf, vPos);
+    }
+}
+
+void CBSP::RenderBrushEntity(int iEntity, VECTOR3D vPos)
+{
+    CEntity* pCurEnt = ppBrushEntities[iEntity];
+
+    // Model
+    int iModel = atoi(pCurEnt->FindProperty("model") + 1);
+
+    // Alpha value
+    unsigned char nAlpha;
+    const char* pszRenderAmt = pCurEnt->FindProperty("renderamt");
+    if(pszRenderAmt != NULL)
+        nAlpha = atoi(pszRenderAmt);
+    else
+        nAlpha = 255;
+
+    // Rendermode
+    unsigned char nRenderMode;
+    const char* pszRenderMode = pCurEnt->FindProperty("rendermode");
+    if(pszRenderMode != NULL)
+        nRenderMode = atoi(pszRenderMode);
+    else
+        nRenderMode = RENDER_MODE_NORMAL;
+
+    glPushMatrix();
+    glTranslatef(pModels[iModel].vOrigin.x, pModels[iModel].vOrigin.y, pModels[iModel].vOrigin.z);
+
+    switch (nRenderMode)
+    {
+    case RENDER_MODE_NORMAL:
+        break;
+    case RENDER_MODE_TEXTURE:
+        glColor4f(1.0f, 1.0f, 1.0f, (float)nAlpha / 255.0f);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        glDepthMask(false);
+
+        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        break;
+    case RENDER_MODE_SOLID:
+        glEnable(GL_ALPHA_TEST);
+        glAlphaFunc(GL_GREATER, 0.25);
+        break;
+    case RENDER_MODE_ADDITIVE:
+        glColor4f(1.0f, 1.0f, 1.0f, (float)nAlpha / 255.0f);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        glDepthMask(false);
+
+        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        break;
+    }
+
+    RenderBSP(pModels[iModel].iHeadNodes[0], -1, vPos);
+
+    switch (nRenderMode)
+    {
+    case RENDER_MODE_NORMAL:
+        break;
+    case RENDER_MODE_TEXTURE:
+    case RENDER_MODE_ADDITIVE:
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        glDisable(GL_BLEND);
+        glDepthMask(true);
+
+        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        break;
+    case RENDER_MODE_SOLID:
+        glDisable(GL_ALPHA_TEST);
+        break;
+    }
+
+    glPopMatrix();
+}
+
+/**
+ *============================================================================================
+ *                                        PUBLIC
+ *============================================================================================
+**/
+
+CBSP::CBSP()
+{
+    pVertices = NULL;
+    pEdges = NULL;
+    pSurfEdges = NULL;
+    pNodes = NULL;
+    pLeafs = NULL;
+    pMarkSurfaces = NULL;
+    pPlanes = NULL;
+    pFaces = NULL;
+    pModels = NULL;
+    pMipTextures = NULL;
+    pMipTextureOffsets = NULL;
+    pTextureInfos = NULL;
+    pFaceTexCoords = NULL;
+
+    pEntities = NULL;
+    ppBrushEntities = NULL;
+    ppSpecialEntities = NULL;
+    pWadFiles = NULL;
+    ppbVisLists = NULL;
+
+    pnLightmapLookUp = NULL;
+    pnTextureLookUp = NULL;
+    pdlSkyBox = NULL;
+    pbFacesDrawn = NULL;
+}
+
+CBSP::~CBSP()
+{
+    Destroy();
+}
+
+bool CBSP::LoadBSPFile(char* pszFileName)
+{
+    LOG("LOADING BSP FILE: %s\n", strrchr(pszFileName, '\\') + 1);
+
+    FILE* pfile = fopen(pszFileName, "rb");
+    if (pfile == NULL)
+    {
+        MSGBOX_ERROR("Map file %s not found", pszFileName);
+        return false;
+    }
+
+    // Read in the header
+    fread(&header, sizeof(BSPHEADER), 1, pfile);
+
+    if (header.nVersion != 30)
+    {
+        MSGBOX_ERROR("Invalid BSP version (%d instead of 30)", header.nVersion);
+        return false;
+    }
+
+    // =================================================================
+    // Get number of elements and allocate memory for them
+    // =================================================================
+
+    // Get the number of pNodes and allocate memory
+    nNodes = header.lump[LUMP_NODES].nLength / sizeof(BSPNODE);
+    pNodes = (BSPNODE*) MALLOC(nNodes * sizeof(BSPNODE));
+
+    // Get the number of pLeafs and allocate memory
+    nLeafs = header.lump[LUMP_LEAFS].nLength / sizeof(BSPLEAF);
+    pLeafs = (BSPLEAF*) MALLOC(nLeafs * sizeof(BSPLEAF));
+
+    // Get the number of marksurfaces and allocate memory
+    nMarkSurfaces = header.lump[LUMP_MARKSURFACES].nLength / sizeof(BSPMARKSURFACE);
+    pMarkSurfaces = (BSPMARKSURFACE*) MALLOC(nMarkSurfaces * sizeof(BSPMARKSURFACE));
+
+    // Get the number of pFaces and allocate memory
+    nFaces = header.lump[LUMP_FACES].nLength / sizeof(BSPFACE);
+    pFaces = (BSPFACE*) MALLOC(nFaces * sizeof(BSPFACE));
+
+    // Get the number of surface pEdges and allocate memory
+    nSurfEdges = header.lump[LUMP_SURFEDGES].nLength / sizeof(BSPSURFEDGE);
+    pSurfEdges = (BSPSURFEDGE*) MALLOC(nSurfEdges * sizeof(BSPSURFEDGE));
+
+    // Get the number of pEdges and allocate memory
+    nEdges = header.lump[LUMP_EDGES].nLength / sizeof(BSPEDGE);
+    pEdges = (BSPEDGE*) MALLOC(nEdges * sizeof(BSPEDGE));
+
+    // Get the number of pVertices and allocate memory
+    nVertices = header.lump[LUMP_VERTEXES].nLength / sizeof(BSPVERTEX);
+    pVertices = (BSPVERTEX*) MALLOC (nVertices * sizeof(BSPVERTEX));
+
+    // Get the number of pPlanes and allocate memory
+    nPlanes = header.lump[LUMP_PLANES].nLength / sizeof(BSPPLANE);
+    pPlanes = (BSPPLANE*) MALLOC(nPlanes * sizeof(BSPPLANE));
+
+    // Get the number of pModels and allocate memory
+    nModels = header.lump[LUMP_MODELS].nLength / sizeof(BSPMODEL);
+    pModels = (BSPMODEL*) MALLOC(nModels * sizeof(BSPMODEL));
+
+    // =================================================================
+    // Seek to and read in the data
+    // =================================================================
+
+    // Seek to the position in the file that stores the node information
+    fseek(pfile, header.lump[LUMP_NODES].nOffset, SEEK_SET);
+    // Read in the pNodes
+    fread(pNodes, sizeof(BSPNODE), nNodes, pfile);
+
+    // Seek to the position in the file that stores the leaf information
+    fseek(pfile, header.lump[LUMP_LEAFS].nOffset, SEEK_SET);
+    // Read in the pLeafs
+    fread(pLeafs, sizeof(BSPLEAF), nLeafs, pfile);
+
+    // Seek to the position in the file that stores the leaf information
+    fseek(pfile, header.lump[LUMP_MARKSURFACES].nOffset, SEEK_SET);
+    // Read in the pLeafs
+    fread(pMarkSurfaces, sizeof(BSPMARKSURFACE), nMarkSurfaces, pfile);
+
+    // Seek to the position in the file that stores the face information
+    fseek(pfile, header.lump[LUMP_FACES].nOffset, SEEK_SET);
+    // Read in the pFaces
+    fread(pFaces, sizeof(BSPFACE), nFaces, pfile);
+
+    // Seek to the position in the file that stores the surface edge information
+    fseek(pfile, header.lump[LUMP_SURFEDGES].nOffset, SEEK_SET);
+    // Read in the surface pEdges
+    fread(pSurfEdges, sizeof(BSPSURFEDGE), nSurfEdges, pfile);
+
+    // Seek to the position in the file that stores the edge information
+    fseek(pfile, header.lump[LUMP_EDGES].nOffset, SEEK_SET);
+    // Read in the pEdges
+    fread(pEdges, sizeof(BSPEDGE), nEdges, pfile);
+
+    // Seek to the position in the file that stores the vertex information
+    fseek(pfile, header.lump[LUMP_VERTEXES].nOffset, SEEK_SET);
+    // Read in the vertexs
+    fread(pVertices, sizeof(BSPVERTEX), nVertices, pfile);
+
+    // Seek to the position in the file that stores the plane information
+    fseek(pfile, header.lump[LUMP_PLANES].nOffset, SEEK_SET);
+    // Read in the planes
+    fread(pPlanes, sizeof(BSPPLANE), nPlanes, pfile);
+
+    // Seek to the position in the file that stores the model information
+    fseek(pfile, header.lump[LUMP_MODELS].nOffset, SEEK_SET);
+    // Read in the models
+    fread(pModels, sizeof(BSPMODEL), nModels, pfile);
+
+    // ===========================
+    // Entity Operations
+    // ===========================
+
+    char* pszEntityBuffer = (char*) MALLOC(header.lump[LUMP_ENTITIES].nLength * sizeof(char));
+    // Seek to the position in the file that stores the entity information
+    fseek(pfile, header.lump[LUMP_ENTITIES].nOffset, SEEK_SET);
+    // Read in the pEntities
+    fread(pszEntityBuffer, sizeof(char), header.lump[LUMP_ENTITIES].nLength, pfile);
+
+    // Parse the string and create the pEntities
+    ParseEntities(pszEntityBuffer);
+
+    // Delete the buffer
+    free(pszEntityBuffer);
+
+    // ===========================
+    // Texture Operations
+    // ===========================
+
+    // Get the number of textures and allocate memory
+    nTextureInfos = header.lump[LUMP_TEXINFO].nLength / sizeof(BSPTEXTUREINFO);
+    pTextureInfos = (BSPTEXTUREINFO*) MALLOC(nTextureInfos * sizeof(BSPTEXTUREINFO));
+
+    // Seek to the position in the file that stores the texture info information
+    fseek(pfile, header.lump[LUMP_TEXINFO].nOffset, SEEK_SET);
+    // Read in the texture infos
+    fread(pTextureInfos, sizeof(BSPTEXTUREINFO), nTextureInfos, pfile);
+
+    // Seek to the position in the file that stores the mip texture header info
+    fseek(pfile, header.lump[LUMP_TEXTURES].nOffset, SEEK_SET);
+
+    // Read in the texture header
+    fread(&textureHeader, sizeof(BSPTEXTUREHEADER), 1, pfile);
+
+    // Allocate the mip texture memory
+    pMipTextures = (BSPMIPTEX*) MALLOC(textureHeader.nMipTextures * sizeof(BSPMIPTEX));
+
+    // Allocate the mip texture offset memory
+
+    pMipTextureOffsets = (BSPMIPTEXOFFSET*) MALLOC(textureHeader.nMipTextures * sizeof(BSPMIPTEXOFFSET));
+
+    // Read in the mip texture offsets
+    fread(pMipTextureOffsets, sizeof(int32_t), (textureHeader.nMipTextures), pfile);
+
+    // Read in all the mip texture structs
+    for (unsigned int i=0; i<textureHeader.nMipTextures; i++)
+    {
+        // Seek to the position in the file that stores the mip texture header info
+        fseek(pfile, header.lump[LUMP_TEXTURES].nOffset + pMipTextureOffsets[i], SEEK_SET);
+        // Read in the mip textures
+        fread(&pMipTextures[i], sizeof(BSPMIPTEX), 1, pfile);
+    }
+
+    // Allocate the memory for the OpenGL texture unit IDs
+    pnTextureLookUp = (GLuint*) MALLOC(textureHeader.nMipTextures * sizeof(GLuint));
+
+    // Load in the texture images and calculate the texture cordinates for each vertex to save render time
+    LoadTextures(pfile);
+
+    // ===========================
+    // Lightmap Operations
+    // ===========================
+
+    LOG("Loading lightmaps ...\n");
+    if (header.lump[LUMP_LIGHTING].nLength == 0)
+        LOG("No lightmapdata found\n");
+    else
+    {
+        // Allocate the memory for the OpenGL texture unit IDs
+        pnLightmapLookUp = (GLuint*) MALLOC(sizeof(GLuint) * nFaces);
+
+        unsigned char* pLightMapData = (unsigned char*) MALLOC(header.lump[LUMP_LIGHTING].nLength * sizeof(unsigned char));
+
+        // Seek to the position in the file that stores the light map information
+        fseek(pfile, header.lump[LUMP_LIGHTING].nOffset, SEEK_SET);
+        // Read in the light map data
+        fread(pLightMapData, sizeof(unsigned char), header.lump[LUMP_LIGHTING].nLength, pfile);
+
+        LoadLightMaps(pLightMapData);
+
+        free(pLightMapData);
+    }
+
+    // ===========================
+    // Skybox Operations
+    // ===========================
+
+    if (!LoadSkyTextures())
+        return false;
+
+    // ===========================
+    // Visibility List Operations
+    // ===========================
+
+    if(header.lump[LUMP_VISIBILITY].nLength > 0)
+    {
+        // Allocate memory for the compressed vis lists
+        unsigned char* pVisList = (unsigned char*) MALLOC(header.lump[LUMP_VISIBILITY].nLength * sizeof(unsigned char));
+
+        // Seek to the beggining of the vis lump
+        fseek(pfile, header.lump[LUMP_VISIBILITY].nOffset, SEEK_SET);
+        // Read in the compressed visibility lists
+        fread(pVisList, sizeof(unsigned char), header.lump[LUMP_VISIBILITY].nLength, pfile);
+
+        LOG("Decompressing VIS ...\n");
+
+        nVisLeafs = 0;
+        CountVisLeafs(0);
+
+        ppbVisLists = (bool**) MALLOC(sizeof(bool*) * nVisLeafs); // DO NOT MOVE THIS LINE Memory Bug
+        //memset(ppbVisLists, 0, sizeof(bool*) * nVisLeafs);
+
+        for (int i=1;i<=nVisLeafs;i++)
+        {
+            if (pLeafs[i].nVisOffset >= 0)
+                ppbVisLists[i-1] = GetPVS(i, pVisList);
+            else
+                ppbVisLists[i-1] = NULL;
+        }
+
+        free(pVisList);
+    }
+    else
+        LOG("No VIS found\n");
+
+    // Close the file
+    fclose(pfile);
+
+    // misc
+    LOG("Miscellaneous ...\n");
+    pbFacesDrawn = (bool*) MALLOC(sizeof(bool) * nFaces);
+
+    LOG("FINISHED LOADING BSP\n");
+
+    return true;
+}
+
+void CBSP::RenderLevel(VECTOR3D vPos)
+{
+    /** RENDER SKY BOX **/
+    if ((pdlSkyBox != NULL) && g_bRenderSkybox)
+        RenderSkybox(vPos);
+
+    /** PREPARE **/
+    if (g_bTextures)
+    {
+        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glEnable(GL_TEXTURE_2D);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    }
+
+    if (g_bLightmaps)
+    {
+        glActiveTextureARB(GL_TEXTURE1_ARB);
+        glEnable(GL_TEXTURE_2D);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    }
+
+    glEnable(GL_DEPTH_TEST);
+
+    memset(pbFacesDrawn, false, sizeof(bool) * nFaces);
+
+    int iLeaf = TraverseBSPTree(vPos, 0); //Get the leaf where the camera is in
+
+    /** RENDER STATIC GEOMETRY **/
+    if (g_bRenderStaticBSP)
+        RenderBSP(0, iLeaf, vPos);
+
+    /** RENDER BRUSH ENTITIES **/
+    if (g_bRenderBrushEntities)
+        for (int i=0;i<nBrushEntities;i++) //TODO: implement PVS for pEntities
+            RenderBrushEntity(i, vPos);
+
+    /** FINALIZE **/
+    if (g_bTextures)
+    {
+        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glDisable(GL_TEXTURE_2D);
+    }
+
+    if (g_bLightmaps)
+    {
+        glActiveTextureARB(GL_TEXTURE1_ARB);
+        glDisable(GL_TEXTURE_2D);
+    }
+
+    glDisable(GL_DEPTH_TEST);
+}
+
+// TODO: This will need to be modified later when there are more then one of the same type
+CEntity* CBSP::FindEntity(const char* pszClassName)
+{
+    for (int i=0; i<nEntities; ++i)
+    {
+        const char* szClass = pEntities[i].FindProperty("classname");
+        if(szClass == NULL)
+            continue;
+
+        if (!strcmp(szClass, pszClassName))
+            return &pEntities[i];
+    }
+
+    return NULL;
+}
+
+void CBSP::Destroy()
+{
+    // Entities
+    if (ppBrushEntities)
+    {
+        free(ppBrushEntities);
+        ppBrushEntities = NULL;
+    }
+
+    if (ppSpecialEntities)
+    {
+        free(ppSpecialEntities);
+        ppSpecialEntities = NULL;
+    }
+
+    //textures
+    if (pnTextureLookUp)
+    {
+        glDeleteTextures(textureHeader.nMipTextures, pnTextureLookUp);
+
+        free(pnTextureLookUp);
+        pnTextureLookUp = NULL;
+    }
+
+    //lightmaps
+    if (pnLightmapLookUp)
+    {
+        for (int i=0;i<nFaces;i++)
+        {
+            if (pnLightmapLookUp[i]!=0)
+                glDeleteTextures(1, &pnLightmapLookUp[i]);
+        }
+
+        free(pnLightmapLookUp);
+        pnLightmapLookUp = NULL;
+    }
+
+    //displaylists
+    if (pdlSkyBox)
+    {
+        glDeleteLists(*pdlSkyBox, 1);
+
+        free(pdlSkyBox);
+        pdlSkyBox = NULL;
+    }
+
+    //visLists
+    if (ppbVisLists)
+    {
+        for (int i=0;i<nVisLeafs;i++)
+        {
+            if (ppbVisLists[i])
+            {
+                free(ppbVisLists[i]);
+                ppbVisLists[i] = NULL;
+            }
+        }
+
+        free(ppbVisLists);
+        ppbVisLists = NULL;
+    }
+
+    //facesdrawn
+    if (pbFacesDrawn)
+    {
+        free(pbFacesDrawn);
+        pbFacesDrawn = NULL;
+    }
+
+    // If we still have valid memory for our pEntities, free them
+    if (pEntities)
+    {
+        delete [] pEntities; // pointer to array of classes
+        pEntities = NULL;
+    }
+
+    // If we still have valid memory for our pNodes, free them
+    if (pNodes)
+    {
+        free(pNodes);
+        pNodes = NULL;
+    }
+
+    // If we still have valid memory for our pLeafs, free them
+    if (pLeafs)
+    {
+        free(pLeafs);
+        pLeafs = NULL;
+    }
+
+    // If we still have valid memory for our pMarkSurfaces, free them
+    if (pMarkSurfaces)
+    {
+        free(pMarkSurfaces);
+        pMarkSurfaces = NULL;
+    }
+
+    // If we still have valid memory for our pFaces, free them
+    if (pFaces)
+    {
+        free(pFaces);
+        pFaces = NULL;
+    }
+
+    // If we still have valid memory for our surfedges, free them
+    if (pSurfEdges)
+    {
+        free(pSurfEdges);
+        pSurfEdges = NULL;
+    }
+
+    // If we still have valid memory for our pEdges, free them
+    if (pEdges)
+    {
+        free(pEdges);
+        pEdges = NULL;
+    }
+
+    // If we still have valid memory for our pVertices, free them
+    if (pVertices)
+    {
+        free(pVertices);
+        pVertices = NULL;
+    }
+
+    // If we still have valid memory for our pPlanes, free them
+    if (pVertices)
+    {
+        free(pPlanes);
+        pPlanes = NULL;
+    }
+
+    // If we still have valid memory for our pModels, free them
+    if (pModels)
+    {
+        free(pModels);
+        pModels = NULL;
+    }
+}
