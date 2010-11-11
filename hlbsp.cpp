@@ -426,6 +426,10 @@ void CBSP::LoadDecals()
         nDecals++;
     while((pEnt = FindEntity(NULL)));
 
+    // Texture name table for texture loading
+    int nLoadedTex = 0;
+    struct {char szName[MAXTEXTURENAME]; GLuint texID; int nWidth; int nHeight;} aLoadedTex[nDecals];
+
     // Allocate new decals
     pDecals = (DECAL*) MALLOC(sizeof(DECAL) * nDecals);
 
@@ -478,9 +482,10 @@ void CBSP::LoadDecals()
                 // Check if decal origin is in this face
                 if(PointInPlane(vOrigin, normal, DotProduct(normal, vertex)))
                 {
-                    GLuint texID;
-
-                    glGenTextures(1, &texID);
+                    // TEXTURE
+                    GLuint texID = 0;
+                    int width;
+                    int height;
 
                     const char* pszTexName = pEnt->FindProperty("texture");
                     if(!pszTexName)
@@ -488,35 +493,61 @@ void CBSP::LoadDecals()
                         LOG("ERROR retrieving texture name from decal\n");
                         continue;
                     }
-                    // TODO: Share textures between decals
-                    MIPTEXTURE* pMipTex = LoadDecalTexture(pszTexName);
-                    if (!pMipTex)
+
+                    // Check if texture has already been loaded
+                    for(int k=0;k<nLoadedTex;k++)
                     {
-                        LOG("#%3d ERROR loading texture %s\n", i + 1, pszTexName);
-                        continue;
+                        if(!strcmp(pszTexName, aLoadedTex[k].szName))
+                        {
+                            // Found already loaded texture
+                            texID = aLoadedTex[k].texID;
+                            width = aLoadedTex[k].nWidth;
+                            height = aLoadedTex[k].nHeight;
+                            break;
+                        }
                     }
 
-                    // Bind the texture
-                    glBindTexture(GL_TEXTURE_2D, texID);
-
-                    // Set up Texture Filtering Parameters
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPLEVELS - 1);
-
-                    for (int k=0;k<MIPLEVELS;k++)
+                    if(!texID)
                     {
-                        AdjustTextureToPowerOfTwo(&pMipTex->Img[k]);
-                        glTexImage2D(GL_TEXTURE_2D, k, GL_RGBA, pMipTex->Img[k].nWidth, pMipTex->Img[k].nHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pMipTex->Img[k].pData);
+                        // Load new texture
+                        MIPTEXTURE* pMipTex = LoadDecalTexture(pszTexName);
+                        if (!pMipTex)
+                        {
+                            LOG("#%3d ERROR loading texture %s\n", i + 1, pszTexName);
+                            continue;
+                        }
+
+                        glGenTextures(1, &texID);
+
+                        // Bind the texture
+                        glBindTexture(GL_TEXTURE_2D, texID);
+
+                        // Set up Texture Filtering Parameters
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPLEVELS - 1);
+
+                        for (int k=0;k<MIPLEVELS;k++)
+                        {
+                            AdjustTextureToPowerOfTwo(&pMipTex->Img[k]);
+                            glTexImage2D(GL_TEXTURE_2D, k, GL_RGBA, pMipTex->Img[k].nWidth, pMipTex->Img[k].nHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pMipTex->Img[k].pData);
+                        }
+
+                        // Decal size
+                        width = pMipTex->Img[0].nWidth;
+                        height = pMipTex->Img[0].nHeight;
+
+                        FreeMipTexturePointer(pMipTex);
+
+                        // Add to loaded textures
+                        strcpy(aLoadedTex[nLoadedTex].szName, pszTexName);
+                        aLoadedTex[nLoadedTex].texID = texID;
+                        aLoadedTex[nLoadedTex].nWidth = width;
+                        aLoadedTex[nLoadedTex].nHeight = height;
+                        nLoadedTex++;
+
+                        //LOG("#%3d Loaded texture %15s from WAD file\n", i + 1, pszTexName);
                     }
-
-                    // Decal size
-                    int width = pMipTex->Img[0].nWidth;
-                    int height = pMipTex->Img[0].nHeight;
-
-                    FreeMipTexturePointer(pMipTex);
-
-                    LOG("#%3d Loaded texture %15s from WAD file\n", i + 1, pszTexName);
 
                     int h2 = height / 2;
                     int w2 = width / 2;
@@ -540,6 +571,8 @@ void CBSP::LoadDecals()
 
         pEnt = FindEntity(NULL);
     }
+
+    LOG("Loaded %d decals, %d decal textures\n", nDecals, nLoadedTex);
 }
 
 void CBSP::LoadLightMaps(unsigned char* pLightMapData)
@@ -1367,7 +1400,6 @@ bool CBSP::LoadBSPFile(const char* pszFileName)
 
     LOG("Loading decals ...\n");
     LoadDecals();
-    LOG("Loaded %d decals\n", nDecals);
 
     // ===========================
     // Skybox Operations
