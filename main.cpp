@@ -10,6 +10,7 @@
 #include "camera.h"
 #include "timer.h"
 #include "inline.h"
+#include "font.h"
 
 #define WINDOW_CLASS_NAME "hlbsp"
 #define WINDOW_TITLE "HL BSP"
@@ -21,6 +22,9 @@
 
 #define WINDOW_HEIGHT 768
 #define WINDOW_WIDTH 1024
+
+#define FONT_HUD_HEIGHT 12
+#define FONT_HUD_COLOR 1.0f ,0.0f, 0.0f
 
 PFNGLACTIVETEXTUREARBPROC   glActiveTextureARB   = NULL;
 PFNGLMULTITEXCOORD2FARBPROC glMultiTexCoord2fARB = NULL;
@@ -44,15 +48,19 @@ bool g_bLightmaps = true;
 bool g_bRenderStaticBSP = true;
 bool g_bRenderBrushEntities = true;
 bool g_bRenderSkybox = true;
+bool g_bRenderCoords = false;
+bool g_bRenderHUD = true;
 
 bool g_bTexNPO2Support;
 
 unsigned int g_nWinWidth = WINDOW_WIDTH;
 unsigned int g_nWinHeight = WINDOW_HEIGHT;
 
+GLuint g_nFontHUD;
+
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
 
-GLvoid ReSizeGLScene(GLsizei nWidth, GLsizei nHeight)		// Resize And Initialize The GL Window
+void ReSizeGLScene(int nWidth, int nHeight)		// Resize And Initialize The GL Window
 {
     g_nWinWidth = nWidth;
     g_nWinHeight = nHeight;
@@ -75,7 +83,7 @@ GLvoid ReSizeGLScene(GLsizei nWidth, GLsizei nHeight)		// Resize And Initialize 
     glLoadIdentity();									// Reset The Modelview Matrix
 }
 
-bool CheckForExtension(char* pszExtensionName)
+bool CheckExtension(const char* pszExtensionName)
 {
     // get the list of supported extensions
     char* pszExtensionList = (char*) glGetString(GL_EXTENSIONS);
@@ -116,7 +124,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
 
     // Extensions
     LOG("Getting multitexture extension function pointers ...\n");
-    if (CheckForExtension("GL_ARB_multitexture"))
+    if (CheckExtension("GL_ARB_multitexture"))
     {
         // Obtain the functions entry point
         if ((glActiveTextureARB = (PFNGLACTIVETEXTUREARBPROC) wglGetProcAddress("glActiveTextureARB")) == NULL)
@@ -137,7 +145,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
     }
 
     LOG("Checking ARB_texture_non_power_of_two extension ...\n");
-    g_bTexNPO2Support = CheckForExtension("GL_ARB_texture_non_power_of_two");
+    g_bTexNPO2Support = CheckExtension("GL_ARB_texture_non_power_of_two");
     if(g_bTexNPO2Support)
         LOG("Supported, no image scaling needed\n");
     else
@@ -166,16 +174,19 @@ int InitGL()										// All Setup For OpenGL Goes Here
         g_camera.SetViewAngles(0.0f, fZAngle);
     }
 
+    //Fonts
+    LOG("Creating font ...\n");
+    g_nFontHUD = CreateFont("System", FONT_HUD_HEIGHT);
+
     return true;										// Initialization Went OK
 }
 
 int DrawGLScene()									// Here's Where We Do All The Drawing
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
-
     glLoadIdentity();									// Reset The Current Modelview Matrix
 
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f); //Reset Color
+    glColor4f(0.0f, 0.0f, 0.0f, 1.0f); //Reset Color
 
     TimerTick();
 
@@ -188,7 +199,7 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
 
     g_bsp.RenderLevel(g_camera.GetPosition());
 
-    ///Brightness
+    /// Brightness
     glPushMatrix();
     glLoadIdentity();
 
@@ -204,10 +215,72 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     glDisable(GL_BLEND);
     glPopMatrix();
 
+    if (g_bRenderCoords)
+    {
+        glLineWidth(3.0f);
+        glBegin(GL_LINES);
+        glColor3f(1.0f,0.0f,0.0f); //red X+
+        glVertex3i(4000,0,0);
+        glVertex3i(0,0,0);
+        glColor3f(0.0f,1.0f,0.0f); //green Y+
+        glVertex3i(0,4000,0);
+        glVertex3i(0,0,0);
+        glColor3f(0.0f,0.0f,1.0f); //blue Z+
+        glVertex3i(0,0,4000);
+        glVertex3i(0,0,0);
+        glEnd();
+
+        glLineWidth(1.0f);
+        glBegin(GL_LINES);
+        glColor3f(0.0f,0.4f,0.0f); //green Y-
+        glVertex3i(0,0,0);
+        glVertex3i(0,-4000,0);
+        glColor3f(0.4f,0.0f,0.0f); //red X-
+        glVertex3i(0,0,0);
+        glVertex3i(-4000,0,0);
+        glColor3f(0.0f,0.0f,0.4f); //blue Z-
+        glVertex3i(0,0,0);
+        glVertex3i(0,0,-4000);
+        glEnd();
+    }
+
+
+
+    /// HUD
+    if (g_bRenderHUD)
+    {
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glLoadIdentity();
+
+        glOrtho(0, g_nWinWidth, 0, g_nWinHeight, -1.0f, 1.0f);
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+
+        //glDisable(GL_DEPTH_TEST);
+
+        int nCurrentY = g_nWinHeight;
+
+        glColor3f(FONT_HUD_COLOR);
+        glPrintf(5, nCurrentY -= (5 + FONT_HUD_HEIGHT), g_nFontHUD, "FPS: %.1f", g_fFPS);
+        VECTOR3D pos = g_camera.GetPosition();
+        glPrintf(5, nCurrentY -= (5 + FONT_HUD_HEIGHT), g_nFontHUD, "Cam pos: %.1fx %.1fy %.1fz", pos.x, pos.y, pos.z);
+        VECTOR2D view = g_camera.GetViewAngles();
+        glPrintf(5, nCurrentY -= (5 + FONT_HUD_HEIGHT), g_nFontHUD, "Cam view: %.1f°pitch %.1f°yaw", view.x, view.y);
+
+        //glEnable(GL_DEPTH_TEST);
+
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+
+    }
+
     return true;										// Everything Went OK
 }
 
-GLvoid KillGLWindow()								// Properly Kill The Window
+void KillGLWindow()								// Properly Kill The Window
 {
     g_bsp.Destroy();
 
@@ -256,7 +329,7 @@ GLvoid KillGLWindow()								// Properly Kill The Window
  *	bits			- Number Of Bits To Use For Color (8/16/24/32)			*
  *	fullscreenflag	- Use Fullscreen Mode (true) Or Windowed Mode (false)	*/
 
-BOOL CreateGLWindow(char* szTitle, int nWidth, int nHeight, int bits)
+bool CreateGLWindow(const char* szTitle, int nWidth, int nHeight, int bits)
 {
     InitTimer();
     LOG("##### Initialization #####\n");
@@ -328,13 +401,13 @@ BOOL CreateGLWindow(char* szTitle, int nWidth, int nHeight, int bits)
 
     // Create The Window
     LOG("Creating window ...\n");
-    if (!(g_hWnd=CreateWindowEx( dwExStyle,							// Extended Style For The Window
+    if (!(g_hWnd = CreateWindowEx( dwExStyle,							// Extended Style For The Window
                                  WINDOW_CLASS_NAME,					// Class Name
                                  szTitle,							// Window Title
                                  dwStyle |							// Defined Window Style
                                  WS_CLIPSIBLINGS |					// Required Window Style
                                  WS_CLIPCHILDREN,					// Required Window Style
-                                 0, 0,								// Window Position
+                                 CW_USEDEFAULT, CW_USEDEFAULT,		// Window Position
                                  WindowRect.right-WindowRect.left,	// Calculate Window Width
                                  WindowRect.bottom-WindowRect.top,	// Calculate Window nHeight
                                  NULL,								// No Parent Window
@@ -484,6 +557,33 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 // Recreate Our OpenGL Window
                 if (!CreateGLWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, 32))
                     PostQuitMessage(0);						// Quit If Window Was Not Created
+                break;
+            case VK_F5:
+            {
+                IMAGE* pImg = CreateImage(3, g_nWinWidth, g_nWinHeight);
+                glReadPixels(0, 0, pImg->nWidth, pImg->nHeight, GL_RGB, GL_UNSIGNED_BYTE, pImg->pData);
+
+                //get filename
+                char szFileName[512];
+
+                for (int i=1;;i++)
+                {
+                    sprintf(szFileName, "screenshots/Screenshot%d.bmp", i);
+                    FILE* pFile;
+                    if ((pFile = fopen(szFileName, "rb")) == NULL)
+                        break;
+                    fclose(pFile);
+                }
+
+                SaveBMP(pImg, szFileName);
+                FreeImagePointer(pImg);
+                break;
+            }
+            case 'C':
+                g_bRenderCoords = !g_bRenderCoords;
+                break;
+            case 'H':
+                g_bRenderHUD = !g_bRenderHUD;
                 break;
             case 'L':
                 g_bLightmaps = !g_bLightmaps;

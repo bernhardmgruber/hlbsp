@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define EPSILON 0.001f
+
 // structure for a float double
 typedef struct _VECTOR2D
 {
@@ -25,5 +27,6 @@ VECTOR3D Normalize(VECTOR3D v);                                 // Returns the n
 float DotProduct(VECTOR3D v1, VECTOR3D v2);                     // Returns the dot product of the two vectors given
 VECTOR3D CrossProduct(VECTOR3D v1, VECTOR3D v2);                // Returns the cross product vector of the two vectors given
 bool PointInBox(VECTOR3D vPoint, int16_t vMin[3], int16_t vMax[3]); // Returns a bool spezifing whether or not a point is in the defined box
+bool PointInPlane(VECTOR3D vPoint, VECTOR3D vNormal, float fDist);
 
 #endif

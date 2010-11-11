@@ -3,21 +3,6 @@
 
 #include <windows.h> // optional, for portability, need for gltexldr.h
 
-#ifndef _WINDOWS_H
-#ifndef BYTE
-#define BYTE  unsigned char  // 8 bit memory, unsigned
-#endif
-#ifndef WORD
-#define WORD  unsigned short //16 bit memory, unsigned
-#endif
-#ifndef DWORD
-#define DWORD unsigned long //32 bit memory, unsigned
-#endif
-#ifndef LONG
-#define LONG  long  //32 bit memory, signed
-#endif
-#endif // _WINDOWS_H
-
 #ifndef STRUCT_IMAGE
 #define STRUCT_IMAGE
 typedef struct _IMAGE
@@ -35,9 +20,7 @@ bool GetPixel(IMAGE* pImg, WORD x, WORD y, BYTE* pRed, BYTE* pGreen, BYTE* pBlue
 bool SetPixel(IMAGE* pImg, WORD x, WORD y, BYTE red, BYTE green, BYTE blue, BYTE alpha); //if channels is 3, alpha is ignored
 
 IMAGE* LoadTGA(const char* szFileName);
-#ifdef _WINDOWS_H
 IMAGE* LoadBMP(const char* szFileName, bool bFromResource);
-#endif // _WINDOWS_H
 
 bool SaveBMP(IMAGE* pImg, const char* szFileName); //Saves an image to a BMP File
 bool SaveTGA(IMAGE* pImg, const char* szFileName); //Saves an image to a TGA File

@@ -8,38 +8,6 @@
 #define TGA_A		 3		// This tells us it's a ALPHA file
 #define TGA_RLE		10		// This tells us that the targa is Run-Length Encoded (RLE)
 
-#ifndef _WINDOWS_H
-
-#define LOBYTE(w)	((BYTE)(w))
-#define HIBYTE(w)	((BYTE)(((WORD)(w)>>8)&0xFF))
-
-#pragma pack(push,2)
-typedef struct _BITMAPFILEHEADER
-{
-	WORD	bfType;
-	DWORD	bfSize;
-	WORD	bfReserved1;
-	WORD	bfReserved2;
-	DWORD	bfOffBits;
-} BITMAPFILEHEADER;
-#pragma pack(pop)
-
-typedef struct _BITMAPINFOHEADER
-{
-	DWORD	biSize;
-	LONG	biWidth;
-	LONG	biHeight;
-	WORD	biPlanes;
-	WORD	biBitCount;
-	DWORD	biCompression;
-	DWORD	biSizeImage;
-	LONG	biXPelsPerMeter;
-	LONG	biYPelsPerMeter;
-	DWORD	biClrUsed;
-	DWORD	biClrImportant;
-} BITMAPINFOHEADER;
-#endif // _WINDOWS_H
-
 IMAGE* CreateImage(BYTE nChannels, WORD nWidth, WORD nHeight)
 {
     if(nChannels != 3 && nChannels != 4)

@@ -21,6 +21,13 @@ typedef struct _BSPFACETEXCOORDS
     BSPTEXCOORDS* pLightmapCoords; // Stores lightmap coordinates
 } BSPFACETEXCOORDS;
 
+typedef struct _DECAL
+{
+    GLuint nTex;
+    VECTOR3D vNormal;
+    VECTOR3D vec[4];
+} DECAL;
+
 class CBSP
 {
 public:
@@ -28,9 +35,9 @@ public:
     CBSP();  //ctor
     ~CBSP(); //dtor
 
-    bool LoadBSPFile(char* pszFileName);                  // Loads the entire BSP file into memory
+    bool LoadBSPFile(const char* pszFileName);                  // Loads the entire BSP file into memory
     void RenderLevel(VECTOR3D vPos);                      // Renders the complete BSP tree
-    CEntity* FindEntity(const char* pszClassName);        // Returns the entity with the given name
+    CEntity* FindEntity(const char* pszNewClassName);        // Returns the entity with the given name
     void Destroy();                                       // Unloads the complete BSP tree and frees all allocated memory
 
 private:
@@ -48,6 +55,7 @@ private:
     int nBrushEntities;   // Number of brush entities
     int nSpecialEntities; // Number of special entities
     int nWadFiles;        // Number of WAD files
+    int nDecals;
 
     BSPHEADER         header;             // Stores the header
     BSPVERTEX*        pVertices;          // Stores the vertices
@@ -69,6 +77,8 @@ private:
     CEntity**                  ppBrushEntities;    // Pointers to brush entities in *pEntities
     CEntity**                  ppSpecialEntities;  // Pointers to special entities in *pEntities
     CWAD*                      pWadFiles;          // Wad files used for texture loading
+    CWAD*                      pDecalWads;
+    DECAL*                     pDecals;
     bool**                     ppbVisLists;        // Stores the vis lists for all faces
     int                        nVisLeafs;          // Number of Leafs the player can walk in (needs PVS)
 
@@ -83,6 +93,8 @@ private:
     void UnloadWadFiles();                               // Unloads all wad files and frees allocated memory
     void LoadTextures(FILE* pFile);                      // Loads the textures either from the wad file or directly from the bsp file
     MIPTEXTURE* LoadTextureFromWad(const char* pszName); // Finds and loads a texture from a wad file by the given name
+    MIPTEXTURE* LoadDecalTexture(const char* pszName);
+    void LoadDecals();
     void LoadLightMaps(unsigned char* pLightMapData);    // Loads lightmaps and calculates extends and coordinates
 
     void ParseEntities(const char* pszEntities); // Parses the entity lump of the bsp file into single entity classes
@@ -98,5 +110,6 @@ private:
     void RenderLeaf(int iLeaf);                             // Renders a leaf of the BSP tree by rendering each face of the leaf by the given index
     void RenderBSP(int iNode, int iLeaf, VECTOR3D vPos);    // Recursively walks through the BSP tree and draws it
     void RenderBrushEntity(int iEntity, VECTOR3D vPos);     // Renders a brush entity by rendering each face of the associated model by the given index
+    void RenderDecals();
 };
 #endif // BSPLOADER_H_INCLUDED

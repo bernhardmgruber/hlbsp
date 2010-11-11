@@ -17,6 +17,8 @@ CEntity::~CEntity()
         free(properties[i].pszName);
         free(properties[i].pszValue);
     }
+
+    free(properties);
 }
 
 void CEntity::ParseProperties(const char* pszProperties)

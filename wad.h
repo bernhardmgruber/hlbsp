@@ -39,6 +39,7 @@ class CWAD
 
         bool Open(const char* pszFilename);                                           // Opens a WAD File and loads it's directory for texture searching
         MIPTEXTURE* LoadTexture(const char * pszTexName);                             // Finds and loads a texture by the given name
+        MIPTEXTURE* LoadDecalTexture(const char* pszTexName);
         void CreateMipTexture(const unsigned char* pRawTexture, MIPTEXTURE* pMipTex); // Creates a Miptexture out of the raw texture data
         void Close();                                                                 // Closes the WAD file and frees all allocated memory
 
@@ -49,6 +50,8 @@ class CWAD
 
         bool LoadDirectory();                  // Loads the directory of the WAD file for further texture finding
         int  FindTexture(const char* pszName); // Finds a texture in the WAD file and returns the directory index
+        unsigned char* GetTexture(const char* pszTexName);
+        void CreateDecalTexture(const unsigned char* pRawTexture, MIPTEXTURE* pMipTex);
         void ApplyAlphaSections(IMAGE* pTex);  // Sets the blue pixels to alpha and colors them a bit for later linear filtering
 };
 

@@ -11,6 +11,8 @@
 #define WAD_DIR "data\\wads"
 #define SKY_DIR "data\\textures\\sky"
 
+#define DECAL_WAD_COUNT 2
+
 #define RENDER_MODE_NORMAL   0
 #define RENDER_MODE_COLOR    1
 #define RENDER_MODE_TEXTURE  2
@@ -227,7 +229,9 @@ bool CBSP::LoadWadFiles(const char* pszWadstr)
 
         bool bFirst = true;
         for(unsigned int i=strlen(pch)-1;i<strlen(pch);i--)
+        {
             if(pch[i] == '\\')
+            {
                 if(bFirst)
                     bFirst = false;
                 else
@@ -235,6 +239,8 @@ bool CBSP::LoadWadFiles(const char* pszWadstr)
                     pch = pch + i;
                     break;
                 }
+            }
+        }
 
         strcat(path, pch);
 
@@ -263,9 +269,9 @@ bool CBSP::LoadWadFiles(const char* pszWadstr)
 void CBSP::UnloadWadFiles()
 {
     for (int i=0;i<nWadFiles;i++)
-    {
         pWadFiles[i].Close();
-    }
+
+    delete[] pWadFiles;
 }
 
 void CBSP::LoadTextures(FILE* pFile)
@@ -309,7 +315,7 @@ void CBSP::LoadTextures(FILE* pFile)
 
             FreeMipTexturePointer(pMipTex);
 
-            LOG("#%3d Loaded texture %15s from WAD file\n", i + 1, pMipTextures[i].szName);
+            //LOG("#%3d Loaded texture %15s from WAD file\n", i + 1, pMipTextures[i].szName);
         }
         else //Internal texture
         {
@@ -341,7 +347,7 @@ void CBSP::LoadTextures(FILE* pFile)
             }
             FreeMipTexture(MipTex);
 
-            LOG("#%3d Loaded texture %15s from bsp file\n", i + 1, pMipTextures[i].szName);
+            //LOG("#%3d Loaded texture %15s from bsp file\n", i + 1, pMipTextures[i].szName);
         }
     }
 
@@ -390,6 +396,150 @@ MIPTEXTURE* CBSP::LoadTextureFromWad(const char* pszName)
     }
 
     return NULL;
+}
+
+MIPTEXTURE* CBSP::LoadDecalTexture(const char* pszName)
+{
+    for (int i=0;i<DECAL_WAD_COUNT;i++)
+    {
+        MIPTEXTURE* pMipMapTex = pDecalWads[i].LoadDecalTexture(pszName);
+        if (pMipMapTex != NULL)
+            return pMipMapTex;
+    }
+
+    return NULL;
+}
+
+void CBSP::LoadDecals()
+{
+    // Load Decal WADs
+    pDecalWads = new CWAD[DECAL_WAD_COUNT];
+
+    pDecalWads[0].Open(WAD_DIR "\\valve\\decals.wad");
+    pDecalWads[1].Open(WAD_DIR "\\cstrike\\decals.wad");
+
+    // Count decals
+    nDecals = 0;
+
+    CEntity* pEnt = FindEntity("infodecal");
+    do
+        nDecals++;
+    while((pEnt = FindEntity(NULL)));
+
+    // Allocate new decals
+    pDecals = (DECAL*) MALLOC(sizeof(DECAL) * nDecals);
+
+    // Process each decal
+    pEnt = FindEntity("infodecal");
+    for(int i=0;i<nDecals;i++)
+    {
+        const char* pszOrigin = pEnt->FindProperty("origin");
+        if(pszOrigin != NULL)
+        {
+            int x, y, z;
+            sscanf(pszOrigin, "%d %d %d", &x, &y, &z);
+
+            VECTOR3D vOrigin;
+            vOrigin.x = x;
+            vOrigin.y = y;
+            vOrigin.z = z;
+
+            // Find leaf
+            int iLeaf = TraverseBSPTree(vOrigin, 0);
+            if(iLeaf == -1)
+            {
+                LOG("ERROR finding decal leaf\n");
+                continue;
+            }
+
+            // Loop through each face in this leaf
+            for (int j=0; j<pLeafs[iLeaf].nMarkSurfaces; j++)
+            {
+                // Find face
+                int iFace = pMarkSurfaces[pLeafs[iLeaf].iFirstMarkSurface + j];
+
+                // Find normal
+                VECTOR3D normal = pPlanes[pFaces[iFace].iPlane].vNormal;
+
+                // Find a vertex on the face
+                VECTOR3D vertex;
+                int iEdge = pSurfEdges[pFaces[iFace].iFirstEdge]; // This gives the index into the edge lump
+
+                if (iEdge > 0)
+                {
+                    vertex = pVertices[pEdges[iEdge].iVertex[0]];
+                }
+                else
+                {
+                    iEdge *= -1;
+                    vertex = pVertices[pEdges[iEdge].iVertex[1]];
+                }
+
+                // Check if decal origin is in this face
+                if(PointInPlane(vOrigin, normal, DotProduct(normal, vertex)))
+                {
+                    GLuint texID;
+
+                    glGenTextures(1, &texID);
+
+                    const char* pszTexName = pEnt->FindProperty("texture");
+                    if(!pszTexName)
+                    {
+                        LOG("ERROR retrieving texture name from decal\n");
+                        continue;
+                    }
+                    // TODO: Share textures between decals
+                    MIPTEXTURE* pMipTex = LoadDecalTexture(pszTexName);
+                    if (!pMipTex)
+                    {
+                        LOG("#%3d ERROR loading texture %s\n", i + 1, pszTexName);
+                        continue;
+                    }
+
+                    // Bind the texture
+                    glBindTexture(GL_TEXTURE_2D, texID);
+
+                    // Set up Texture Filtering Parameters
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPLEVELS - 1);
+
+                    for (int k=0;k<MIPLEVELS;k++)
+                    {
+                        AdjustTextureToPowerOfTwo(&pMipTex->Img[k]);
+                        glTexImage2D(GL_TEXTURE_2D, k, GL_RGBA, pMipTex->Img[k].nWidth, pMipTex->Img[k].nHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pMipTex->Img[k].pData);
+                    }
+
+                    // Decal size
+                    int width = pMipTex->Img[0].nWidth;
+                    int height = pMipTex->Img[0].nHeight;
+
+                    FreeMipTexturePointer(pMipTex);
+
+                    LOG("#%3d Loaded texture %15s from WAD file\n", i + 1, pszTexName);
+
+                    int h2 = height / 2;
+                    int w2 = width / 2;
+
+                    VECTOR3D vS = pTextureInfos[pFaces[iFace].iTextureInfo].vS;
+                    VECTOR3D vT = pTextureInfos[pFaces[iFace].iTextureInfo].vT;
+
+                    pDecals[i].vNormal = normal;
+                    pDecals[i].nTex = texID;
+
+                    pDecals[i].vec[0] = vOrigin - vT * h2 - vS * w2;
+                    pDecals[i].vec[1] = vOrigin - vT * h2 + vS * w2;
+                    pDecals[i].vec[2] = vOrigin + vT * h2 + vS * w2;
+                    pDecals[i].vec[3] = vOrigin + vT * h2 - vS * w2;
+
+                    break;
+                }
+            }
+
+        }
+
+        pEnt = FindEntity(NULL);
+    }
 }
 
 void CBSP::LoadLightMaps(unsigned char* pLightMapData)
@@ -494,7 +644,8 @@ void CBSP::LoadLightMaps(unsigned char* pLightMapData)
 
             FreeImagePointer(pImg);
 
-            LOG("#%4d Loaded lightmap %2d x %2d\n", ++nLoadedLightmaps, nWidth, nHeight);
+            nLoadedLightmaps++;
+            //LOG("#%4d Loaded lightmap %2d x %2d\n", nLoadedLightmaps, nWidth, nHeight);
 
             //lm data diff
             /*unsigned int nNextOffset = 0xFFFFFFFF;
@@ -947,6 +1098,37 @@ void CBSP::RenderBrushEntity(int iEntity, VECTOR3D vPos)
     glPopMatrix();
 }
 
+void CBSP::RenderDecals()
+{
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(0.0f,-2.0f);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for(int i=0;i<nDecals;i++)
+    {
+        glBindTexture(GL_TEXTURE_2D, pDecals[i].nTex);
+
+        glBegin(GL_TRIANGLE_FAN);
+            glTexCoord2f(0,0);
+            glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
+            glVertex3f(pDecals[i].vec[0].x, pDecals[i].vec[0].y, pDecals[i].vec[0].z);
+            glTexCoord2f(1,0);
+            glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
+            glVertex3f(pDecals[i].vec[1].x, pDecals[i].vec[1].y, pDecals[i].vec[1].z);
+            glTexCoord2f(1,1);
+            glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
+            glVertex3f(pDecals[i].vec[2].x, pDecals[i].vec[2].y, pDecals[i].vec[2].z);
+            glTexCoord2f(0,1);
+            glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
+            glVertex3f(pDecals[i].vec[3].x, pDecals[i].vec[3].y, pDecals[i].vec[3].z);
+        glEnd();
+    }
+
+    glDisable(GL_BLEND);
+    glDisable(GL_POLYGON_OFFSET_FILL);
+}
+
 /**
  *============================================================================================
  *                                        PUBLIC
@@ -986,7 +1168,7 @@ CBSP::~CBSP()
     Destroy();
 }
 
-bool CBSP::LoadBSPFile(char* pszFileName)
+bool CBSP::LoadBSPFile(const char* pszFileName)
 {
     LOG("LOADING BSP FILE: %s\n", strrchr(pszFileName, '\\') + 1);
 
@@ -1180,6 +1362,14 @@ bool CBSP::LoadBSPFile(char* pszFileName)
     }
 
     // ===========================
+    // Decal Operations
+    // ===========================
+
+    LOG("Loading decals ...\n");
+    LoadDecals();
+    LOG("Loaded %d decals\n", nDecals);
+
+    // ===========================
     // Skybox Operations
     // ===========================
 
@@ -1208,12 +1398,12 @@ bool CBSP::LoadBSPFile(char* pszFileName)
         ppbVisLists = (bool**) MALLOC(sizeof(bool*) * nVisLeafs); // DO NOT MOVE THIS LINE Memory Bug
         //memset(ppbVisLists, 0, sizeof(bool*) * nVisLeafs);
 
-        for (int i=1;i<=nVisLeafs;i++)
+        for (int i=0;i<nVisLeafs;i++)
         {
-            if (pLeafs[i].nVisOffset >= 0)
-                ppbVisLists[i-1] = GetPVS(i, pVisList);
+            if (pLeafs[i+1].nVisOffset >= 0)
+                ppbVisLists[i] = GetPVS(i+1, pVisList);
             else
-                ppbVisLists[i-1] = NULL;
+                ppbVisLists[i] = NULL;
         }
 
         free(pVisList);
@@ -1269,6 +1459,9 @@ void CBSP::RenderLevel(VECTOR3D vPos)
         for (int i=0;i<nBrushEntities;i++) //TODO: implement PVS for pEntities
             RenderBrushEntity(i, vPos);
 
+    /** RENDER DECALS **/
+    RenderDecals();
+
     /** FINALIZE **/
     if (g_bTextures)
     {
@@ -1285,10 +1478,19 @@ void CBSP::RenderLevel(VECTOR3D vPos)
     glDisable(GL_DEPTH_TEST);
 }
 
-// TODO: This will need to be modified later when there are more then one of the same type
-CEntity* CBSP::FindEntity(const char* pszClassName)
+CEntity* CBSP::FindEntity(const char* pszNewClassName)
 {
-    for (int i=0; i<nEntities; ++i)
+    static int i;
+    static const char* pszClassName;
+    if(pszNewClassName == NULL)
+        i++;
+    else
+    {
+        i = 0;
+        pszClassName = pszNewClassName;
+    }
+
+    for (; i<nEntities; i++)
     {
         const char* szClass = pEntities[i].FindProperty("classname");
         if(szClass == NULL)
@@ -1336,6 +1538,16 @@ void CBSP::Destroy()
 
         free(pnLightmapLookUp);
         pnLightmapLookUp = NULL;
+    }
+
+    // decals
+    if(pDecalWads)
+    {
+        for(int i=0;i<DECAL_WAD_COUNT;i++)
+            pDecalWads[i].Close();
+
+        delete[] pDecalWads;
+        pDecalWads = NULL;
     }
 
     //displaylists

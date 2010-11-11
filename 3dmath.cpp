@@ -80,3 +80,11 @@ bool PointInBox(VECTOR3D vPoint, int16_t vMin[3], int16_t vMax[3])
     else
         return false;
 }
+
+bool PointInPlane(VECTOR3D vPoint, VECTOR3D vNormal, float fDist)
+{
+    if(fabs(DotProduct(vPoint, vNormal) - fDist) < EPSILON)
+        return true;
+    else
+        return false;
+}

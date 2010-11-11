@@ -47,29 +47,30 @@ void CWAD::Close()
 
 MIPTEXTURE* CWAD::LoadTexture(const char * pszTexName)
 {
-    // Get texture offset from the WAD directory
-    int iDir = FindTexture(pszTexName);
-    if (iDir < 0)
-        return NULL;
-
-    // We are assuming all WAD textures are not compressed
-    if (pDirEntries[iDir].bCompression != 0)
-    {
-        LOG("WAD Texture cannot be loaded. Cannot read compressed items.\n");
-        return NULL;
-    }
-
-    size_t nTexSize = pDirEntries[iDir].nSize;
-    unsigned char * wadtexdata = (unsigned char*) MALLOC(nTexSize * sizeof(unsigned char));
-
-    fseek(pWadFile, pDirEntries[iDir].nFilePos, SEEK_SET);
-    fread(wadtexdata, sizeof(unsigned char), nTexSize, pWadFile);
-
     MIPTEXTURE* pMipMapTexture = (MIPTEXTURE*) MALLOC(sizeof(MIPTEXTURE));
 
-    CreateMipTexture(wadtexdata, pMipMapTexture);
+    unsigned char* pRawTex = GetTexture(pszTexName);
+    if(!pRawTex)
+        return NULL;
 
-    free(wadtexdata);
+    CreateMipTexture(pRawTex, pMipMapTexture);
+
+    free(pRawTex);
+
+    return pMipMapTexture;
+}
+
+MIPTEXTURE* CWAD::LoadDecalTexture(const char* pszTexName)
+{
+    MIPTEXTURE* pMipMapTexture = (MIPTEXTURE*) MALLOC(sizeof(MIPTEXTURE));
+
+    unsigned char* pRawTex = GetTexture(pszTexName);
+    if(!pRawTex)
+        return NULL;
+
+    CreateDecalTexture(pRawTex, pMipMapTexture);
+
+    free(pRawTex);
 
     return pMipMapTexture;
 }
@@ -137,6 +138,29 @@ int CWAD::FindTexture(const char * pszName)
     return nDirIndex;
 }
 
+unsigned char* CWAD::GetTexture(const char* pszTexName)
+{
+    // Get texture offset from the WAD directory
+    int iDir = FindTexture(pszTexName);
+    if (iDir < 0)
+        return NULL;
+
+    // We are assuming all WAD textures are not compressed
+    if (pDirEntries[iDir].bCompression != 0)
+    {
+        LOG("WAD texture cannot be loaded. Cannot read compressed items.\n");
+        return NULL;
+    }
+
+    size_t nTexSize = pDirEntries[iDir].nSize;
+    unsigned char * wadtexdata = (unsigned char*) MALLOC(nTexSize * sizeof(unsigned char));
+
+    fseek(pWadFile, pDirEntries[iDir].nFilePos, SEEK_SET);
+    fread(wadtexdata, sizeof(unsigned char), nTexSize, pWadFile);
+
+    return wadtexdata;
+}
+
 void CWAD::CreateMipTexture(const unsigned char* pRawTexture, MIPTEXTURE* pMipTex)
 {
     BSPMIPTEX * pRawMipTex = (BSPMIPTEX*) pRawTexture;
@@ -160,6 +184,45 @@ void CWAD::CreateMipTexture(const unsigned char* pRawTexture, MIPTEXTURE* pMipTe
                 pRGBATexture[j * 4 + 1] = pRGBPalette[nPalIndex + 1];
                 pRGBATexture[j * 4 + 2] = pRGBPalette[nPalIndex + 2];
                 pRGBATexture[j * 4 + 3] = 255; //every pixel is totally opaque
+        }
+
+        pMipTex->Img[i].nChannels = 4;
+        pMipTex->Img[i].nWidth =  nWidth;
+        pMipTex->Img[i].nHeight = nHeight;
+        pMipTex->Img[i].pData = pRGBATexture;
+
+        ApplyAlphaSections(&pMipTex->Img[i]);
+
+        nWidth >>= 1;
+        nHeight >>= 1;
+    }
+}
+
+void CWAD::CreateDecalTexture(const unsigned char* pRawTexture, MIPTEXTURE* pMipTex)
+{
+    BSPMIPTEX * pRawMipTex = (BSPMIPTEX*) pRawTexture;
+
+    int nWidth = pRawMipTex->nWidth;
+    int nHeight = pRawMipTex->nHeight;
+    int nRGBPalIndex = pRawMipTex->nOffsets[3] + ((nWidth / 8) * (nHeight / 8)) + 2;
+    const unsigned char * pRGBPalette = &(pRawTexture[nRGBPalIndex]);
+
+    for (int i=0;i<MIPLEVELS;i++)
+    {
+        const unsigned char * pPalTexture = &(pRawTexture[pRawMipTex->nOffsets[i]]);
+
+        const unsigned char* pColor = pRGBPalette + 255 * 3;
+
+        unsigned char * pRGBATexture = (unsigned char*) MALLOC(nWidth * nHeight * 4 * sizeof(unsigned char));
+
+        for (int j=0; j<nHeight * nWidth; j++)
+        {
+                int nPalIndex = pPalTexture[j] * 3;
+
+                pRGBATexture[j * 4]     = pColor[0];
+                pRGBATexture[j * 4 + 1] = pColor[1];
+                pRGBATexture[j * 4 + 2] = pColor[2];
+                pRGBATexture[j * 4 + 3] = 255 - pRGBPalette[nPalIndex];
         }
 
         pMipTex->Img[i].nChannels = 4;
