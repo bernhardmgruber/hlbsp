@@ -11,6 +11,7 @@
 #include "timer.h"
 #include "inline.h"
 #include "font.h"
+#include "glsl.h"
 
 #define WINDOW_CLASS_NAME "hlbsp"
 #define WINDOW_TITLE "HL BSP"
@@ -50,6 +51,11 @@ bool g_bRenderBrushEntities = true;
 bool g_bRenderSkybox = true;
 bool g_bRenderCoords = false;
 bool g_bRenderHUD = true;
+
+bool g_bShaderSupport;
+bool g_bNightvision = false;
+bool g_bFlashlight = false;
+GLuint g_shpMain;
 
 bool g_bTexNPO2Support;
 
@@ -154,6 +160,64 @@ int InitGL()										// All Setup For OpenGL Goes Here
     if (!g_bsp.LoadBSPFile(BSP_DIR "\\" BSP_FILE_NAME))
         return false;
 
+    // Shader
+    LOG("Checking GLSL shader support ...\n");
+    if (!glslCheckSupport())
+    {
+        MSGBOX_WARNING("GLSL shaders are not supported. Several features will not be available.");
+        g_bShaderSupport = false;
+    }
+    else
+    {
+        if (!glslInitProcs())
+        {
+            MSGBOX_ERROR("Error retrieving shader function pointers");
+            return false;
+        }
+        g_bShaderSupport = true;
+    }
+
+    if (g_bShaderSupport)
+    {
+        LOG("Loading shaders ...\n");
+        GLuint vsMain = glCreateShader(GL_VERTEX_SHADER);
+        GLuint fsMain = glCreateShader(GL_FRAGMENT_SHADER);
+
+        if (!glslShaderSourceFile(vsMain, "shader/main.vert"))
+            return false;
+        if (!glslShaderSourceFile(fsMain, "shader/main.frag"))
+            return false;
+
+        glCompileShader(vsMain);
+        glCompileShader(fsMain);
+
+        //PROGRAM
+        g_shpMain = glCreateProgram();
+        glAttachShader(g_shpMain, vsMain);
+        glAttachShader(g_shpMain, fsMain);
+
+        glLinkProgram(g_shpMain);
+
+        //LOG("Program Info Log:\n");
+        glslPrintProgramInfoLog(g_shpMain);
+    }
+
+    // lighting for compelex flashlight
+    glEnable(GL_LIGHT0);
+
+    // set light position
+    GLfloat lightPos[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
+
+    // set spot light parameters
+    GLfloat spotDir[] = {0.0f, 0.0f, -1.0f};            	// define spot direction
+    glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spotDir);
+    glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 25.0f);    	// set cutoff angle
+    glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 1.0f);   	// set focusing strength
+    glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.0f);
+    glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.0f);
+    glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0001f);
+
     // Get the players start pos
     LOG("Setting start position and angles...\n");
     CEntity* info_player_start = g_bsp.FindEntity("info_player_start");
@@ -197,10 +261,27 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     g_camera.UpdateView(g_dFrameInterval);
     g_camera.Look();
 
+    // Enable Shader
+    if ((g_bNightvision || g_bFlashlight) && g_bShaderSupport)
+    {
+        glUseProgram(g_shpMain);
+
+        glUniform1i(glGetUniformLocation(g_shpMain, "tex1"), 0);
+        glUniform1i(glGetUniformLocation(g_shpMain, "tex2"), 1);
+        glUniform1i(glGetUniformLocation(g_shpMain, "bNightvision"), g_bNightvision);
+        glUniform1i(glGetUniformLocation(g_shpMain, "bFlashlight"), g_bFlashlight);
+    }
+
     g_bsp.RenderLevel(g_camera.GetPosition());
 
+    // Disable Shader
+    if ((g_bNightvision || g_bFlashlight) && g_bShaderSupport)
+    {
+        glUseProgram(0);
+    }
+
     /// Brightness
-    glPushMatrix();
+    /*glPushMatrix();
     glLoadIdentity();
 
     glEnable(GL_BLEND);
@@ -213,7 +294,7 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     glVertex3f( 15.0f, -15.0f, -17.0f);
     glEnd();
     glDisable(GL_BLEND);
-    glPopMatrix();
+    glPopMatrix();*/
 
     if (g_bRenderCoords)
     {
@@ -588,6 +669,9 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             case 'L':
                 g_bLightmaps = !g_bLightmaps;
                 break;
+            case 'N':
+                g_bNightvision = !g_bNightvision;
+                break;
             case 'T':
                 g_bTextures = !g_bTextures;
                 break;
@@ -597,6 +681,9 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 else
                     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                break;
+            case 'V':
+                g_bFlashlight = !g_bFlashlight;
                 break;
             case '1':
                 g_bRenderSkybox = !g_bRenderSkybox;

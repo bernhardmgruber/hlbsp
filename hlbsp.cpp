@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-
+#include "glsl.h"
 #include "inline.h"
 
 #define WAD_DIR "data\\wads"
@@ -32,6 +32,11 @@ extern unsigned int g_nWinWidth;
 extern unsigned int g_nWinHeight;
 
 extern bool g_bTexNPO2Support;
+
+extern bool g_bShaderSupport;
+extern bool g_bNightvision;
+extern bool g_bFlashlight;
+extern GLuint g_shpMain;
 
 /**
  *============================================================================================
@@ -1457,6 +1462,9 @@ bool CBSP::LoadBSPFile(const char* pszFileName)
 
 void CBSP::RenderLevel(VECTOR3D vPos)
 {
+    if(g_bShaderSupport)
+        glUniform1i(glGetUniformLocation(g_shpMain, "nTextureUnits"), 1);
+
     /** RENDER SKY BOX **/
     if ((pdlSkyBox != NULL) && g_bRenderSkybox)
         RenderSkybox(vPos);
@@ -1476,6 +1484,9 @@ void CBSP::RenderLevel(VECTOR3D vPos)
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     }
 
+    if(g_bShaderSupport)
+        glUniform1i(glGetUniformLocation(g_shpMain, "nTextureUnits"), 2);
+
     glEnable(GL_DEPTH_TEST);
 
     memset(pbFacesDrawn, false, sizeof(bool) * nFaces);
@@ -1490,6 +1501,9 @@ void CBSP::RenderLevel(VECTOR3D vPos)
     if (g_bRenderBrushEntities)
         for (int i=0;i<nBrushEntities;i++) //TODO: implement PVS for pEntities
             RenderBrushEntity(i, vPos);
+
+    if(g_bShaderSupport)
+        glUniform1i(glGetUniformLocation(g_shpMain, "nTextureUnits"), 1);
 
     /** RENDER DECALS **/
     RenderDecals();

@@ -59,10 +59,11 @@ void CCamera::SetMoveSens(float fNewMoveSens)
 void CCamera::CaptureMouse(bool bCapture)
 {
     bCaptureMouse = bCapture;
-    POINT pt;
-    GetCursorPos(&pt);
+
     if(bCapture)
     {
+        POINT pt;
+        GetCursorPos(&pt);
         nMouseOriginX = pt.x;
         nMouseOriginY = pt.y;
     }
