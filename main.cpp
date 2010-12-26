@@ -27,8 +27,8 @@
 #define FONT_HUD_HEIGHT 12
 #define FONT_HUD_COLOR 1.0f ,0.0f, 0.0f
 
-PFNGLACTIVETEXTUREARBPROC   glActiveTextureARB   = NULL;
-PFNGLMULTITEXCOORD2FARBPROC glMultiTexCoord2fARB = NULL;
+PFNGLACTIVETEXTUREARBPROC   glActiveTexture   = NULL;
+PFNGLMULTITEXCOORD2FARBPROC glMultiTexCoord2f = NULL;
 
 CBSP    g_bsp;
 CCamera g_camera;
@@ -43,16 +43,18 @@ bool g_bActive = true;		// Window Active Flag Set To true By Default
 bool g_bFullscreen = true;	// Fullscreen Flag Set To Fullscreen Mode By Default
 
 bool g_bTextures = true;
-bool g_bPolygons = false;
 bool g_bLightmaps = true;
+bool g_bPolygons = false;
 
 bool g_bRenderStaticBSP = true;
 bool g_bRenderBrushEntities = true;
 bool g_bRenderSkybox = true;
+bool g_bRenderDecals = true;
 bool g_bRenderCoords = false;
 bool g_bRenderHUD = true;
 
 bool g_bShaderSupport;
+bool g_bUseShader = false;
 bool g_bNightvision = false;
 bool g_bFlashlight = false;
 GLuint g_shpMain;
@@ -133,14 +135,14 @@ int InitGL()										// All Setup For OpenGL Goes Here
     if (CheckExtension("GL_ARB_multitexture"))
     {
         // Obtain the functions entry point
-        if ((glActiveTextureARB = (PFNGLACTIVETEXTUREARBPROC) wglGetProcAddress("glActiveTextureARB")) == NULL)
+        if ((glActiveTexture = (PFNGLACTIVETEXTUREARBPROC) wglGetProcAddress("glActiveTexture")) == NULL)
         {
-            MSGBOX_ERROR("Error retrieving function pointer. glActiveTextureARB is not supported");
+            MSGBOX_ERROR("Error retrieving function pointer. glActiveTexture is not supported");
             return false;
         }
-        if ((glMultiTexCoord2fARB = (PFNGLMULTITEXCOORD2FARBPROC)wglGetProcAddress("glMultiTexCoord2fARB")) == NULL)
+        if ((glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FARBPROC)wglGetProcAddress("glMultiTexCoord2f")) == NULL)
         {
-            MSGBOX_ERROR("Error retrieving function pointer. glMultiTexCoord2fARB is not supported");
+            MSGBOX_ERROR("Error retrieving function pointer. glMultiTexCoord2f is not supported");
             return false;
         }
     }
@@ -171,8 +173,8 @@ int InitGL()										// All Setup For OpenGL Goes Here
     {
         if (!glslInitProcs())
         {
-            MSGBOX_ERROR("Error retrieving shader function pointers");
-            return false;
+            MSGBOX_ERROR("Error retrieving shader function pointers. Several features will not be available.");
+            g_bShaderSupport = false;
         }
         g_bShaderSupport = true;
     }
@@ -202,6 +204,10 @@ int InitGL()										// All Setup For OpenGL Goes Here
         glslPrintProgramInfoLog(g_shpMain);
     }
 
+    // turn off shader if not supported
+    if(!g_bShaderSupport)
+        g_bUseShader = false;
+
     // lighting for compelex flashlight
     glEnable(GL_LIGHT0);
 
@@ -214,8 +220,8 @@ int InitGL()										// All Setup For OpenGL Goes Here
     glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spotDir);
     glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 25.0f);    	// set cutoff angle
     glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 1.0f);   	// set focusing strength
-    glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.0f);
-    glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.0f);
+    glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.01f);
+    glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.01f);
     glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0001f);
 
     // Get the players start pos
@@ -262,7 +268,7 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     g_camera.Look();
 
     // Enable Shader
-    if ((g_bNightvision || g_bFlashlight) && g_bShaderSupport)
+    if (g_bUseShader)
     {
         glUseProgram(g_shpMain);
 
@@ -275,13 +281,11 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     g_bsp.RenderLevel(g_camera.GetPosition());
 
     // Disable Shader
-    if ((g_bNightvision || g_bFlashlight) && g_bShaderSupport)
-    {
+    if (g_bUseShader)
         glUseProgram(0);
-    }
 
     /// Brightness
-    /*glPushMatrix();
+    glPushMatrix();
     glLoadIdentity();
 
     glEnable(GL_BLEND);
@@ -294,7 +298,7 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     glVertex3f( 15.0f, -15.0f, -17.0f);
     glEnd();
     glDisable(GL_BLEND);
-    glPopMatrix();*/
+    glPopMatrix();
 
     if (g_bRenderCoords)
     {
@@ -639,6 +643,10 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 if (!CreateGLWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, 32))
                     PostQuitMessage(0);						// Quit If Window Was Not Created
                 break;
+            case VK_F2:
+                if(g_bShaderSupport)
+                    g_bUseShader = !g_bUseShader;
+                break;
             case VK_F5:
             {
                 IMAGE* pImg = CreateImage(3, g_nWinWidth, g_nWinHeight);
@@ -693,6 +701,9 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 break;
             case '3':
                 g_bRenderBrushEntities = !g_bRenderBrushEntities;
+                break;
+            case '4':
+                g_bRenderDecals = !g_bRenderDecals;
                 break;
         }
 

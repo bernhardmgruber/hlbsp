@@ -20,13 +20,14 @@
 #define RENDER_MODE_SOLID    4
 #define RENDER_MODE_ADDITIVE 5
 
-extern PFNGLACTIVETEXTUREARBPROC glActiveTextureARB;
-extern PFNGLMULTITEXCOORD2FARBPROC glMultiTexCoord2fARB;
+extern PFNGLACTIVETEXTUREARBPROC glActiveTexture;
+extern PFNGLMULTITEXCOORD2FARBPROC glMultiTexCoord2f;
 extern bool g_bTextures;
 extern bool g_bLightmaps;
 extern bool g_bRenderStaticBSP;
 extern bool g_bRenderBrushEntities;
 extern bool g_bRenderSkybox;
+extern bool g_bRenderDecals;
 
 extern unsigned int g_nWinWidth;
 extern unsigned int g_nWinHeight;
@@ -34,6 +35,7 @@ extern unsigned int g_nWinHeight;
 extern bool g_bTexNPO2Support;
 
 extern bool g_bShaderSupport;
+extern bool g_bUseShader;
 extern bool g_bNightvision;
 extern bool g_bFlashlight;
 extern GLuint g_shpMain;
@@ -116,10 +118,10 @@ bool CBSP::LoadSkyTextures()
     *pdlSkyBox = glGenLists(1);
     glNewList(*pdlSkyBox, GL_COMPILE);
 
+
+
     //http://enter.diehlsworld.de/ogl/skyboxartikel/skybox.htm
-    glActiveTextureARB(GL_TEXTURE0_ARB);
-    glEnable(GL_TEXTURE_2D);
-    //glDisable(GL_DEPTH_TEST);
+    glDepthMask(0); // prevent writing depth coords
 
     float fAHalf = 100; //half length of the edge of the cube
 
@@ -201,8 +203,7 @@ bool CBSP::LoadSkyTextures()
     glVertex3f(-fAHalf, -fAHalf, -fAHalf);
     glEnd();
 
-    glDisable(GL_TEXTURE_2D);
-    //glEnable(GL_DEPTH_TEST);
+    glDepthMask(1);
 
     glEndList();
 
@@ -938,24 +939,26 @@ void CBSP::RenderFace(int iFace)
     if (pFaces[iFace].nStyles[0] == 0xFF)
        return;
 
-    // If the light type is normal continue AND If the light map offset is not -1, there is a light map
-    if ((signed)pFaces[iFace].nLightmapOffset != -1 && header.lump[LUMP_LIGHTING].nLength > 0)
-    {
-        // Multi-texturing
+    // if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
+    bool bLightmapAvail = (signed)pFaces[iFace].nLightmapOffset != -1 && header.lump[LUMP_LIGHTING].nLength > 0;
 
-        // Base texture map
-        glActiveTextureARB(GL_TEXTURE0_ARB);
+    if (bLightmapAvail && g_bLightmaps && g_bTextures)
+    {
+        // We need both texture units for textures and lightmaps
+
+        // base texture
+        glActiveTexture(GL_TEXTURE0_ARB);
         glBindTexture(GL_TEXTURE_2D, pnTextureLookUp[pTextureInfos[pFaces[iFace].iTextureInfo].iMiptex]);
 
-        // Light map
-        glActiveTextureARB(GL_TEXTURE1_ARB);
+        // light map
+        glActiveTexture(GL_TEXTURE1_ARB);
         glBindTexture(GL_TEXTURE_2D, pnLightmapLookUp[iFace]);
 
         glBegin(GL_TRIANGLE_FAN);
         for (int i=0; i<pFaces[iFace].nEdges; i++)
         {
-            glMultiTexCoord2fARB(GL_TEXTURE0_ARB, pFaceTexCoords[iFace].pTexCoords[i].fS, pFaceTexCoords[iFace].pTexCoords[i].fT);
-            glMultiTexCoord2fARB(GL_TEXTURE1_ARB, pFaceTexCoords[iFace].pLightmapCoords[i].fS, pFaceTexCoords[iFace].pLightmapCoords[i].fT);
+            glMultiTexCoord2f(GL_TEXTURE0_ARB, pFaceTexCoords[iFace].pTexCoords[i].fS, pFaceTexCoords[iFace].pTexCoords[i].fT);
+            glMultiTexCoord2f(GL_TEXTURE1_ARB, pFaceTexCoords[iFace].pLightmapCoords[i].fS, pFaceTexCoords[iFace].pLightmapCoords[i].fT);
 
             // normal
             VECTOR3D vNormal = pPlanes[pFaces[iFace].iPlane].vNormal;
@@ -979,14 +982,21 @@ void CBSP::RenderFace(int iFace)
     }
     else
     {
-        // There is no lightmap
-        glActiveTextureARB(GL_TEXTURE0_ARB);
-        glBindTexture(GL_TEXTURE_2D, pnTextureLookUp[pTextureInfos[pFaces[iFace].iTextureInfo].iMiptex]);
+        // We need one texture unit for either textures or lightmaps
+        glActiveTexture(GL_TEXTURE0_ARB);
+
+        if(g_bLightmaps)
+            glBindTexture(GL_TEXTURE_2D, pnLightmapLookUp[iFace]);
+        else
+            glBindTexture(GL_TEXTURE_2D, pnTextureLookUp[pTextureInfos[pFaces[iFace].iTextureInfo].iMiptex]);
 
         glBegin(GL_TRIANGLE_FAN);
         for (int i=0; i<pFaces[iFace].nEdges; i++)
         {
-            glTexCoord2f(pFaceTexCoords[iFace].pTexCoords[i].fS, pFaceTexCoords[iFace].pTexCoords[i].fT);
+            if(g_bLightmaps)
+                glTexCoord2f(pFaceTexCoords[iFace].pLightmapCoords[i].fS, pFaceTexCoords[iFace].pLightmapCoords[i].fT);
+            else
+                glTexCoord2f(pFaceTexCoords[iFace].pTexCoords[i].fS, pFaceTexCoords[iFace].pTexCoords[i].fT);
 
             // normal
             VECTOR3D vNormal = pPlanes[pFaces[iFace].iPlane].vNormal;
@@ -1095,7 +1105,7 @@ void CBSP::RenderBrushEntity(int iEntity, VECTOR3D vPos)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE);
         glDepthMask(false);
 
-        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glActiveTexture(GL_TEXTURE0_ARB);
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
         break;
     case RENDER_MODE_SOLID:
@@ -1108,7 +1118,7 @@ void CBSP::RenderBrushEntity(int iEntity, VECTOR3D vPos)
         glBlendFunc(GL_ONE, GL_ONE);
         glDepthMask(false);
 
-        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glActiveTexture(GL_TEXTURE0_ARB);
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
         break;
     }
@@ -1125,7 +1135,7 @@ void CBSP::RenderBrushEntity(int iEntity, VECTOR3D vPos)
         glDisable(GL_BLEND);
         glDepthMask(true);
 
-        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glActiveTexture(GL_TEXTURE0_ARB);
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
         break;
     case RENDER_MODE_SOLID:
@@ -1462,30 +1472,48 @@ bool CBSP::LoadBSPFile(const char* pszFileName)
 
 void CBSP::RenderLevel(VECTOR3D vPos)
 {
-    if(g_bShaderSupport)
-        glUniform1i(glGetUniformLocation(g_shpMain, "nTextureUnits"), 1);
-
     /** RENDER SKY BOX **/
     if ((pdlSkyBox != NULL) && g_bRenderSkybox)
+    {
+        if(g_bUseShader)
+            glUniform1i(glGetUniformLocation(g_shpMain, "bUnit1Enabled"), 1);
+        else
+        {
+            glActiveTexture(GL_TEXTURE0_ARB);
+            glEnable(GL_TEXTURE_2D);
+        }
+
         RenderSkybox(vPos);
 
+        if(g_bUseShader)
+            glUniform1i(glGetUniformLocation(g_shpMain, "bUnit1Enabled"), 0);
+        else
+            glDisable(GL_TEXTURE_2D);
+    }
+
     /** PREPARE **/
-    if (g_bTextures)
+    // turn on needed texture units
+    if(g_bUseShader)
     {
-        glActiveTextureARB(GL_TEXTURE0_ARB);
-        glEnable(GL_TEXTURE_2D);
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        glUniform1i(glGetUniformLocation(g_shpMain, "bUnit1Enabled"), g_bTextures || g_bLightmaps);
+        glUniform1i(glGetUniformLocation(g_shpMain, "bUnit2Enabled"), g_bTextures && g_bLightmaps);
     }
-
-    if (g_bLightmaps)
+    else
     {
-        glActiveTextureARB(GL_TEXTURE1_ARB);
-        glEnable(GL_TEXTURE_2D);
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    }
+        if (g_bTextures || g_bLightmaps)
+        {
+            glActiveTexture(GL_TEXTURE0_ARB);
+            glEnable(GL_TEXTURE_2D);
+            glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        }
 
-    if(g_bShaderSupport)
-        glUniform1i(glGetUniformLocation(g_shpMain, "nTextureUnits"), 2);
+        if (g_bLightmaps && g_bTextures)
+        {
+            glActiveTexture(GL_TEXTURE1_ARB);
+            glEnable(GL_TEXTURE_2D);
+            glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        }
+    }
 
     glEnable(GL_DEPTH_TEST);
 
@@ -1502,26 +1530,36 @@ void CBSP::RenderLevel(VECTOR3D vPos)
         for (int i=0;i<nBrushEntities;i++) //TODO: implement PVS for pEntities
             RenderBrushEntity(i, vPos);
 
-    if(g_bShaderSupport)
-        glUniform1i(glGetUniformLocation(g_shpMain, "nTextureUnits"), 1);
+    // Turn off second unit, if it was enabled
+    if(g_bUseShader)
+        glUniform1i(glGetUniformLocation(g_shpMain, "bUnit2Enabled"), 0);
+    else
+    {
+        if (g_bLightmaps && g_bTextures)
+        {
+            glActiveTexture(GL_TEXTURE1_ARB);
+            glDisable(GL_TEXTURE_2D);
+        }
+    }
 
     /** RENDER DECALS **/
-    RenderDecals();
-
-    /** FINALIZE **/
-    if (g_bTextures)
+    if(g_bRenderDecals)
     {
-        glActiveTextureARB(GL_TEXTURE0_ARB);
-        glDisable(GL_TEXTURE_2D);
+        glActiveTexture(GL_TEXTURE0_ARB);
+        RenderDecals();
     }
 
-    if (g_bLightmaps)
+    // Turn off first unit, if it was enabled
+    if(g_bUseShader)
+        glUniform1i(glGetUniformLocation(g_shpMain, "bUnit1Enabled"), 0);
+    else
     {
-        glActiveTextureARB(GL_TEXTURE1_ARB);
-        glDisable(GL_TEXTURE_2D);
+        if (g_bLightmaps || g_bTextures)
+        {
+            glActiveTexture(GL_TEXTURE0_ARB);
+            glDisable(GL_TEXTURE_2D);
+        }
     }
-
-    glDisable(GL_DEPTH_TEST);
 }
 
 CEntity* CBSP::FindEntity(const char* pszNewClassName)

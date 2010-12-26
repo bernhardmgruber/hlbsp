@@ -1,4 +1,5 @@
-uniform int nTextureUnits;
+uniform bool bUnit1Enabled;
+uniform bool bUnit2Enabled;
 
 uniform bool bFlashlight;
 uniform bool bNightvision;
@@ -37,7 +38,8 @@ void main()
 
     gl_Position = ftransform();
 
-    gl_TexCoord[0] = gl_MultiTexCoord0;
-    if(nTextureUnits > 1)
+    if(bUnit1Enabled)
+        gl_TexCoord[0] = gl_MultiTexCoord0;
+    if(bUnit2Enabled)
         gl_TexCoord[1] = gl_MultiTexCoord1;
 }
