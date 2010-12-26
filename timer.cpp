@@ -1,48 +1,48 @@
 #include "timer.h"
 
-#include <windows.h>
-#define FPS_UPDATE_INTERVAL 0.2f
+#define TPS_UPDATE_INTERVAL 0.2f
 
-LARGE_INTEGER g_HPF;
-float  g_fFPS = 0;
-double g_dFrameInterval = 0;
-
-void InitTimer()
+CTimer::CTimer()
 {
-    if (!QueryPerformanceFrequency(&g_HPF))
-        g_HPF.QuadPart = 0; //set 0 if not suppored
+    if (!QueryPerformanceFrequency(&HPF))
+        HPF.QuadPart = 0; //set 0 if not suppored
 
-    TimerTick();
+    Tick();
 }
 
-void TimerTick()
+void CTimer::Tick()
 {
-    static int nFrameCounter = 0;
-    static double dLastTimeFPSUpdate = 0.0;
     static double dLastTime = 0.0;
 
-    double dCurrentTime;
+    double dCurrentTime = GetTime();
+    dInterval = dCurrentTime - dLastTime;
 
-    if (g_HPF.QuadPart) //g_HPF.QuadPart == 0, if not supported
-    {
-        LARGE_INTEGER PerformanceCounter;
-        QueryPerformanceCounter(&PerformanceCounter);
-        dCurrentTime = (double)PerformanceCounter.QuadPart / (double)g_HPF.QuadPart;
-    }
-    else
-        dCurrentTime = (double)timeGetTime() * 0.001;
+    //fTPS = 1.0 / dInterval;
 
-
-    g_dFrameInterval = dCurrentTime - dLastTime;
     dLastTime = dCurrentTime;
+
+    static int nFrameCounter = 0;
+    static double dLastTimeFPSUpdate = 0.0;
 
     nFrameCounter++;
 
-    if (dCurrentTime - dLastTimeFPSUpdate > FPS_UPDATE_INTERVAL)
+    if (dCurrentTime - dLastTimeFPSUpdate > TPS_UPDATE_INTERVAL)
     {
-        g_fFPS = (float)((double)nFrameCounter / (dCurrentTime - dLastTimeFPSUpdate));
+        fTPS = (float)((double)nFrameCounter / (dCurrentTime - dLastTimeFPSUpdate));
 
         dLastTimeFPSUpdate = dCurrentTime;
         nFrameCounter = 0;
     }
+}
+
+double CTimer::GetTime()
+{
+    if (HPF.QuadPart) //g_HPF.QuadPart is 0, if not supported
+    {
+        LARGE_INTEGER PerformanceCounter;
+        QueryPerformanceCounter(&PerformanceCounter);
+        return (double)PerformanceCounter.QuadPart / (double)HPF.QuadPart;
+    }
+    else
+        return (double)timeGetTime() * 0.001;
 }

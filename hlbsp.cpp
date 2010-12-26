@@ -1,12 +1,10 @@
 #include "hlbsp.h"
+#include "main.h"
 
-#include <gl/glu.h>
-#include <gl/glext.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "glsl.h"
-#include "inline.h"
+
 
 #define WAD_DIR "data\\wads"
 #define SKY_DIR "data\\textures\\sky"
@@ -20,33 +18,11 @@
 #define RENDER_MODE_SOLID    4
 #define RENDER_MODE_ADDITIVE 5
 
-extern PFNGLACTIVETEXTUREARBPROC glActiveTexture;
-extern PFNGLMULTITEXCOORD2FARBPROC glMultiTexCoord2f;
-extern bool g_bTextures;
-extern bool g_bLightmaps;
-extern bool g_bRenderStaticBSP;
-extern bool g_bRenderBrushEntities;
-extern bool g_bRenderSkybox;
-extern bool g_bRenderDecals;
-
-extern unsigned int g_nWinWidth;
-extern unsigned int g_nWinHeight;
-
-extern bool g_bTexNPO2Support;
-
-extern bool g_bShaderSupport;
-extern bool g_bUseShader;
-extern bool g_bNightvision;
-extern bool g_bFlashlight;
-extern GLuint g_shpMain;
-
 /**
  *============================================================================================
  *                                       PRIVATE
  *============================================================================================
 **/
-
-
 
 void CBSP::AdjustTextureToPowerOfTwo(IMAGE* pImg)
 {
@@ -490,8 +466,8 @@ void CBSP::LoadDecals()
                 {
                     // TEXTURE
                     GLuint texID = 0;
-                    int width;
-                    int height;
+                    int width = 0;
+                    int height = 0;
 
                     const char* pszTexName = pEnt->FindProperty("texture");
                     if(!pszTexName)
@@ -1560,6 +1536,8 @@ void CBSP::RenderLevel(VECTOR3D vPos)
             glDisable(GL_TEXTURE_2D);
         }
     }
+
+    glDisable(GL_DEPTH_TEST);
 }
 
 CEntity* CBSP::FindEntity(const char* pszNewClassName)

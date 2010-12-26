@@ -1,6 +1,6 @@
 #include "font.h"
+#include "main.h"
 
-#include <windows.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>

@@ -1,5 +1,4 @@
 #include "3dmath.h"
-
 #include <math.h>
 
 VECTOR3D operator-(VECTOR3D v1, VECTOR3D v2)
@@ -68,7 +67,7 @@ VECTOR3D CrossProduct(VECTOR3D v1, VECTOR3D v2)
     return perpendicularVector;
 }
 
-bool PointInBox(VECTOR3D vPoint, int16_t vMin[3], int16_t vMax[3])
+bool PointInBox(VECTOR3D vPoint, short vMin[3], short vMax[3])
 {
     if(((float)vMin[0] <= vPoint.x && vPoint.x <= (float)vMax[0] &&
         (float)vMin[1] <= vPoint.y && vPoint.y <= (float)vMax[1] &&

@@ -1,9 +1,6 @@
 #include "camera.h"
-
-#include <windows.h>
-#include <gl/gl.h>
+#include "main.h"
 #include <math.h>
-#include "3dmath.h"
 
 #define DEGTORAD 0.017460317460317460317460317460317
 

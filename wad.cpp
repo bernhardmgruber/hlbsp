@@ -1,10 +1,9 @@
 #include "wad.h"
+#include "main.h"
 
 #include <stdlib.h>
-#include <ctype.h>
-#include <windows.h>
 #include <math.h>
-#include "inline.h"
+#include <ctype.h>
 
 CWAD::CWAD()
 {

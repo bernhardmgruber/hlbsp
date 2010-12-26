@@ -1,9 +1,8 @@
 #include "entity.h"
+#include "main.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include "3dmath.h"
-#include "inline.h"
 
 CEntity::CEntity()
 {

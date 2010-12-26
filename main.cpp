@@ -1,17 +1,15 @@
 /*
     Link against: gdi32, winmm, opengl32, glu32
 */
-#include <windows.h>  // Header for windows
-#include <gl/gl.h>    // Header for OpenGL core functions
-#include <gl/glu.h>	  // Header for OpenGl utility functions
-#include <gl/glext.h> // Header for OpenGL extension definitions
+#include "main.h"
+
 #include <math.h>
 #include "hlbsp.h"
 #include "camera.h"
 #include "timer.h"
-#include "inline.h"
 #include "font.h"
 #include "glsl.h"
+#include "hud.h"
 
 #define WINDOW_CLASS_NAME "hlbsp"
 #define WINDOW_TITLE "HL BSP"
@@ -24,14 +22,13 @@
 #define WINDOW_HEIGHT 768
 #define WINDOW_WIDTH 1024
 
-#define FONT_HUD_HEIGHT 12
-#define FONT_HUD_COLOR 1.0f ,0.0f, 0.0f
-
-PFNGLACTIVETEXTUREARBPROC   glActiveTexture   = NULL;
-PFNGLMULTITEXCOORD2FARBPROC glMultiTexCoord2f = NULL;
+PFNGLACTIVETEXTUREPROC   glActiveTexture   = NULL;
+PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
 
 CBSP    g_bsp;
 CCamera g_camera;
+CHUD    g_hud;
+CTimer  g_timer;
 
 HDC	        g_hDC;		 // Handle to device context from windows
 HGLRC		g_hRC;		 // OpenGL rendering context
@@ -64,9 +61,53 @@ bool g_bTexNPO2Support;
 unsigned int g_nWinWidth = WINDOW_WIDTH;
 unsigned int g_nWinHeight = WINDOW_HEIGHT;
 
-GLuint g_nFontHUD;
-
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
+
+int MSGBOX_WARNING(const char* pszFormat, ...)
+{
+    char szText[1024];
+
+    if (pszFormat == NULL)
+        return 0;
+
+    va_list aParam;
+    va_start(aParam, pszFormat);
+    vsprintf(szText, pszFormat, aParam);
+    va_end(aParam);
+
+    return MessageBox(NULL, szText, "WARNING", MB_OK | MB_ICONWARNING);
+}
+
+int MSGBOX_ERROR(const char* pszFormat, ...)
+{
+    if (pszFormat == NULL)
+        return 0;
+
+    char szText[1024];
+
+    va_list aParam;
+    va_start(aParam, pszFormat);
+    vsprintf(szText, pszFormat, aParam);
+    va_end(aParam);
+    return MessageBox(NULL, szText, "ERROR", MB_OK | MB_ICONERROR);
+}
+
+int LOG(const char* pszFormat, ...)
+{
+    va_list args;
+    va_start(args, pszFormat);
+    return vprintf(pszFormat, args);
+    va_end(args);
+}
+
+void* MALLOC(size_t nSize)
+{
+    void* pMemory = malloc(nSize);
+    if (pMemory == NULL)
+        MSGBOX_ERROR("Memory allocation of %d bytes failed", nSize);
+
+    return pMemory;
+}
 
 void ReSizeGLScene(int nWidth, int nHeight)		// Resize And Initialize The GL Window
 {
@@ -244,9 +285,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
         g_camera.SetViewAngles(0.0f, fZAngle);
     }
 
-    //Fonts
-    LOG("Creating font ...\n");
-    g_nFontHUD = CreateFont("System", FONT_HUD_HEIGHT);
+    g_hud.Init();
 
     return true;										// Initialization Went OK
 }
@@ -258,13 +297,13 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
 
     glColor4f(0.0f, 0.0f, 0.0f, 1.0f); //Reset Color
 
-    TimerTick();
+    g_timer.Tick();
 
     char szWindowText[256];
-    sprintf(szWindowText, "%s - %.1f FPS", WINDOW_TITLE, g_fFPS);
+    sprintf(szWindowText, "%s - %.1f FPS", WINDOW_TITLE, g_timer.fTPS);
     SetWindowText(g_hWnd, szWindowText);
 
-    g_camera.UpdateView(g_dFrameInterval);
+    g_camera.UpdateView(g_timer.dInterval);
     g_camera.Look();
 
     // Enable Shader
@@ -329,37 +368,10 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
         glEnd();
     }
 
-
-
     /// HUD
     if (g_bRenderHUD)
     {
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
-        glLoadIdentity();
-
-        glOrtho(0, g_nWinWidth, 0, g_nWinHeight, -1.0f, 1.0f);
-
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-
-        //glDisable(GL_DEPTH_TEST);
-
-        int nCurrentY = g_nWinHeight;
-
-        glColor3f(FONT_HUD_COLOR);
-        glPrintf(5, nCurrentY -= (5 + FONT_HUD_HEIGHT), g_nFontHUD, "FPS: %.1f", g_fFPS);
-        VECTOR3D pos = g_camera.GetPosition();
-        glPrintf(5, nCurrentY -= (5 + FONT_HUD_HEIGHT), g_nFontHUD, "Cam pos: %.1fx %.1fy %.1fz", pos.x, pos.y, pos.z);
-        VECTOR2D view = g_camera.GetViewAngles();
-        glPrintf(5, nCurrentY -= (5 + FONT_HUD_HEIGHT), g_nFontHUD, "Cam view: %.1f°pitch %.1f°yaw", view.x, view.y);
-
-        //glEnable(GL_DEPTH_TEST);
-
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-        glMatrixMode(GL_MODELVIEW);
-
+        g_hud.Render();
     }
 
     return true;										// Everything Went OK
@@ -416,7 +428,6 @@ void KillGLWindow()								// Properly Kill The Window
 
 bool CreateGLWindow(const char* szTitle, int nWidth, int nHeight, int bits)
 {
-    InitTimer();
     LOG("##### Initialization #####\n");
 
     GLuint		PixelFormat;			// Holds The Results After Searching For A Match
@@ -487,18 +498,18 @@ bool CreateGLWindow(const char* szTitle, int nWidth, int nHeight, int bits)
     // Create The Window
     LOG("Creating window ...\n");
     if (!(g_hWnd = CreateWindowEx( dwExStyle,							// Extended Style For The Window
-                                 WINDOW_CLASS_NAME,					// Class Name
-                                 szTitle,							// Window Title
-                                 dwStyle |							// Defined Window Style
-                                 WS_CLIPSIBLINGS |					// Required Window Style
-                                 WS_CLIPCHILDREN,					// Required Window Style
-                                 CW_USEDEFAULT, CW_USEDEFAULT,		// Window Position
-                                 WindowRect.right-WindowRect.left,	// Calculate Window Width
-                                 WindowRect.bottom-WindowRect.top,	// Calculate Window nHeight
-                                 NULL,								// No Parent Window
-                                 NULL,								// No Menu
-                                 g_hInstance,						// Instance
-                                 NULL)))							// Dont Pass Anything To WM_CREATE
+                                   WINDOW_CLASS_NAME,					// Class Name
+                                   szTitle,							// Window Title
+                                   dwStyle |							// Defined Window Style
+                                   WS_CLIPSIBLINGS |					// Required Window Style
+                                   WS_CLIPCHILDREN,					// Required Window Style
+                                   CW_USEDEFAULT, CW_USEDEFAULT,		// Window Position
+                                   WindowRect.right-WindowRect.left,	// Calculate Window Width
+                                   WindowRect.bottom-WindowRect.top,	// Calculate Window nHeight
+                                   NULL,								// No Parent Window
+                                   NULL,								// No Menu
+                                   g_hInstance,						// Instance
+                                   NULL)))							// Dont Pass Anything To WM_CREATE
     {
         KillGLWindow();								// Reset The Display
         MSGBOX_ERROR("Window Creation Error");
@@ -582,8 +593,8 @@ bool CreateGLWindow(const char* szTitle, int nWidth, int nHeight, int bits)
     SetForegroundWindow(g_hWnd);						// Slightly Higher Priority
     SetFocus(g_hWnd);									// Sets Keyboard Focus To The Window
 
-    TimerTick();
-    LOG("##### Finished Initialization (%.3f s) #####\n", (float)g_dFrameInterval);
+    g_timer.Tick();
+    LOG("##### Finished Initialization (%.3f s) #####\n", (float)g_timer.dInterval);
 
     return true;									// Success
 }
@@ -625,86 +636,140 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
         switch(wParam)
         {
-            case VK_TAB:
-                g_camera.SetMoveSens(CAMERA_MOVE_SENS * 3.0f);
-                break;
-            case VK_SHIFT:
-                g_camera.SetMoveSens(CAMERA_MOVE_SENS / 3.0f);
-                break;
-            case VK_F1:
-                KillGLWindow();						// Kill Our Current Window
-                g_bFullscreen =! g_bFullscreen;				// Toggle Fullscreen / Windowed Mode
-                if(g_bFullscreen)
-                    LOG("Changing to fullscreen ...\n");
-                else
-                    LOG("Changing to windowed mode ...\n");
+        case VK_TAB:
+            g_camera.SetMoveSens(CAMERA_MOVE_SENS * 3.0f);
+            break;
+        case VK_SHIFT:
+            g_camera.SetMoveSens(CAMERA_MOVE_SENS / 3.0f);
+            break;
+        case VK_F1:
+            KillGLWindow();						// Kill Our Current Window
+            g_bFullscreen =! g_bFullscreen;				// Toggle Fullscreen / Windowed Mode
+            if(g_bFullscreen)
+                LOG("Changing to fullscreen ...\n");
+            else
+                LOG("Changing to windowed mode ...\n");
 
-                // Recreate Our OpenGL Window
-                if (!CreateGLWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, 32))
-                    PostQuitMessage(0);						// Quit If Window Was Not Created
-                break;
-            case VK_F2:
-                if(g_bShaderSupport)
-                    g_bUseShader = !g_bUseShader;
-                break;
-            case VK_F5:
+            // Recreate Our OpenGL Window
+            if (!CreateGLWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, 32))
+                PostQuitMessage(0);						// Quit If Window Was Not Created
+            break;
+        case VK_F2:
+            if(g_bShaderSupport)
             {
-                IMAGE* pImg = CreateImage(3, g_nWinWidth, g_nWinHeight);
-                glReadPixels(0, 0, pImg->nWidth, pImg->nHeight, GL_RGB, GL_UNSIGNED_BYTE, pImg->pData);
-
-                //get filename
-                char szFileName[512];
-
-                for (int i=1;;i++)
-                {
-                    sprintf(szFileName, "screenshots/Screenshot%d.bmp", i);
-                    FILE* pFile;
-                    if ((pFile = fopen(szFileName, "rb")) == NULL)
-                        break;
-                    fclose(pFile);
-                }
-
-                SaveBMP(pImg, szFileName);
-                FreeImagePointer(pImg);
-                break;
-            }
-            case 'C':
-                g_bRenderCoords = !g_bRenderCoords;
-                break;
-            case 'H':
-                g_bRenderHUD = !g_bRenderHUD;
-                break;
-            case 'L':
-                g_bLightmaps = !g_bLightmaps;
-                break;
-            case 'N':
-                g_bNightvision = !g_bNightvision;
-                break;
-            case 'T':
-                g_bTextures = !g_bTextures;
-                break;
-            case 'P':
-                g_bPolygons = !g_bPolygons;
-                if (g_bPolygons)
-                    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                g_bUseShader = !g_bUseShader;
+                if(g_bUseShader)
+                    g_hud.Printf("shaders enabled");
                 else
-                    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-                break;
-            case 'V':
-                g_bFlashlight = !g_bFlashlight;
-                break;
-            case '1':
-                g_bRenderSkybox = !g_bRenderSkybox;
-                break;
-            case '2':
-                g_bRenderStaticBSP = !g_bRenderStaticBSP;
-                break;
-            case '3':
-                g_bRenderBrushEntities = !g_bRenderBrushEntities;
-                break;
-            case '4':
-                g_bRenderDecals = !g_bRenderDecals;
-                break;
+                    g_hud.Printf("shaders disabled");
+            }
+            else
+                g_hud.Printf("shaders are not supported");
+            break;
+        case VK_F5:
+        {
+            IMAGE* pImg = CreateImage(3, g_nWinWidth, g_nWinHeight);
+            glReadPixels(0, 0, pImg->nWidth, pImg->nHeight, GL_RGB, GL_UNSIGNED_BYTE, pImg->pData);
+
+            //get filename
+            char szFileName[512];
+
+            for (int i=1;; i++)
+            {
+                sprintf(szFileName, "screenshots/Screenshot%d.bmp", i);
+                FILE* pFile;
+                if ((pFile = fopen(szFileName, "rb")) == NULL)
+                    break;
+                fclose(pFile);
+            }
+
+            SaveBMP(pImg, szFileName);
+            FreeImagePointer(pImg);
+            break;
+        }
+        case 'C':
+            g_bRenderCoords = !g_bRenderCoords;
+            if(g_bRenderCoords)
+                g_hud.Printf("coords enabled");
+            else
+                g_hud.Printf("coords disabled");
+            break;
+        case 'H':
+            g_bRenderHUD = !g_bRenderHUD;
+            if(g_bRenderHUD)
+                g_hud.Printf("hud enabled");
+            else
+                g_hud.Printf("hud disabled");
+            break;
+        case 'L':
+            g_bLightmaps = !g_bLightmaps;
+            if(g_bLightmaps)
+                g_hud.Printf("lightmaps enabled");
+            else
+                g_hud.Printf("lightmaps disabled");
+            break;
+        case 'N':
+            g_bNightvision = !g_bNightvision;
+            if(g_bNightvision)
+                g_hud.Printf("nightvision enabled");
+            else
+                g_hud.Printf("nightvision disabled");
+            break;
+        case 'T':
+            g_bTextures = !g_bTextures;
+            if(g_bTextures)
+                g_hud.Printf("textures enabled");
+            else
+                g_hud.Printf("textures disabled");
+            break;
+        case 'P':
+            g_bPolygons = !g_bPolygons;
+            if (g_bPolygons)
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                g_hud.Printf("polygon mode set to line");
+            }
+            else
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                g_hud.Printf("polygon mode set to fill");
+            }
+            break;
+        case 'V':
+            g_bFlashlight = !g_bFlashlight;
+            if(g_bFlashlight)
+                g_hud.Printf("flashlight enabled");
+            else
+                g_hud.Printf("flashlight disabled");
+            break;
+        case '1':
+            g_bRenderSkybox = !g_bRenderSkybox;
+            if(g_bRenderSkybox)
+                g_hud.Printf("skybox enabled");
+            else
+                g_hud.Printf("skybox disabled");
+            break;
+        case '2':
+            g_bRenderStaticBSP = !g_bRenderStaticBSP;
+            if(g_bRenderStaticBSP)
+                g_hud.Printf("static geometry enabled");
+            else
+                g_hud.Printf("static geometry  disabled");
+            break;
+        case '3':
+            g_bRenderBrushEntities = !g_bRenderBrushEntities;
+            if(g_bRenderBrushEntities)
+                g_hud.Printf("entities enabled");
+            else
+                g_hud.Printf("entities disabled");
+            break;
+        case '4':
+            g_bRenderDecals = !g_bRenderDecals;
+            if(g_bRenderDecals)
+                g_hud.Printf("decals enabled");
+            else
+                g_hud.Printf("decals disabled");
+            break;
         }
 
         return 0;								// Jump Back
@@ -716,10 +781,10 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
         switch(wParam)
         {
-            case VK_TAB:
-            case VK_SHIFT:
-                g_camera.SetMoveSens(CAMERA_MOVE_SENS);
-                break;
+        case VK_TAB:
+        case VK_SHIFT:
+            g_camera.SetMoveSens(CAMERA_MOVE_SENS);
+            break;
 
         }
 

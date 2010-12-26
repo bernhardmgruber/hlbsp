@@ -53,10 +53,12 @@
 		<Unit filename="gltexldr.h" />
 		<Unit filename="hlbsp.cpp" />
 		<Unit filename="hlbsp.h" />
+		<Unit filename="hud.cpp" />
+		<Unit filename="hud.h" />
 		<Unit filename="imageio.cpp" />
 		<Unit filename="imageio.h" />
-		<Unit filename="inline.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
 		<Unit filename="shader\main.frag" />
 		<Unit filename="shader\main.vert" />
 		<Unit filename="timer.cpp" />

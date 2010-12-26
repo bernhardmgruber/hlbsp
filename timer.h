@@ -1,10 +1,20 @@
 #ifndef TIMER_H_INCLUDED
 #define TIMER_H_INCLUDED
 
-extern float  g_fFPS;           // The current value of the calculated FPS
-extern double g_dFrameInterval; // The time passed since the last call of TimerTick()
+#include <windows.h>
 
-void InitTimer(); // Must be called during initialization
-void TimerTick(); // Must be called at the beginning of every rendered frame to update variables
+class CTimer
+{
+public:
+    CTimer();
+    void Tick();
+    double GetTime();
+
+    float fTPS;      // Ticks per second
+    double dInterval; // The time passed since the last call of Tick()
+
+private:
+    LARGE_INTEGER HPF;
+};
 
 #endif // TIMER_H_INCLUDED
