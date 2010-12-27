@@ -29,6 +29,7 @@ CBSP    g_bsp;
 CCamera g_camera;
 CHUD    g_hud;
 CTimer  g_timer;
+CPlayer g_player;
 
 HDC	        g_hDC;		 // Handle to device context from windows
 HGLRC		g_hRC;		 // OpenGL rendering context
@@ -54,14 +55,18 @@ bool g_bShaderSupport;
 bool g_bUseShader = false;
 bool g_bNightvision = false;
 bool g_bFlashlight = false;
-GLuint g_shpMain;
+
+bool g_bCaptureMouse = false;
+VECTOR2D g_windowCenter;
 
 bool g_bTexNPO2Support;
 
 unsigned int g_nWinWidth = WINDOW_WIDTH;
 unsigned int g_nWinHeight = WINDOW_HEIGHT;
 
-LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
+GLuint g_shpMain;
+
+LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 int MSGBOX_WARNING(const char* pszFormat, ...)
 {
@@ -265,8 +270,8 @@ int InitGL()										// All Setup For OpenGL Goes Here
     glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.01f);
     glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0001f);
 
-    // Get the players start pos
-    LOG("Setting start position and angles...\n");
+    // Create local player
+    LOG("Creating local player ...\n");
     CEntity* info_player_start = g_bsp.FindEntity("info_player_start");
 
     const char* pszOrigin = info_player_start->FindProperty("origin");
@@ -274,7 +279,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
     {
         int x, y, z;
         sscanf(pszOrigin, "%d %d %d", &x, &y, &z);
-        g_camera.SetPosition(x, y, z);
+        g_player.SetPosition(x, y, z);
     }
 
     const char* pszAngle = info_player_start->FindProperty("angle");
@@ -282,9 +287,12 @@ int InitGL()										// All Setup For OpenGL Goes Here
     {
         float fZAngle;
         sscanf(pszAngle, "%f", &fZAngle);
-        g_camera.SetViewAngles(0.0f, fZAngle);
+        g_player.SetViewAngles(0.0f, fZAngle);
     }
 
+    g_camera.BindPlayer(&g_player);
+
+    // HUD
     g_hud.Init();
 
     return true;										// Initialization Went OK
@@ -292,6 +300,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
 
 int DrawGLScene()									// Here's Where We Do All The Drawing
 {
+    /** UPDATE SCENE **/
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
     glLoadIdentity();									// Reset The Current Modelview Matrix
 
@@ -303,9 +312,14 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     sprintf(szWindowText, "%s - %.1f FPS", WINDOW_TITLE, g_timer.fTPS);
     SetWindowText(g_hWnd, szWindowText);
 
-    g_camera.UpdateView(g_timer.dInterval);
+    // Player
+    g_player.UpdateFromInput(g_timer.dInterval);
+
+    // Camera
+    g_camera.UpdateFromInput(g_timer.dInterval);
     g_camera.Look();
 
+    /** DRAW SCENE **/
     // Enable Shader
     if (g_bUseShader)
     {
@@ -799,14 +813,18 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_RBUTTONDOWN:
     {
-        g_camera.CaptureMouse(true);
+        g_bCaptureMouse = true;
+        POINT pt;
+        GetCursorPos(&pt);
+        g_windowCenter.x = pt.x;
+        g_windowCenter.y = pt.y;
         ShowCursor(false);
         return 0;
     }
 
     case WM_RBUTTONUP:
     {
-        g_camera.CaptureMouse(false);
+        g_bCaptureMouse = false;
         ShowCursor(true);
         return 0;
     }

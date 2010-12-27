@@ -3,6 +3,9 @@
 
 #define EPSILON 0.001f
 
+#define DEGTORAD(x) ((x) * M_PI / 180.0)
+#define RADTODEG(x) ((x) * 180.0 / M_PI)
+
 // structure for a float double
 typedef struct _VECTOR2D
 {

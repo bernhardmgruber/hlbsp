@@ -59,6 +59,8 @@
 		<Unit filename="imageio.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="main.h" />
+		<Unit filename="player.cpp" />
+		<Unit filename="player.h" />
 		<Unit filename="shader\main.frag" />
 		<Unit filename="shader\main.vert" />
 		<Unit filename="timer.cpp" />

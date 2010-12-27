@@ -46,12 +46,16 @@ extern bool g_bShaderSupport;
 extern bool g_bUseShader;
 extern bool g_bNightvision;
 extern bool g_bFlashlight;
-extern GLuint g_shpMain;
+
+extern bool g_bCaptureMouse;
+extern VECTOR2D g_windowCenter;
 
 extern bool g_bTexNPO2Support;
 
 extern unsigned int g_nWinWidth;
 extern unsigned int g_nWinHeight;
+
+extern GLuint g_shpMain;
 
 int MSGBOX_WARNING(const char* pszFormat, ...);
 int MSGBOX_ERROR(const char* pszFormat, ...);
