@@ -1,7 +1,7 @@
 #ifndef _3DMATH_
 #define _3DMATH_
 
-#define EPSILON 0.001f
+#define EPSILON 0.01f
 
 #define DEGTORAD(x) ((x) * M_PI / 180.0)
 #define RADTODEG(x) ((x) * 180.0 / M_PI)
@@ -23,6 +23,8 @@ VECTOR3D operator+(VECTOR3D v1, VECTOR3D v2);                   // Vector additi
 VECTOR3D operator*(float f, VECTOR3D v);                        // Vector multiplication with a scalar
 VECTOR3D operator*(VECTOR3D v, float f);                        // Vector multiplication with a scalar
 VECTOR3D operator/(VECTOR3D v, float f);                        // Vector division through a scalar
+bool operator==(VECTOR3D v1, VECTOR3D v2);
+bool operator!=(VECTOR3D v1, VECTOR3D v2);
 float Length(VECTOR3D v);                                       // Returns the length of a vector
 VECTOR3D Normalize(VECTOR3D v);                                 // Returns the normalized vector
 float DotProduct(VECTOR3D v1, VECTOR3D v2);                     // Returns the dot product of the two vectors given

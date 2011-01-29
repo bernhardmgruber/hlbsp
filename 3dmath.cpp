@@ -43,6 +43,25 @@ VECTOR3D operator/(VECTOR3D v, float f)
     return v;
 }
 
+bool operator==(VECTOR3D v1, VECTOR3D v2)
+{
+	VECTOR3D v = v1 - v2;
+
+	if(fabs(v.x) > EPSILON)
+		return false;
+	if(fabs(v.y) > EPSILON)
+		return false;
+	if(fabs(v.z) > EPSILON)
+		return false;
+
+	return true;
+}
+
+bool operator!=(VECTOR3D v1, VECTOR3D v2)
+{
+	return !(v1 == v2);
+}
+
 float Length(VECTOR3D v)
 {
     return sqrt((v.x*v.x) + (v.y*v.y) + (v.z*v.z));

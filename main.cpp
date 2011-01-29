@@ -131,7 +131,7 @@ void ReSizeGLScene(int nWidth, int nHeight)		// Resize And Initialize The GL Win
     glLoadIdentity();									// Reset The Projection Matrix
 
     // Calculate The Aspect Ratio Of The Window
-    gluPerspective(60.0f, (GLfloat)nWidth/(GLfloat)nHeight, 16.0f, 4000.0f);
+    gluPerspective(60.0f, (GLfloat)nWidth/(GLfloat)nHeight, 8.0f, 4000.0f);
 
     glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
     glLoadIdentity();									// Reset The Modelview Matrix
@@ -205,6 +205,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
     else
         LOG("Not supported, lightmaps will be scaled to 16 x 16\n");
 
+    // BSP file
     if (!g_bsp.LoadBSPFile(BSP_DIR "\\" BSP_FILE_NAME))
         return false;
 

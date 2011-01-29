@@ -37,7 +37,13 @@ public:
 
     bool LoadBSPFile(const char* pszFileName);                  // Loads the entire BSP file into memory
     void RenderLevel(VECTOR3D vPos);                      // Renders the complete BSP tree
+
     CEntity* FindEntity(const char* pszNewClassName);        // Returns the entity with the given name
+
+    VECTOR3D TraceRay   (VECTOR3D inputStart, VECTOR3D inputEnd);
+    VECTOR3D TraceSphere(VECTOR3D inputStart, VECTOR3D inputEnd, float inputRadius);
+    VECTOR3D TraceBox   (VECTOR3D inputStart, VECTOR3D inputEnd, VECTOR3D inputMins, VECTOR3D inputMaxs);
+
     void Destroy();                                       // Unloads the complete BSP tree and frees all allocated memory
 
 private:
@@ -105,6 +111,13 @@ private:
 
     int TraverseBSPTree(VECTOR3D vPos, int iNode); // Recursivly walks through the BSP tree to find the leaf where the camera is in
 
+	/** Collision detection **/
+    VECTOR3D Trace(VECTOR3D inputStart, VECTOR3D inputEnd);
+    void CheckNode(int nodeIndex, float startFraction, float endFraction, VECTOR3D start, VECTOR3D end);
+    void CheckLeaf(BSPLEAF* leaf, float startFrac, float endFrac, VECTOR3D inputStart, VECTOR3D inputEnd);
+    bool IsInsideFace(BSPFACE* face, VECTOR3D);
+
+	/** Rendering **/
     void RenderSkybox(VECTOR3D vPos);                       // Calls the display list, which draws the skybox to the screen
     void RenderFace(int iFace);                             // Renders a face (polygon) by the given index
     void RenderLeaf(int iLeaf);                             // Renders a leaf of the BSP tree by rendering each face of the leaf by the given index

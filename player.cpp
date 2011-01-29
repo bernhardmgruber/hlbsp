@@ -52,10 +52,8 @@ void CPlayer::SetPosition(VECTOR2D v)
 
 void CPlayer::UpdateFromInput(double dFrameInterval)
 {
-    // Save old state
+    // Save old position
     VECTOR3D vOldPos = vPos;
-    float fOldXAngle = fXAngle;
-    float fOldZAngle = fZAngle;
 
     if(g_bCaptureMouse)
     {
@@ -88,7 +86,7 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
 
     float fTmpMoveSens = PLAYER_MOVE_SENS * dFrameInterval;
 
-    /*if (g_abKeys[VK_SPACE]) // UP
+    if (g_abKeys[VK_SPACE]) // UP
     {
         vPos.z += fTmpMoveSens;
     }
@@ -96,7 +94,7 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
     if (g_abKeys[VK_CONTROL]) // DOWN
     {
         vPos.z -= fTmpMoveSens;
-    }*/
+    }
 
     // TODO: If strafing and moving reduce speed to keep total move per frame constant
     if (g_abKeys[(int)'W']) // FORWARD
@@ -122,4 +120,15 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
         vPos.x += cos(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
         vPos.y += sin(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
     }
+
+    // Perform collision detection
+    VECTOR3D vTrace = g_bsp.TraceBox(vOldPos, vPos, {-16,-16,0}, {16,16,72});
+    //VECTOR3D vTrace = g_bsp.TraceRay(vOldPos, vPos);
+
+    if(vTrace != vPos)
+		printf("collision\n");
+
+    //printf("old: %.1f/%.1f/%.1f new: %.1f/%.1f/%.1f trace: %.1f/%.1f/%.1f\n", vOldPos.x, vOldPos.y, vOldPos.z, vPos.x, vPos.y, vPos.z, vTrace.x, vTrace.y, vTrace.z);
+
+    vPos = vTrace;
 }

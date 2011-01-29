@@ -3,7 +3,7 @@
 
 #include "3dmath.h"
 
-#define PLAYER_MOVE_SENS 192
+#define PLAYER_MOVE_SENS 500 //192
 #define PLAYER_LOOK_SENS 0.15
 
 class CPlayer

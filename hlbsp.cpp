@@ -12,15 +12,15 @@
 #define DECAL_WAD_COUNT 2
 
 #define RENDER_MODE_NORMAL   0
-#define RENDER_MODE_COLOR    1
+#define RENDER_MODE_COLOR	1
 #define RENDER_MODE_TEXTURE  2
-#define RENDER_MODE_GLOW     3
-#define RENDER_MODE_SOLID    4
+#define RENDER_MODE_GLOW	 3
+#define RENDER_MODE_SOLID	4
 #define RENDER_MODE_ADDITIVE 5
 
 /**
  *============================================================================================
- *                                       PRIVATE
+ *									   PRIVATE
  *============================================================================================
 **/
 
@@ -69,7 +69,7 @@ bool CBSP::LoadSkyTextures()
     char szFileName[64];
     IMAGE* pImg;
 
-    for (int i=0;i<6;i++)
+    for (int i=0; i<6; i++)
     {
         sprintf(szFileName, SKY_DIR "\\%s%s.tga", pszSkyName, aszSide[i]);
 
@@ -189,7 +189,7 @@ bool CBSP::LoadSkyTextures()
 bool CBSP::LoadWadFiles(const char* pszWadstr)
 {
     nWadFiles = 0;
-    for (unsigned int i=0;i<strlen(pszWadstr);i++)
+    for (unsigned int i=0; i<strlen(pszWadstr); i++)
     {
         if (pszWadstr[i] == ';')
             nWadFiles++;
@@ -210,7 +210,7 @@ bool CBSP::LoadWadFiles(const char* pszWadstr)
         strcpy(path, WAD_DIR);
 
         bool bFirst = true;
-        for(unsigned int i=strlen(pch)-1;i<strlen(pch);i--)
+        for(unsigned int i=strlen(pch)-1; i<strlen(pch); i--)
         {
             if(pch[i] == '\\')
             {
@@ -250,7 +250,7 @@ bool CBSP::LoadWadFiles(const char* pszWadstr)
 
 void CBSP::UnloadWadFiles()
 {
-    for (int i=0;i<nWadFiles;i++)
+    for (int i=0; i<nWadFiles; i++)
         pWadFiles[i].Close();
 
     delete[] pWadFiles;
@@ -289,7 +289,7 @@ void CBSP::LoadTextures(FILE* pFile)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPLEVELS - 1);
 
-            for (int j=0;j<MIPLEVELS;j++)
+            for (int j=0; j<MIPLEVELS; j++)
             {
                 AdjustTextureToPowerOfTwo(&pMipTex->Img[j]);
                 glTexImage2D(GL_TEXTURE_2D, j, GL_RGBA, pMipTex->Img[j].nWidth, pMipTex->Img[j].nHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pMipTex->Img[j].pData);
@@ -322,7 +322,7 @@ void CBSP::LoadTextures(FILE* pFile)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPLEVELS - 1);
 
-            for (int j=0;j<MIPLEVELS;j++)
+            for (int j=0; j<MIPLEVELS; j++)
             {
                 AdjustTextureToPowerOfTwo(&MipTex.Img[j]);
                 glTexImage2D(GL_TEXTURE_2D, j, GL_RGBA, MipTex.Img[j].nWidth, MipTex.Img[j].nHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, MipTex.Img[j].pData);
@@ -370,7 +370,7 @@ void CBSP::LoadTextures(FILE* pFile)
 
 MIPTEXTURE* CBSP::LoadTextureFromWad(const char* pszName)
 {
-    for (int i=0;i<nWadFiles;i++)
+    for (int i=0; i<nWadFiles; i++)
     {
         MIPTEXTURE* pMipMapTex = pWadFiles[i].LoadTexture(pszName);
         if (pMipMapTex != NULL)
@@ -382,7 +382,7 @@ MIPTEXTURE* CBSP::LoadTextureFromWad(const char* pszName)
 
 MIPTEXTURE* CBSP::LoadDecalTexture(const char* pszName)
 {
-    for (int i=0;i<DECAL_WAD_COUNT;i++)
+    for (int i=0; i<DECAL_WAD_COUNT; i++)
     {
         MIPTEXTURE* pMipMapTex = pDecalWads[i].LoadDecalTexture(pszName);
         if (pMipMapTex != NULL)
@@ -410,14 +410,27 @@ void CBSP::LoadDecals()
 
     // Texture name table for texture loading
     int nLoadedTex = 0;
-    struct {char szName[MAXTEXTURENAME]; GLuint texID; int nWidth; int nHeight;} aLoadedTex[nDecals];
+    struct
+    {
+        char szName[MAXTEXTURENAME];
+        GLuint texID;
+        int nWidth;
+        int nHeight;
+    } aLoadedTex[nDecals];
 
     // Allocate new decals
     pDecals = (DECAL*) MALLOC(sizeof(DECAL) * nDecals);
 
     // Process each decal
     pEnt = FindEntity("infodecal");
-    for(int i=0;i<nDecals;i++)
+    if(!pEnt)
+    {
+        // There are no decals
+        printf("(no decals)\n");
+        return;
+    }
+
+    for(int i=0; i<nDecals; i++)
     {
         const char* pszOrigin = pEnt->FindProperty("origin");
         if(pszOrigin != NULL)
@@ -477,7 +490,7 @@ void CBSP::LoadDecals()
                     }
 
                     // Check if texture has already been loaded
-                    for(int k=0;k<nLoadedTex;k++)
+                    for(int k=0; k<nLoadedTex; k++)
                     {
                         if(!strcmp(pszTexName, aLoadedTex[k].szName))
                         {
@@ -509,7 +522,7 @@ void CBSP::LoadDecals()
                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPLEVELS - 1);
 
-                        for (int k=0;k<MIPLEVELS;k++)
+                        for (int k=0; k<MIPLEVELS; k++)
                         {
                             AdjustTextureToPowerOfTwo(&pMipTex->Img[k]);
                             glTexImage2D(GL_TEXTURE_2D, k, GL_RGBA, pMipTex->Img[k].nWidth, pMipTex->Img[k].nHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pMipTex->Img[k].pData);
@@ -563,7 +576,7 @@ void CBSP::LoadLightMaps(unsigned char* pLightMapData)
     int nLoadedLightmaps = 0;
     //int nErrors = 0;
 
-    for (int i=0;i<nFaces;i++)
+    for (int i=0; i<nFaces; i++)
     {
         if (pFaces[i].nStyles[0] == 0 && (signed)pFaces[i].nLightmapOffset >= -1)
         {
@@ -666,23 +679,23 @@ void CBSP::LoadLightMaps(unsigned char* pLightMapData)
             /*unsigned int nNextOffset = 0xFFFFFFFF;
             for (int j=0;j<nFaces;j++)
             {
-                if (pFaces[j].nLightmapOffset > pFaces[i].nLightmapOffset && pFaces[j].nLightmapOffset < nNextOffset)
-                    nNextOffset = pFaces[j].nLightmapOffset;
+            	if (pFaces[j].nLightmapOffset > pFaces[i].nLightmapOffset && pFaces[j].nLightmapOffset < nNextOffset)
+            		nNextOffset = pFaces[j].nLightmapOffset;
             }
 
             if (nNextOffset == 0xFFFFFFFF)
-                nNextOffset = header.lump[LUMP_LIGHTING].nLength;
+            	nNextOffset = header.lump[LUMP_LIGHTING].nLength;
 
             int nDataDiff = nWidth * nHeight * 3 - (nNextOffset - pFaces[i].nLightmapOffset);
 
             LOG("DataDiff: %d ", nDataDiff);
 
             if (nDataDiff == 0)
-                LOG("OK\n");
+            	LOG("OK\n");
             else
             {
-                LOG("ERROR\n");
-                nErrors++;
+            	LOG("ERROR\n");
+            	nErrors++;
             }*/
 
             nLoadedData += nWidth * nHeight * 3;
@@ -770,7 +783,7 @@ void CBSP::ParseEntities(const char* pszEntities)
 
     int iBrush = 0;
     int iSpecial = 0;
-    for (int i=0;i<nEntities;i++)
+    for (int i=0; i<nEntities; i++)
     {
         if (IsBrushEntity(&pEntities[i]))
         {
@@ -804,11 +817,11 @@ bool CBSP::IsBrushEntity(CEntity* pEnt)
 
     const char* pzsClassName = pEnt->FindProperty("classname");
     if (!strcmp(pzsClassName, "func_door_rotating") ||
-        !strcmp(pzsClassName, "func_door") ||
-        !strcmp(pzsClassName, "func_illusionary") ||
-        !strcmp(pzsClassName, "func_wall") ||
-        !strcmp(pzsClassName, "func_breakable") ||
-        !strcmp(pzsClassName, "func_button"))
+            !strcmp(pzsClassName, "func_door") ||
+            !strcmp(pzsClassName, "func_illusionary") ||
+            !strcmp(pzsClassName, "func_wall") ||
+            !strcmp(pzsClassName, "func_breakable") ||
+            !strcmp(pzsClassName, "func_button"))
         return true;
     else
         return false;
@@ -816,18 +829,18 @@ bool CBSP::IsBrushEntity(CEntity* pEnt)
 
 void CBSP::CountVisLeafs(int iNode)
 {
-	if (iNode < 0)
-	{
+    if (iNode < 0)
+    {
         // decision node
-	    if(iNode == -1)
+        if(iNode == -1)
             return;
 
-	    if(pLeafs[~iNode].nContents == CONTENTS_SOLID)
+        if(pLeafs[~iNode].nContents == CONTENTS_SOLID)
             return;
 
         nVisLeafs++;
         return;
-	}
+    }
 
     CountVisLeafs(pNodes[iNode].iChildren[0]);
     CountVisLeafs(pNodes[iNode].iChildren[1]);
@@ -875,7 +888,7 @@ bool* CBSP::GetPVS(int iLeaf, unsigned char* pVisList)
 int CBSP::TraverseBSPTree(VECTOR3D vPos, int iNode)
 {
     // Run once for each child
-    for (int i=0;i<2;i++)
+    for (int i=0; i<2; i++)
     {
         // If the index is positive  it is an index into the nodes array
         if ((pNodes[iNode].iChildren[i]) >= 0)
@@ -913,7 +926,7 @@ void CBSP::RenderFace(int iFace)
         pbFacesDrawn[iFace] = true;
 
     if (pFaces[iFace].nStyles[0] == 0xFF)
-       return;
+        return;
 
     // if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
     bool bLightmapAvail = (signed)pFaces[iFace].nLightmapOffset != -1 && header.lump[LUMP_LIGHTING].nLength > 0;
@@ -993,6 +1006,27 @@ void CBSP::RenderFace(int iFace)
             }
         }
         glEnd();
+
+        // Debug edge direction
+        /*glPointSize(3.0f);
+        glBegin(GL_POLYGON);
+        for (int i=0; i<pFaces[iFace].nEdges; i++)
+        {
+        	VECTOR3D v;
+        	int iEdge = pSurfEdges[pFaces[iFace].iFirstEdge + i]; // This gives the index into the edge lump
+        	if(iEdge > 0)
+        		v = pVertices[pEdges[iEdge].iVertex[0]] +
+        					 0.75 * (pVertices[pEdges[iEdge].iVertex[1]] - pVertices[pEdges[iEdge].iVertex[0]]); // From [0] to [1] at 0.75
+        	else
+        	{
+        		iEdge *= -1;
+        		v = pVertices[pEdges[iEdge].iVertex[1]] +
+        					 0.75 * (pVertices[pEdges[iEdge].iVertex[0]] - pVertices[pEdges[iEdge].iVertex[1]]); // From [0] to [1] at 0.75
+        	}
+
+        	glVertex3f(v.x, v.y,v.z);
+        }
+        glEnd();*/
     }
 }
 
@@ -1129,23 +1163,23 @@ void CBSP::RenderDecals()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    for(int i=0;i<nDecals;i++)
+    for(int i=0; i<nDecals; i++)
     {
         glBindTexture(GL_TEXTURE_2D, pDecals[i].nTex);
 
         glBegin(GL_TRIANGLE_FAN);
-            glTexCoord2f(0,0);
-            glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
-            glVertex3f(pDecals[i].vec[0].x, pDecals[i].vec[0].y, pDecals[i].vec[0].z);
-            glTexCoord2f(1,0);
-            glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
-            glVertex3f(pDecals[i].vec[1].x, pDecals[i].vec[1].y, pDecals[i].vec[1].z);
-            glTexCoord2f(1,1);
-            glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
-            glVertex3f(pDecals[i].vec[2].x, pDecals[i].vec[2].y, pDecals[i].vec[2].z);
-            glTexCoord2f(0,1);
-            glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
-            glVertex3f(pDecals[i].vec[3].x, pDecals[i].vec[3].y, pDecals[i].vec[3].z);
+        glTexCoord2f(0,0);
+        glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
+        glVertex3f(pDecals[i].vec[0].x, pDecals[i].vec[0].y, pDecals[i].vec[0].z);
+        glTexCoord2f(1,0);
+        glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
+        glVertex3f(pDecals[i].vec[1].x, pDecals[i].vec[1].y, pDecals[i].vec[1].z);
+        glTexCoord2f(1,1);
+        glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
+        glVertex3f(pDecals[i].vec[2].x, pDecals[i].vec[2].y, pDecals[i].vec[2].z);
+        glTexCoord2f(0,1);
+        glNormal3f(pDecals[i].vNormal.x, pDecals[i].vNormal.y, pDecals[i].vNormal.z);
+        glVertex3f(pDecals[i].vec[3].x, pDecals[i].vec[3].y, pDecals[i].vec[3].z);
         glEnd();
     }
 
@@ -1155,7 +1189,7 @@ void CBSP::RenderDecals()
 
 /**
  *============================================================================================
- *                                        PUBLIC
+ *										PUBLIC
  *============================================================================================
 **/
 
@@ -1421,7 +1455,7 @@ bool CBSP::LoadBSPFile(const char* pszFileName)
         ppbVisLists = (bool**) MALLOC(sizeof(bool*) * nVisLeafs); // DO NOT MOVE THIS LINE Memory Bug
         //memset(ppbVisLists, 0, sizeof(bool*) * nVisLeafs);
 
-        for (int i=0;i<nVisLeafs;i++)
+        for (int i=0; i<nVisLeafs; i++)
         {
             if (pLeafs[i+1].nVisOffset >= 0)
                 ppbVisLists[i] = GetPVS(i+1, pVisList);
@@ -1503,7 +1537,7 @@ void CBSP::RenderLevel(VECTOR3D vPos)
 
     /** RENDER BRUSH ENTITIES **/
     if (g_bRenderBrushEntities)
-        for (int i=0;i<nBrushEntities;i++) //TODO: implement PVS for pEntities
+        for (int i=0; i<nBrushEntities; i++) //TODO: implement PVS for pEntities
             RenderBrushEntity(i, vPos);
 
     // Turn off second unit, if it was enabled
@@ -1565,6 +1599,360 @@ CEntity* CBSP::FindEntity(const char* pszNewClassName)
     return NULL;
 }
 
+// collision detection source: http://www.devmaster.net/articles/quake3collision/ 27.12.2010
+#define TT_RAY 0
+#define TT_SPHERE 1
+#define TT_BOX 2
+
+float traceRadius;
+int traceType;
+VECTOR3D traceMins;
+VECTOR3D traceMaxs;
+VECTOR3D traceExtents;
+
+VECTOR3D CBSP::TraceRay(VECTOR3D inputStart, VECTOR3D inputEnd)
+{
+    traceType = TT_RAY;
+    return Trace(inputStart, inputEnd);
+}
+
+VECTOR3D CBSP::TraceSphere(VECTOR3D inputStart, VECTOR3D inputEnd, float inputRadius)
+{
+    traceType = TT_SPHERE;
+    traceRadius = inputRadius;
+    return Trace(inputStart, inputEnd);
+}
+
+VECTOR3D CBSP::TraceBox(VECTOR3D inputStart, VECTOR3D inputEnd, VECTOR3D inputMins, VECTOR3D inputMaxs)
+{
+    if (inputMins.x == 0 && inputMins.y == 0 && inputMins.z == 0 &&
+            inputMaxs.x == 0 && inputMaxs.y == 0 && inputMaxs.z == 0)
+    {
+        // the box is actually a ray
+        return TraceRay(inputStart, inputEnd);
+    }
+    else
+    {
+        // setup for a box
+        traceType = TT_BOX;
+        traceMins = inputMins;
+        traceMaxs = inputMaxs;
+        traceExtents.x = -traceMins.x > traceMaxs.x ? -traceMins.x : traceMaxs.x;
+        traceExtents.y = -traceMins.y > traceMaxs.y ? -traceMins.y : traceMaxs.y;
+        traceExtents.z = -traceMins.z > traceMaxs.z ? -traceMins.z : traceMaxs.z;
+        return Trace(inputStart, inputEnd);
+    }
+}
+
+float outputFraction;
+bool outputStartsOut;
+bool outputAllSolid;
+bool debug = false;
+
+VECTOR3D CBSP::Trace(VECTOR3D inputStart, VECTOR3D inputEnd)
+{
+    outputStartsOut = true;
+    outputAllSolid = false;
+    outputFraction = 1.0f;
+
+    // walk through the BSP tree
+    CheckNode(0, 0.0f, 1.0f, inputStart, inputEnd);
+
+    if (outputFraction == 1.0f)
+    {
+        // nothing blocked the trace
+        return inputEnd;
+    }
+    else
+    {
+        // collided with something
+        return inputStart + outputFraction * (inputEnd - inputStart);
+    }
+}
+
+void CBSP::CheckNode(int nodeIndex, float startFraction, float endFraction, VECTOR3D start, VECTOR3D end)
+{
+    if (nodeIndex < 0)
+    {
+        // this is a leaf
+        BSPLEAF* pLeaf = &pLeafs[~nodeIndex];
+        //if(leaf->nContents == CONTENTS_SOLID)
+        {
+            if (pLeaf->nMarkSurfaces > 0)
+            {
+                CheckLeaf(pLeaf, startFraction, endFraction, start, end);
+            }
+        }
+
+        return;
+    }
+
+    // this is a node
+
+    BSPNODE* node = &pNodes[nodeIndex];
+    BSPPLANE* plane = &pPlanes[node->iPlane];
+
+    float startDistance = DotProduct(start, plane->vNormal) - plane->fDist;
+    float endDistance =   DotProduct(end,   plane->vNormal) - plane->fDist;
+
+    float offset;
+    switch(traceType)
+    {
+    case TT_RAY:
+        offset = 0;
+        break;
+    case TT_SPHERE:
+        offset = traceRadius;
+        break;
+    case TT_BOX:
+        // this is just a dot product, but we want the absolute values
+        offset = (float)(fabs( traceExtents.x * plane->vNormal.x ) +
+                         fabs( traceExtents.y * plane->vNormal.y ) +
+                         fabs( traceExtents.z * plane->vNormal.z ));
+        break;
+    }
+
+    if (startDistance >= offset && endDistance >= offset)
+    {
+        // both points are in front of the plane
+        // so check the front child
+        CheckNode(node->iChildren[0], startFraction, endFraction, start, end);
+    }
+    else if (startDistance < -offset && endDistance < -offset)
+    {
+        // both points are behind the plane
+        // so check the back child
+        CheckNode(node->iChildren[1], startFraction, endFraction, start, end);
+    }
+    else
+    {
+        // the line spans the splitting plane
+        //int side;
+        float fraction1, fraction2, middleFraction;
+        VECTOR3D middle;
+
+        // split the segment into two
+        if (startDistance < endDistance)
+        {
+            //side = 1; // back
+            float inverseDistance = 1.0f / (startDistance - endDistance);
+            fraction1 = (startDistance - offset - EPSILON) * inverseDistance;
+            fraction2 = (startDistance + offset + EPSILON) * inverseDistance;
+        }
+        else if (startDistance > endDistance)
+        {
+            //side = 0; // front
+            float inverseDistance = 1.0f / (startDistance - endDistance);
+            fraction1 = (startDistance + offset + EPSILON) * inverseDistance;
+            fraction2 = (startDistance - offset - EPSILON) * inverseDistance;
+        }
+        else
+        {
+            //side = 0; // front
+            fraction1 = 1.0f;
+            fraction2 = 0.0f;
+        }
+
+        // clamp tp [0;1]
+        if (fraction1 < 0.0f)
+            fraction1 = 0.0f;
+        else if (fraction1 > 1.0f)
+            fraction1 = 1.0f;
+
+        if (fraction2 < 0.0f)
+            fraction2 = 0.0f;
+        else if (fraction2 > 1.0f)
+            fraction2 = 1.0f;
+
+        // calculate the middle point for the first side
+        middleFraction = startFraction + (endFraction - startFraction) * fraction1;
+        middle = start + fraction1 * (end - start);
+
+        // check the first side
+        CheckNode(node->iChildren[0], startFraction, middleFraction, start, middle);
+
+        // calculate the middle point for the second side
+        middleFraction = startFraction + (endFraction - startFraction) * fraction2;
+        middle = start + fraction2 * (end - start);
+
+        // check the second side
+        CheckNode(node->iChildren[1], middleFraction, endFraction, middle, end);
+    }
+}
+
+void CBSP::CheckLeaf(BSPLEAF* leaf, float startFrac, float endFrac, VECTOR3D inputStart, VECTOR3D inputEnd)
+{
+    //system("cls");
+    float startFraction = -1.0f;
+    float endFraction = 1.0f;
+    bool startsOut = false;
+    bool endsOut = false;
+
+    for (int i = 0; i < leaf->nMarkSurfaces; i++)
+    {
+        BSPFACE *face = &pFaces[pMarkSurfaces[leaf->iFirstMarkSurface + i]];
+        BSPPLANE *plane = &pPlanes[face->iPlane];
+
+        VECTOR3D normal = plane->vNormal;
+        float dist = plane->fDist;
+        if(face->nPlaneSide)
+        {
+            normal = -1 * normal;
+            dist = -dist;
+        }
+
+        //printf("PLANE normal: %f %f %f dist: %f\n", normal.x, normal.y, normal.z, dist);
+
+        float startDistance, endDistance;
+        if (traceType == TT_RAY)
+        {
+            startDistance = DotProduct(inputStart, normal) - dist;
+            endDistance = DotProduct(inputEnd, normal) - dist;
+        }
+        else if (traceType == TT_SPHERE)
+        {
+            startDistance = DotProduct(inputStart, normal) - (dist + traceRadius);
+            endDistance = DotProduct(inputEnd, normal) - (dist + traceRadius);
+        }
+        else if (traceType == TT_BOX)
+        {
+            VECTOR3D offset;
+            if (normal.x < 0)
+                offset.x = traceMaxs.x;
+            else
+                offset.x = traceMins.x;
+
+            if (normal.y < 0)
+                offset.y = traceMaxs.y;
+            else
+                offset.y = traceMins.y;
+
+            if (normal.z < 0)
+                offset.z = traceMaxs.z;
+            else
+                offset.z = traceMins.z;
+
+			startDistance = DotProduct(inputStart + offset, normal) - dist;
+            endDistance = DotProduct(inputEnd + offset, normal) - dist;
+        }
+
+        //printf("dist %f %f\n", startDistance, endDistance);
+
+        if (startDistance < 0)
+            startsOut = true;
+        if (endDistance < 0)
+            endsOut = true;
+
+        // make sure the trace isn't completely on one side of the face
+        if (startDistance > 0 && endDistance > 0)
+        {
+            // both are inside the leaf
+            continue;
+        }
+        else if (startDistance <= 0 && endDistance <= 0)
+        {
+            // both are outside the leaf
+            continue;
+        }
+        else
+        {
+            // plane intersection, check if inside all surface edges
+            float rayStartDistance = DotProduct(inputStart, normal) - dist;
+            float rayEndDistance = DotProduct(inputEnd, normal) - dist;
+            VECTOR3D intersectionPoint = inputStart + (rayStartDistance / (rayStartDistance - rayEndDistance)) * (inputEnd - inputStart);
+
+            if(!IsInsideFace(face, intersectionPoint))
+                continue;
+
+            // surface intersection
+            if (startDistance < endDistance)
+            {
+                // line is entering into the leaf
+                float fraction = (startDistance + EPSILON) / (startDistance - endDistance);
+                if (fraction > startFraction)
+                    startFraction = fraction;
+            }
+            else
+            {
+                // line is leaving the leaf
+                float fraction = (startDistance - EPSILON) / (startDistance - endDistance);
+                if (fraction < endFraction)
+                    startFraction = fraction;
+            }
+
+            break;
+        }
+    }
+
+    if (startsOut == false)
+    {
+        outputStartsOut = false;
+        if (endsOut == false)
+            outputAllSolid = true;
+    }
+
+    if (startFraction < endFraction)
+    {
+        //printf("FRAC %f %f\n", startFraction, endFraction);
+        if (startFraction > -1)
+        {
+            if (startFraction < 0)
+                startFraction = 0;
+
+            // Transform fraction for current part of trace (startFrac to endFrac) to full length of trace (0 to 1)
+            outputFraction = startFrac + startFraction * (endFrac - startFrac);
+        }
+    }
+}
+
+#define EPSILON_PRECISE  0.0000001
+#define MODULUS(p) (sqrt(p.x*p.x + p.y*p.y + p.z*p.z))
+#define TWOPI 6.283185307179586476925287
+#define RTOD 57.2957795
+
+bool CBSP::IsInsideFace(BSPFACE* face, VECTOR3D p)
+{
+    // Alg: http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/ [28.01.11]
+    double m1,m2;
+    double anglesum = 0;
+    double costheta;
+    VECTOR3D p1, p2, v1, v2;
+
+    for (int i=0; i<face->nEdges; i++)
+    {
+        int iEdge = pSurfEdges[face->iFirstEdge + i]; // This gives the index into the edge lump
+        if(iEdge > 0)
+        {
+            p1 = pVertices[pEdges[iEdge].iVertex[0]];
+            p2 = pVertices[pEdges[iEdge].iVertex[1]];
+        }
+        else
+        {
+            iEdge *= -1;
+            p1 = pVertices[pEdges[iEdge].iVertex[1]];
+            p2 = pVertices[pEdges[iEdge].iVertex[0]];
+        }
+
+        v1.x = p1.x - p.x;
+        v1.y = p1.y - p.y;
+        v1.z = p1.z - p.z;
+        v2.x = p2.x - p.x;
+        v2.y = p2.y - p.y;
+        v2.z = p2.z - p.z;
+
+        m1 = MODULUS(v1);
+        m2 = MODULUS(v2);
+        if (m1*m2 <= EPSILON_PRECISE)
+            return true; // We are on a node, consider this inside
+        else
+            costheta = (v1.x*v2.x + v1.y*v2.y + v1.z*v2.z) / (m1*m2);
+
+        anglesum += acos(costheta);
+    }
+
+	return (fabs(anglesum - TWOPI) < EPSILON);
+}
+
 void CBSP::Destroy()
 {
     // Entities
@@ -1592,7 +1980,7 @@ void CBSP::Destroy()
     //lightmaps
     if (pnLightmapLookUp)
     {
-        for (int i=0;i<nFaces;i++)
+        for (int i=0; i<nFaces; i++)
         {
             if (pnLightmapLookUp[i]!=0)
                 glDeleteTextures(1, &pnLightmapLookUp[i]);
@@ -1605,7 +1993,7 @@ void CBSP::Destroy()
     // decals
     if(pDecalWads)
     {
-        for(int i=0;i<DECAL_WAD_COUNT;i++)
+        for(int i=0; i<DECAL_WAD_COUNT; i++)
             pDecalWads[i].Close();
 
         delete[] pDecalWads;
@@ -1624,7 +2012,7 @@ void CBSP::Destroy()
     //visLists
     if (ppbVisLists)
     {
-        for (int i=0;i<nVisLeafs;i++)
+        for (int i=0; i<nVisLeafs; i++)
         {
             if (ppbVisLists[i])
             {
