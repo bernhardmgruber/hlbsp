@@ -1,10 +1,14 @@
 #ifndef MAIN_H_INCLUDED
 #define MAIN_H_INCLUDED
 
-#include <windows.h>  // Header for windows
-#include <gl/gl.h>    // Header for OpenGL core functions
-#include <gl/glu.h>	  // Header for OpenGl utility functions
-#include <gl/glext.h> // Header for OpenGL extension definitions
+//#include <windows.h>  // Header for windows
+//#include <gl/gl.h>    // Header for OpenGL core functions
+//#include <gl/glu.h>	  // Header for OpenGl utility functions
+//#include <gl/glext.h> // Header for OpenGL extension definitions
+
+#include <SDL/SDL.h>
+#include <SDL/SDL_opengl.h>
+
 #include "glsl.h"
 
 #include "hlbsp.h"
@@ -27,7 +31,8 @@ extern HGLRC     g_hRC;		 // OpenGL rendering context
 extern HWND      g_hWnd;		 // Handle to our window
 extern HINSTANCE g_hInstance; // Handle to our application instance
 
-extern bool g_abKeys[256];			// Array Used For The Keyboard Routine
+//extern bool g_abKeys[256];			// Array Used For The Keyboard Routine
+extern bool g_abKeys[SDLK_LAST];
 extern bool g_bActive;		// Window Active Flag Set To true By Default
 extern bool g_bFullscreen;	// Fullscreen Flag Set To Fullscreen Mode By Default
 

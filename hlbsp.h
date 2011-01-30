@@ -1,7 +1,7 @@
 #ifndef BSPLOADER_H_INCLUDED
 #define BSPLOADER_H_INCLUDED
 
-#include <windows.h>
+//#include <windows.h>
 #include <gl/gl.h>
 #include "bspv30filedefs.h"
 #include "entity.h"

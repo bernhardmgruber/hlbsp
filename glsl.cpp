@@ -1,6 +1,6 @@
 #include "glsl.h"
 
-#include <windows.h>
+//#include <windows.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -96,6 +96,10 @@ bool glslCheckSupport()
 
     return true;
 }
+
+#ifndef __WIN32__
+#define wglGetProcAddress(x) SDL_GL_GetProcAddress(x)
+#endif
 
 bool glslInitProcs()
 {

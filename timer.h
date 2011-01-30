@@ -1,7 +1,7 @@
 #ifndef TIMER_H_INCLUDED
 #define TIMER_H_INCLUDED
 
-#include <windows.h>
+//#include <windows.h>
 
 class CTimer
 {
@@ -14,7 +14,7 @@ public:
     double dInterval; // The time passed since the last call of Tick()
 
 private:
-    LARGE_INTEGER HPF;
+    //LARGE_INTEGER HPF;
 };
 
 #endif // TIMER_H_INCLUDED

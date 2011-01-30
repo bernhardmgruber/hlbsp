@@ -1,7 +1,6 @@
 #ifndef WAD_H_INCLUDED
 #define WAD_H_INCLUDED
 
-#include <windows.h>
 #include <stdio.h>
 #include "imageio.h"
 #include "bspv30filedefs.h"

@@ -36,7 +36,6 @@
 			<Add library="gdi32" />
 			<Add library="opengl32" />
 			<Add library="glu32" />
-			<Add library="winmm" />
 		</Linker>
 		<Unit filename="3dmath.cpp" />
 		<Unit filename="3dmath.h" />

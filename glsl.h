@@ -1,8 +1,10 @@
 #ifndef GLSL_H_INCLUDED
 #define GLSL_H_INCLUDED
 
-#include <gl/gl.h>
-#include <gl/glext.h>
+//#include <gl/gl.h>
+//#include <gl/glext.h>
+#include <SDL/SDL.h>
+#include <SDL/SDL_opengl.h>
 
 /* GL Functions */
 extern PFNGLCREATESHADERPROC glCreateShader;

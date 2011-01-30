@@ -1,58 +1,42 @@
 #include "gltexldr.h"
-
-#include <gl/glu.h>
-#include <gl/glext.h>
-#include <stdio.h>
+#include "main.h"
 
 bool LoadTexture(GLuint* texture, const char* fileName, unsigned char mode)
 {
     if (!fileName)
     {
-        char errtext[512];
-        sprintf(errtext, "Could not load texture %s. Invalid filename.", fileName);
-        MessageBox(NULL, errtext, "ERROR", MB_OK | MB_ICONERROR);
+        MSGBOX_ERROR("Could not load texture %s. Invalid filename.", fileName);
         return false;
     }
 
     // Define a pointer to a tImage
     IMAGE *pImage = NULL;
 
-#ifdef _WINDOWS_H
-    if(mode & LT_RESOURCE) //Resource
+    /*if(mode & LT_RESOURCE) //Resource
     {
         pImage = LoadBMP(fileName, true);
         if (pImage==NULL)
         {
-            char errtext[512];
-            sprintf(errtext, "Could not load texture %s. Loading BMP from resource failed.", fileName);
-            MessageBox(NULL, errtext, "ERROR", MB_OK | MB_ICONERROR);
+            MSGBOX_ERROR("Could not load texture %s. Loading BMP from resource failed.", fileName);
             return false;
         }
 
         int resID = LOWORD((DWORD)fileName);
-        fileName = (char*) malloc(sizeof(char) * 64);
-        if(fileName == NULL)
-        {
-            printf("Memory allocation failed\n");
-            return false;
-        }
+        fileName = (char*) MALLOC(sizeof(char) * 64);
         sprintf((char*)fileName, "#%d (resource)", resID);
     }
-    else
-    #endif // _WINDOWS_H
+    else*/
     {
         if (strstr(fileName, ".tga")) //TGA File
         {
             pImage = LoadTGA(fileName);
             if (pImage==NULL)
             {
-                char errtext[512];
-                sprintf(errtext, "Could not load texture %s. Loading TGA file failed.", fileName);
-                MessageBox(NULL, errtext, "ERROR", MB_OK | MB_ICONERROR);
+                MSGBOX_ERROR("Could not load texture %s. Loading TGA file failed.", fileName);
                 return false;
             }
         }
-        else if (strstr(fileName, ".bmp")) //BMP File
+        /*else if (strstr(fileName, ".bmp")) //BMP File
         {
             pImage = LoadBMP(fileName, false);
             if (pImage==NULL)
@@ -62,26 +46,22 @@ bool LoadTexture(GLuint* texture, const char* fileName, unsigned char mode)
                 MessageBox(NULL, errtext, "ERROR", MB_OK | MB_ICONERROR);
                 return false;
             }
-        }
+        }*/
         else // Else we don't support the file format
         {
-            char errtext[512];
-            sprintf(errtext, "Could not load texture %s. Unknown file extension.", fileName);
-            MessageBox(NULL, errtext, "ERROR", MB_OK | MB_ICONERROR);
+            MSGBOX_ERROR("Could not load texture %s. Unsupported file extension.", fileName);
             return false;
         }
     }
 
     if(!CreateTexture(texture, pImage, mode))
     {
-        char errtext[512];
-        sprintf(errtext, "Could not load texture %s.", fileName);
-        MessageBox(NULL, errtext, "ERROR", MB_OK | MB_ICONERROR);
+        MSGBOX_ERROR("Could not load texture %s.", fileName);
         return false;
     }
     else
     {
-        printf("Loaded Texture %s width ID %d\n", fileName, *texture);
+        LOG("Loaded Texture %s width ID %d\n", fileName, *texture);
         return true;
     }
 }
@@ -150,15 +130,7 @@ bool CreateTexture(GLuint* texture, IMAGE* pImage, unsigned char mode)
         texCount++;
     }
 
-    if (pImage)										// If we loaded the IMAGE
-    {
-        if (pImage->pData)							// If there is texture data
-        {
-            free(pImage->pData);						// Free the texture data, we don't need it anymore
-        }
-
-        free(pImage);								// Free the IMAGE structure
-    }
+    FreeImagePointer(pImage);
 
     return true;
 }

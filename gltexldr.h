@@ -1,7 +1,7 @@
 #ifndef GLTEXTURELOADER_H_INCLUDED
 #define GLTEXTURELOADER_H_INCLUDED
 
-#include <windows.h>
+//#include <windows.h>
 #include <gl/gl.h>
 #include "imageio.h"
 

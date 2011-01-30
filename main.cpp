@@ -1,5 +1,5 @@
 /*
-    Link against: gdi32, winmm, opengl32, glu32
+    Link against: opengl32, glu32
 */
 #include "main.h"
 
@@ -12,9 +12,9 @@
 #include "hud.h"
 
 #define WINDOW_CLASS_NAME "hlbsp"
-#define WINDOW_TITLE "HL BSP"
+#define WINDOW_CAPTION "HL BSP"
 
-#define BSP_DIR "data\\maps"
+#define BSP_DIR "data/maps"
 #define BSP_FILE_NAME "cs_assault.bsp"
 
 //#define FULLSCREEN
@@ -36,7 +36,8 @@ HGLRC		g_hRC;		 // OpenGL rendering context
 HWND		g_hWnd;		 // Handle to our window
 HINSTANCE	g_hInstance; // Handle to our application instance
 
-bool g_abKeys[256];			// Array Used For The Keyboard Routine
+//bool g_abKeys[256];			// Array Used For The Keyboard Routine
+bool g_abKeys[SDLK_LAST];
 bool g_bActive = true;		// Window Active Flag Set To true By Default
 bool g_bFullscreen = true;	// Fullscreen Flag Set To Fullscreen Mode By Default
 
@@ -114,7 +115,7 @@ void* MALLOC(size_t nSize)
     return pMemory;
 }
 
-void ReSizeGLScene(int nWidth, int nHeight)		// Resize And Initialize The GL Window
+void ResizeGLScene(int nWidth, int nHeight)		// Resize And Initialize The GL Window
 {
     g_nWinWidth = nWidth;
     g_nWinHeight = nHeight;
@@ -176,17 +177,19 @@ int InitGL()										// All Setup For OpenGL Goes Here
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
 
+    glEnable(GL_MULTISAMPLE);
+
     // Extensions
     LOG("Getting multitexture extension function pointers ...\n");
     if (CheckExtension("GL_ARB_multitexture"))
     {
         // Obtain the functions entry point
-        if ((glActiveTexture = (PFNGLACTIVETEXTUREARBPROC) wglGetProcAddress("glActiveTexture")) == NULL)
+        if ((glActiveTexture = (PFNGLACTIVETEXTUREARBPROC) SDL_GL_GetProcAddress("glActiveTexture")) == NULL)
         {
             MSGBOX_ERROR("Error retrieving function pointer. glActiveTexture is not supported");
             return false;
         }
-        if ((glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FARBPROC)wglGetProcAddress("glMultiTexCoord2f")) == NULL)
+        if ((glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FARBPROC)SDL_GL_GetProcAddress("glMultiTexCoord2f")) == NULL)
         {
             MSGBOX_ERROR("Error retrieving function pointer. glMultiTexCoord2f is not supported");
             return false;
@@ -310,7 +313,7 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     g_timer.Tick();
 
     char szWindowText[256];
-    sprintf(szWindowText, "%s - %.1f FPS", WINDOW_TITLE, g_timer.fTPS);
+    sprintf(szWindowText, "%s - %.1f FPS", WINDOW_CAPTION, g_timer.fTPS);
     SetWindowText(g_hWnd, szWindowText);
 
     // Player
@@ -392,7 +395,308 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     return true;										// Everything Went OK
 }
 
-void KillGLWindow()								// Properly Kill The Window
+bool CreateSDLWindow(int width, int height)
+{
+    if (SDL_Init(SDL_INIT_VIDEO))
+    {
+        MSGBOX_ERROR("Could not initialize SDL");
+        return false;
+    };
+
+    SDL_WM_SetCaption(WINDOW_CAPTION, WINDOW_CAPTION);
+
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+    // enable 2x anti-aliasing
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+
+    unsigned int flags = SDL_OPENGL | SDL_RESIZABLE;
+    if(g_bFullscreen)
+        flags |= SDL_FULLSCREEN;
+
+    SDL_SetVideoMode(width, height, 0, flags);
+
+    InitGL();
+    ResizeGLScene(width, height);
+
+    return true;
+}
+
+void ProcessEvent(SDL_Event event)
+{
+    switch(event.type)
+    {
+    case SDL_APPACTIVE:
+        if((event.active.state & SDL_APPINPUTFOCUS) && (event.active.gain == 0))
+            g_bActive = false;
+        else
+            g_bActive = true;
+        return;
+
+    case SDL_KEYDOWN:
+        g_abKeys[event.key.keysym.sym] = true;
+
+        switch(event.key.keysym.sym)
+        {
+        case SDLK_TAB:
+            g_camera.SetMoveSens(CAMERA_MOVE_SENS * 3.0f);
+            break;
+
+        case SDLK_LSHIFT:
+            g_camera.SetMoveSens(CAMERA_MOVE_SENS / 3.0f);
+            break;
+
+        case SDLK_F1:
+            SDL_Quit();						// Kill Our Current Window
+            g_bFullscreen =! g_bFullscreen;				// Toggle Fullscreen / Windowed Mode
+            if(g_bFullscreen)
+                LOG("Changing to fullscreen ...\n");
+            else
+                LOG("Changing to windowed mode ...\n");
+
+            // Recreate Our OpenGL Window
+            if (!CreateSDLWindow(WINDOW_WIDTH, WINDOW_HEIGHT))
+                SDL_Quit();
+            break;
+
+        case SDLK_F2:
+            if(g_bShaderSupport)
+            {
+                g_bUseShader = !g_bUseShader;
+                if(g_bUseShader)
+                    g_hud.Printf("shaders enabled");
+                else
+                    g_hud.Printf("shaders disabled");
+            }
+            else
+                g_hud.Printf("shaders are not supported");
+            break;
+
+        case SDLK_F5:
+        {
+            IMAGE* pImg = CreateImage(3, g_nWinWidth, g_nWinHeight);
+            glReadPixels(0, 0, pImg->nWidth, pImg->nHeight, GL_RGB, GL_UNSIGNED_BYTE, pImg->pData);
+
+            //get filename
+            char szFileName[512];
+
+            for (int i=1;; i++)
+            {
+                sprintf(szFileName, "screenshots/Screenshot%d.bmp", i);
+                FILE* pFile;
+                if ((pFile = fopen(szFileName, "rb")) == NULL)
+                    break;
+                fclose(pFile);
+            }
+
+            SaveBMP(pImg, szFileName);
+            FreeImagePointer(pImg);
+            break;
+        }
+
+        case SDLK_c:
+            g_bRenderCoords = !g_bRenderCoords;
+            if(g_bRenderCoords)
+                g_hud.Printf("coords enabled");
+            else
+                g_hud.Printf("coords disabled");
+            break;
+
+        case SDLK_h:
+            g_bRenderHUD = !g_bRenderHUD;
+            if(g_bRenderHUD)
+                g_hud.Printf("hud enabled");
+            else
+                g_hud.Printf("hud disabled");
+            break;
+
+        case SDLK_l:
+            g_bLightmaps = !g_bLightmaps;
+            if(g_bLightmaps)
+                g_hud.Printf("lightmaps enabled");
+            else
+                g_hud.Printf("lightmaps disabled");
+            break;
+
+        case SDLK_n:
+            g_bNightvision = !g_bNightvision;
+            if(g_bNightvision)
+                g_hud.Printf("nightvision enabled");
+            else
+                g_hud.Printf("nightvision disabled");
+            break;
+
+        case SDLK_t:
+            g_bTextures = !g_bTextures;
+            if(g_bTextures)
+                g_hud.Printf("textures enabled");
+            else
+                g_hud.Printf("textures disabled");
+            break;
+
+        case SDLK_p:
+            g_bPolygons = !g_bPolygons;
+            if (g_bPolygons)
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                g_hud.Printf("polygon mode set to line");
+            }
+            else
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                g_hud.Printf("polygon mode set to fill");
+            }
+            break;
+
+        case SDLK_v:
+            g_bFlashlight = !g_bFlashlight;
+            if(g_bFlashlight)
+                g_hud.Printf("flashlight enabled");
+            else
+                g_hud.Printf("flashlight disabled");
+            break;
+
+        case SDLK_1:
+            g_bRenderSkybox = !g_bRenderSkybox;
+            if(g_bRenderSkybox)
+                g_hud.Printf("skybox enabled");
+            else
+                g_hud.Printf("skybox disabled");
+            break;
+
+        case SDLK_2:
+            g_bRenderStaticBSP = !g_bRenderStaticBSP;
+            if(g_bRenderStaticBSP)
+                g_hud.Printf("static geometry enabled");
+            else
+                g_hud.Printf("static geometry  disabled");
+            break;
+
+        case SDLK_3:
+            g_bRenderBrushEntities = !g_bRenderBrushEntities;
+            if(g_bRenderBrushEntities)
+                g_hud.Printf("entities enabled");
+            else
+                g_hud.Printf("entities disabled");
+            break;
+
+        case SDLK_4:
+            g_bRenderDecals = !g_bRenderDecals;
+            if(g_bRenderDecals)
+                g_hud.Printf("decals enabled");
+            else
+                g_hud.Printf("decals disabled");
+            break;
+
+        default:
+            break;
+        }
+        return;
+
+    case SDL_KEYUP:
+        g_abKeys[event.key.keysym.sym] = false;
+
+        switch(event.key.keysym.sym)
+        {
+        case SDLK_TAB:
+        case SDLK_LSHIFT:
+            g_camera.SetMoveSens(CAMERA_MOVE_SENS);
+            break;
+
+        default:
+            break;
+        }
+        return;
+
+    case SDL_VIDEORESIZE:
+        ResizeGLScene(event.resize.w, event.resize.h);
+        return;
+
+    case SDL_MOUSEBUTTONDOWN:
+        switch(event.button.button)
+        {
+            case SDL_BUTTON_RIGHT:
+                g_bCaptureMouse = true;
+                POINT pt;
+                GetCursorPos(&pt);
+                g_windowCenter.x = pt.x;
+                g_windowCenter.y = pt.y;
+                ShowCursor(false);
+                break;
+        }
+        return;
+
+    case SDL_MOUSEBUTTONUP:
+        switch(event.button.button)
+        {
+            case SDL_BUTTON_RIGHT:
+                g_bCaptureMouse = false;
+                ShowCursor(true);
+                break;
+        }
+        return;
+    }
+}
+
+#ifdef __WIN32__
+#undef main
+#endif
+
+int main(int argc, char **argv )
+{
+#ifdef FULLSCREEN
+    g_bFullscreen = true;
+#else
+    g_bFullscreen = false;
+#endif
+
+    if (!CreateSDLWindow(WINDOW_WIDTH, WINDOW_HEIGHT))
+        return 0;
+
+    SDL_Event event;
+    bool bDone = false;
+    while (!bDone)
+    {
+        if (SDL_PollEvent(&event))
+        {
+            if(event.type == SDL_QUIT)
+                bDone = true;
+            else
+                ProcessEvent(event);
+        }
+        else
+        {
+            if (g_bActive)
+            {
+                if (g_abKeys[SDLK_ESCAPE])
+                {
+                    bDone = true;
+                }
+                else
+                {
+                    DrawGLScene();
+                    SDL_GL_SwapBuffers();
+                }
+            }
+
+            if (g_abKeys[SDLK_F1])
+            {
+                g_abKeys[SDLK_F1] = false;
+                SDL_Quit();
+                g_bFullscreen =! g_bFullscreen;
+
+                if (!CreateSDLWindow(WINDOW_WIDTH, WINDOW_HEIGHT))
+                    return 0;
+            }
+        }
+    }
+
+    SDL_Quit();
+    return 0;
+}
+
+/*void KillGLWindow()								// Properly Kill The Window
 {
     g_bsp.Destroy();
 
@@ -432,16 +736,9 @@ void KillGLWindow()								// Properly Kill The Window
         MSGBOX_ERROR("Could Not Unregister Class.");
         g_hInstance=NULL;									// Set g_hInstance To NULL
     }
-}
+}*/
 
-/*	This Code Creates Our OpenGL Window.  Parameters Are:					*
- *	szTitle			- Title To Appear At The Top Of The Window				*
- *	nWidth			- Width Of The GL Window Or Fullscreen Mode				*
- *	nHeight			- nHeight Of The GL Window Or Fullscreen Mode			*
- *	bits			- Number Of Bits To Use For Color (8/16/24/32)			*
- *	fullscreenflag	- Use Fullscreen Mode (true) Or Windowed Mode (false)	*/
-
-bool CreateGLWindow(const char* szTitle, int nWidth, int nHeight, int bits)
+/*bool CreateGLWindow(const char* szTitle, int nWidth, int nHeight, int bits)
 {
     LOG("##### Initialization #####\n");
 
@@ -594,7 +891,7 @@ bool CreateGLWindow(const char* szTitle, int nWidth, int nHeight, int bits)
     }
 
     LOG("Setting up projection ...\n");
-    ReSizeGLScene(nWidth, nHeight);					// Set Up Our Perspective GL Screen
+    ResizeGLScene(nWidth, nHeight);					// Set Up Our Perspective GL Screen
 
     if (!InitGL())									// Initialize Our Newly Created GL Window
     {
@@ -612,9 +909,9 @@ bool CreateGLWindow(const char* szTitle, int nWidth, int nHeight, int bits)
     LOG("##### Finished Initialization (%.3f s) #####\n", (float)g_timer.dInterval);
 
     return true;									// Success
-}
+}*/
 
-LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+/*LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)									// Check For Windows Messages
     {
@@ -666,7 +963,7 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 LOG("Changing to windowed mode ...\n");
 
             // Recreate Our OpenGL Window
-            if (!CreateGLWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, 32))
+            if (!CreateGLWindow(WINDOW_CAPTION, WINDOW_WIDTH, WINDOW_HEIGHT, 32))
                 PostQuitMessage(0);						// Quit If Window Was Not Created
             break;
         case VK_F2:
@@ -808,7 +1105,7 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_SIZE:								// Resize The OpenGL Window
     {
-        ReSizeGLScene(LOWORD(lParam),HIWORD(lParam));  // LoWord=Width, HiWord=nHeight
+        ResizeGLScene(LOWORD(lParam),HIWORD(lParam));  // LoWord=Width, HiWord=nHeight
         return 0;								// Jump Back
     }
 
@@ -833,9 +1130,9 @@ LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     // Pass All Unhandled Messages To DefWindowProc
     return DefWindowProc(g_hWnd,uMsg,wParam,lParam);
-}
+}*/
 
-int WINAPI WinMain(HINSTANCE g_hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+/*int WINAPI WinMain(HINSTANCE g_hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 #ifdef FULLSCREEN
     g_bFullscreen = true;
@@ -844,7 +1141,7 @@ int WINAPI WinMain(HINSTANCE g_hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 #endif
 
     // Create Our OpenGL Window
-    if (!CreateGLWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, 32))
+    if (!CreateGLWindow(WINDOW_CAPTION, WINDOW_WIDTH, WINDOW_HEIGHT, 32))
         return 0;									// Quit If Window Was Not Created
 
     MSG		msg;									// Windows Message Structure
@@ -884,4 +1181,4 @@ int WINAPI WinMain(HINSTANCE g_hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     // Shutdown
     KillGLWindow();									// Kill The Window
     return 0;							// Exit The Program
-}
+}*/

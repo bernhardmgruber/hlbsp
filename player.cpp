@@ -86,36 +86,36 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
 
     float fTmpMoveSens = PLAYER_MOVE_SENS * dFrameInterval;
 
-    if (g_abKeys[VK_SPACE]) // UP
+    if (g_abKeys[SDLK_SPACE]) // UP
     {
         vPos.z += fTmpMoveSens;
     }
 
-    if (g_abKeys[VK_CONTROL]) // DOWN
+    if (g_abKeys[SDLK_LCTRL]) // DOWN
     {
         vPos.z -= fTmpMoveSens;
     }
 
     // TODO: If strafing and moving reduce speed to keep total move per frame constant
-    if (g_abKeys[(int)'W']) // FORWARD
+    if (g_abKeys[SDLK_w]) // FORWARD
     {
         vPos.x += cos(DEGTORAD(fZAngle)) * fTmpMoveSens;
         vPos.y += sin(DEGTORAD(fZAngle)) * fTmpMoveSens;
     }
 
-    if (g_abKeys[(int)'S']) // BACKWARD
+    if (g_abKeys[SDLK_s]) // BACKWARD
     {
         vPos.x -= cos(DEGTORAD(fZAngle)) * fTmpMoveSens;
         vPos.y -= sin(DEGTORAD(fZAngle)) * fTmpMoveSens;
     }
 
-    if (g_abKeys[(int)'A']) // LEFT
+    if (g_abKeys[SDLK_a]) // LEFT
     {
         vPos.x += cos(DEGTORAD(fZAngle + 90.0f)) * fTmpMoveSens;
         vPos.y += sin(DEGTORAD(fZAngle + 90.0f)) * fTmpMoveSens;
     }
 
-    if (g_abKeys[(int)'D']) // RIGHT
+    if (g_abKeys[SDLK_d]) // RIGHT
     {
         vPos.x += cos(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
         vPos.y += sin(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;

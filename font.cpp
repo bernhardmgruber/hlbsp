@@ -9,6 +9,7 @@ GLuint CreateFont(const char* pszFontName, int nFontHeight)
 {
     GLuint uBase = glGenLists(96);						// Storage For 96 Characters
 
+    #ifdef __WIN32__
 	HFONT hFont = CreateFont(-nFontHeight,				// Height Of Font
 						0,								// Width Of Font
 						0,								// Angle Of Escapement
@@ -31,6 +32,7 @@ GLuint CreateFont(const char* pszFontName, int nFontHeight)
 
 	SelectObject(hDC, hOldFont);							// restore font
 	DeleteObject(hFont);									// Delete The Font
+    #endif
 
     return uBase;
 }

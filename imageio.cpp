@@ -8,7 +8,7 @@
 #define TGA_A		 3		// This tells us it's a ALPHA file
 #define TGA_RLE		10		// This tells us that the targa is Run-Length Encoded (RLE)
 
-IMAGE* CreateImage(BYTE nChannels, WORD nWidth, WORD nHeight)
+IMAGE* CreateImage(unsigned char nChannels, unsigned short nWidth, unsigned short nHeight)
 {
     if(nChannels != 3 && nChannels != 4)
         return NULL;
@@ -22,17 +22,17 @@ IMAGE* CreateImage(BYTE nChannels, WORD nWidth, WORD nHeight)
     pImg->nChannels = nChannels;
     pImg->nWidth = nWidth;
     pImg->nHeight = nHeight;
-    pImg->pData = (BYTE*) malloc(nWidth * nHeight * nChannels * sizeof(BYTE));
+    pImg->pData = (unsigned char*) malloc(nWidth * nHeight * nChannels * sizeof(unsigned char));
     if(pImg->pData == NULL)
     {
         fprintf(stderr, "Memory allocation failed");
         return NULL;
     }
-    memset(pImg->pData, 0, nWidth * nHeight * nChannels * sizeof(BYTE));
+    memset(pImg->pData, 0, nWidth * nHeight * nChannels * sizeof(unsigned char));
     return pImg;
 }
 
-bool GetPixel(IMAGE* pImg, WORD x, WORD y, BYTE* pRed, BYTE* pGreen, BYTE* pBlue, BYTE* pAlpha)
+bool GetPixel(IMAGE* pImg, unsigned short x, unsigned short y, unsigned char* pRed, unsigned char* pGreen, unsigned char* pBlue, unsigned char* pAlpha)
 {
     if (x > pImg->nWidth-1 || y > pImg->nHeight-1)
         return false;
@@ -49,7 +49,7 @@ bool GetPixel(IMAGE* pImg, WORD x, WORD y, BYTE* pRed, BYTE* pGreen, BYTE* pBlue
     return true;
 }
 
-bool SetPixel(IMAGE* pImg, WORD x, WORD y, BYTE red, BYTE green, BYTE blue, BYTE alpha)
+bool SetPixel(IMAGE* pImg, unsigned short x, unsigned short y, unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha)
 {
     if (x > pImg->nWidth-1 || y > pImg->nHeight-1)
         return false;
@@ -69,10 +69,10 @@ bool SetPixel(IMAGE* pImg, WORD x, WORD y, BYTE red, BYTE green, BYTE blue, BYTE
 IMAGE *LoadTGA(const char *szFileName)
 {
     IMAGE *pImg = NULL;			// This stores our important IMAGE data
-    WORD nWidth = 0, nHeight = 0;			// The dimensions of the IMAGE
-    BYTE length = 0;					// The length in bytes to the pixels
-    BYTE imageType = 0;					// The IMAGE type (RLE, RGB, Alpha...)
-    BYTE bits = 0;						// The bits per pixel for the IMAGE (16, 24, 32)
+    unsigned short nWidth = 0, nHeight = 0;			// The dimensions of the IMAGE
+    unsigned char length = 0;					// The length in bytes to the pixels
+    unsigned char imageType = 0;					// The IMAGE type (RLE, RGB, Alpha...)
+    unsigned char bits = 0;						// The bits per pixel for the IMAGE (16, 24, 32)
     FILE *pFile = NULL;					// The file pointer
     int channels = 0;					// The channels of the IMAGE (3 = RGA : 4 = RGBA)
     int stride = 0;						// The stride (channels * nWidth)
@@ -91,21 +91,21 @@ IMAGE *LoadTGA(const char *szFileName)
     }
 
     // Read in the length in bytes from the header to the pixel data
-    fread(&length, sizeof(BYTE), 1, pFile);
+    fread(&length, sizeof(unsigned char), 1, pFile);
 
     // Jump over one byte
     fseek(pFile,1,SEEK_CUR);
 
     // Read in the imageType (RLE, RGB, etc...)
-    fread(&imageType, sizeof(BYTE), 1, pFile);
+    fread(&imageType, sizeof(unsigned char), 1, pFile);
 
     // Skip past general information we don't care about
     fseek(pFile, 9, SEEK_CUR);
 
     // Read the nWidth, nHeight and bits per pixel (16, 24 or 32)
-    fread(&nWidth,  sizeof(WORD), 1, pFile);
-    fread(&nHeight, sizeof(WORD), 1, pFile);
-    fread(&bits,   sizeof(BYTE), 1, pFile);
+    fread(&nWidth,  sizeof(unsigned short), 1, pFile);
+    fread(&nHeight, sizeof(unsigned short), 1, pFile);
+    fread(&bits,   sizeof(unsigned char), 1, pFile);
 
     // Now we move the file pointer to the pixel data
     fseek(pFile, length + 1, SEEK_CUR);
@@ -189,7 +189,7 @@ IMAGE *LoadTGA(const char *szFileName)
     else
     {
         // Create some variables to hold the rleID, current colors read, channels, & stride.
-        BYTE rleID = 0;
+        unsigned char rleID = 0;
         int colorsRead = 0;
         channels = bits / 8;
         stride = channels * nWidth;
@@ -202,7 +202,7 @@ IMAGE *LoadTGA(const char *szFileName)
             fprintf(stderr, "Memory allocation failed");
             return NULL;
         }
-        BYTE *pColors = (BYTE*)malloc(sizeof(BYTE) * channels);
+        unsigned char *pColors = (unsigned char*)malloc(sizeof(unsigned char) * channels);
         if(pColors == NULL)
         {
             fprintf(stderr, "Memory allocation failed");
@@ -213,7 +213,7 @@ IMAGE *LoadTGA(const char *szFileName)
         while (i < nWidth*nHeight)
         {
             // Read in the current color count + 1
-            fread(&rleID, sizeof(BYTE), 1, pFile);
+            fread(&rleID, sizeof(unsigned char), 1, pFile);
 
             // Check if we don't have an encoded string of colors
             if (rleID < 128)
@@ -225,7 +225,7 @@ IMAGE *LoadTGA(const char *szFileName)
                 while (rleID)
                 {
                     // Read in the current color
-                    fread(pColors, sizeof(BYTE) * channels, 1, pFile);
+                    fread(pColors, sizeof(unsigned char) * channels, 1, pFile);
 
                     // Store the current pixel in our IMAGE array
                     pImg->pData[colorsRead + 0] = pColors[2];
@@ -250,7 +250,7 @@ IMAGE *LoadTGA(const char *szFileName)
                 rleID -= 127;
 
                 // Read in the current color, which is the same for a while
-                fread(pColors, sizeof(BYTE) * channels, 1, pFile);
+                fread(pColors, sizeof(unsigned char) * channels, 1, pFile);
 
                 // Go and read as many pixels as are the same
                 while (rleID)
@@ -324,6 +324,30 @@ IMAGE* LoadBMP(const char* szFileName, bool bFromResource)
 }
 #endif // _WINDOWS_H
 
+#ifndef _WINDOWS_H
+typedef struct tagBITMAPFILEHEADER {
+  uint16_t  bfType;
+  uint32_t bfSize;
+  uint16_t  bfReserved1;
+  uint16_t  bfReserved2;
+  uint32_t bfOffBits;
+} BITMAPFILEHEADER, *PBITMAPFILEHEADER;
+
+typedef struct tagBITMAPINFOHEADER {
+  uint32_t biSize;
+  int32_t  biWidth;
+  int32_t  biHeight;
+  uint16_t  biPlanes;
+  uint16_t  biBitCount;
+  uint32_t biCompression;
+  uint32_t biSizeImage;
+  int32_t  biXPelsPerMeter;
+  int32_t  biYPelsPerMeter;
+  uint32_t biClrUsed;
+  uint32_t biClrImportant;
+} BITMAPINFOHEADER, *PBITMAPINFOHEADER;
+#endif
+
 bool SaveBMP(IMAGE* pImg, const char* szFileName)
 {
     FILE* pfile = fopen(szFileName, "wb");					// Open The BMP File
@@ -370,7 +394,7 @@ bool SaveBMP(IMAGE* pImg, const char* szFileName)
 
         if((i+1)%pImg->nWidth == 0)
         {
-            BYTE zero = 0;
+            unsigned char zero = 0;
             for(int i=0;i<rowZeros;i++)
                 fwrite(&zero, 1, 1, pfile);
         }
@@ -387,17 +411,17 @@ bool SaveTGA(IMAGE* pImg, const char* szFileName)
     if (pfile == NULL)										// Did The File Even Exist?
         return false;										// Return False
 
-    BYTE TGAheader[12]={0,0,2,0,0,0,0,0,0,0,0,0};		// Uncompressed TGA Header
+    unsigned char TGAheader[12]={0,0,2,0,0,0,0,0,0,0,0,0};		// Uncompressed TGA Header
     fwrite(TGAheader, 1, sizeof(TGAheader), pfile);
 
-    BYTE header[6];										// First 6 Useful Bytes From The Header
-    header[0] = LOBYTE(pImg->nWidth);
-    header[1] = HIBYTE(pImg->nWidth);
-    header[2] = LOBYTE(pImg->nHeight);
-    header[3] = HIBYTE(pImg->nHeight);
-    header[4] = pImg->nChannels * 8;
-    header[5] = 0x08;
-    fwrite(header,1,sizeof(header),pfile);
+    fwrite(&pImg->nWidth, 1, sizeof(uint16_t), pfile);
+    fwrite(&pImg->nHeight, 1, sizeof(uint16_t), pfile);
+    fwrite(&pImg->nHeight, 1, sizeof(uint16_t), pfile);
+
+    unsigned char bits[2];
+    bits[0] = pImg->nChannels * 8;
+    bits[1] = 0x08;
+    fwrite(bits,1,sizeof(bits),pfile);
 
     for (int i=0;i<pImg->nWidth * pImg->nHeight;i++)
     {
@@ -410,7 +434,7 @@ bool SaveTGA(IMAGE* pImg, const char* szFileName)
         if (pImg->nChannels == 4)
             fwrite(&pImg->pData[i * pImg->nChannels + 3], 1, 1, pfile);
     }
-    BYTE TGAfoot[8]={0,0,0,0,0,0,0,0};
+    unsigned char TGAfoot[8]={0,0,0,0,0,0,0,0};
     fwrite(TGAfoot,1,sizeof(TGAfoot),pfile);
 
     fwrite("TRUEVISION-XFILE.",1,18,pfile);
