@@ -23,7 +23,11 @@ void CHUD::Init()
 {
     // Load fonts
     LOG("Creating font ...\n");
+    #ifdef __WIN32__
     g_nFontHUD = CreateFont("System", FONT_HUD_HEIGHT);
+    #else
+    g_nFontHUD = CreateFont("helvetica", FONT_HUD_HEIGHT);
+    #endif
 }
 
 void CHUD::Render()

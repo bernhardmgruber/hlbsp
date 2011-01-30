@@ -22,8 +22,10 @@
 #define WINDOW_HEIGHT 768
 #define WINDOW_WIDTH 1024
 
+#ifdef __WIN32__
 PFNGLACTIVETEXTUREPROC   glActiveTexture   = NULL;
 PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
+#endif
 
 CBSP    g_bsp;
 CCamera g_camera;
@@ -31,10 +33,10 @@ CHUD    g_hud;
 CTimer  g_timer;
 CPlayer g_player;
 
-HDC	        g_hDC;		 // Handle to device context from windows
-HGLRC		g_hRC;		 // OpenGL rendering context
-HWND		g_hWnd;		 // Handle to our window
-HINSTANCE	g_hInstance; // Handle to our application instance
+//HDC	        g_hDC;		 // Handle to device context from windows
+//HGLRC		g_hRC;		 // OpenGL rendering context
+//HWND		g_hWnd;		 // Handle to our window
+//HINSTANCE	g_hInstance; // Handle to our application instance
 
 //bool g_abKeys[256];			// Array Used For The Keyboard Routine
 bool g_abKeys[SDLK_LAST];
@@ -67,14 +69,15 @@ unsigned int g_nWinHeight = WINDOW_HEIGHT;
 
 GLuint g_shpMain;
 
-LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+//LRESULT CALLBACK WndProc(HWND g_hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 int MSGBOX_WARNING(const char* pszFormat, ...)
 {
-    char szText[1024];
-
     if (pszFormat == NULL)
         return 0;
+
+    #ifdef __WIN32__
+    char szText[1024];
 
     va_list aParam;
     va_start(aParam, pszFormat);
@@ -82,6 +85,15 @@ int MSGBOX_WARNING(const char* pszFormat, ...)
     va_end(aParam);
 
     return MessageBox(NULL, szText, "WARNING", MB_OK | MB_ICONWARNING);
+    #else
+    int ret;
+    va_list aParam;
+    va_start(aParam, pszFormat);
+    ret = vprintf(pszFormat, aParam);
+    va_end(aParam);
+
+    return ret;
+    #endif
 }
 
 int MSGBOX_ERROR(const char* pszFormat, ...)
@@ -89,21 +101,34 @@ int MSGBOX_ERROR(const char* pszFormat, ...)
     if (pszFormat == NULL)
         return 0;
 
+    #ifdef __WIN32__
     char szText[1024];
 
     va_list aParam;
     va_start(aParam, pszFormat);
     vsprintf(szText, pszFormat, aParam);
     va_end(aParam);
+
     return MessageBox(NULL, szText, "ERROR", MB_OK | MB_ICONERROR);
+    #else
+    int ret;
+    va_list aParam;
+    va_start(aParam, pszFormat);
+    ret = vprintf(pszFormat, aParam);
+    va_end(aParam);
+
+    return ret;
+    #endif
 }
 
 int LOG(const char* pszFormat, ...)
 {
+    int ret;
     va_list args;
     va_start(args, pszFormat);
-    return vprintf(pszFormat, args);
+    ret = vprintf(pszFormat, args);
     va_end(args);
+    return ret;
 }
 
 void* MALLOC(size_t nSize)
@@ -180,6 +205,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
     glEnable(GL_MULTISAMPLE);
 
     // Extensions
+    #ifdef __WIN32__
     LOG("Getting multitexture extension function pointers ...\n");
     if (CheckExtension("GL_ARB_multitexture"))
     {
@@ -200,6 +226,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
         MSGBOX_ERROR("GL_ARB_multitexture is not supported. Please upgrade your video driver.");
         return false;
     }
+    #endif
 
     LOG("Checking ARB_texture_non_power_of_two extension ...\n");
     g_bTexNPO2Support = CheckExtension("GL_ARB_texture_non_power_of_two");
@@ -209,7 +236,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
         LOG("Not supported, lightmaps will be scaled to 16 x 16\n");
 
     // BSP file
-    if (!g_bsp.LoadBSPFile(BSP_DIR "\\" BSP_FILE_NAME))
+    if (!g_bsp.LoadBSPFile(BSP_DIR "/" BSP_FILE_NAME))
         return false;
 
     // Shader
@@ -314,7 +341,7 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
 
     char szWindowText[256];
     sprintf(szWindowText, "%s - %.1f FPS", WINDOW_CAPTION, g_timer.fTPS);
-    SetWindowText(g_hWnd, szWindowText);
+    SDL_WM_SetCaption(szWindowText, szWindowText);
 
     // Player
     g_player.UpdateFromInput(g_timer.dInterval);
@@ -618,11 +645,15 @@ void ProcessEvent(SDL_Event event)
         {
             case SDL_BUTTON_RIGHT:
                 g_bCaptureMouse = true;
-                POINT pt;
-                GetCursorPos(&pt);
-                g_windowCenter.x = pt.x;
-                g_windowCenter.y = pt.y;
-                ShowCursor(false);
+                //POINT pt;
+                //GetCursorPos(&pt);
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+
+                g_windowCenter.x = x;
+                g_windowCenter.y = y;
+                //ShowCursor(false);
+                SDL_ShowCursor(SDL_DISABLE);
                 break;
         }
         return;
@@ -632,7 +663,8 @@ void ProcessEvent(SDL_Event event)
         {
             case SDL_BUTTON_RIGHT:
                 g_bCaptureMouse = false;
-                ShowCursor(true);
+                //ShowCursor(true);
+                SDL_ShowCursor(SDL_ENABLE);
                 break;
         }
         return;

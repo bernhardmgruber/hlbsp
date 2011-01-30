@@ -80,11 +80,13 @@ void CCamera::UpdateFromInput(double dFrameInterval)
         // else update camera object
         if(g_bCaptureMouse)
         {
-            POINT pt;
-            GetCursorPos(&pt);
+            //POINT pt;
+            //GetCursorPos(&pt);
+            int x, y;
+            SDL_GetMouseState(&x, &y);
 
             // Update rotation based on mouse input
-            fZAngle += fLookSens * (float)(int)(nMouseOriginX - pt.x);
+            fZAngle += fLookSens * (float)(int)(nMouseOriginX - x);
 
             // Correct z angle to interval [0;360]
             if(fZAngle >= 360.0f)
@@ -94,7 +96,7 @@ void CCamera::UpdateFromInput(double dFrameInterval)
                 fZAngle += 360.0f;
 
             // Update up down view
-            fXAngle += fLookSens * (float)(int)(nMouseOriginY - pt.y);
+            fXAngle += fLookSens * (float)(int)(nMouseOriginY - y);
 
             // Correct x angle to interval [-90;90]
             if (fXAngle < -90.0f)
@@ -104,7 +106,7 @@ void CCamera::UpdateFromInput(double dFrameInterval)
                 fXAngle = 90.0f;
 
             // Reset cursor
-            SetCursorPos(nMouseOriginX, nMouseOriginY);
+            SDL_WarpMouse(nMouseOriginX, nMouseOriginY);
         }
 
         float fTmpMoveSens = fMoveSens * dFrameInterval;

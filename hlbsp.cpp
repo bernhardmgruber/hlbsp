@@ -6,8 +6,8 @@
 #include <string.h>
 
 
-#define WAD_DIR "data\\wads"
-#define SKY_DIR "data\\textures\\sky"
+#define WAD_DIR "data/wads"
+#define SKY_DIR "data/textures/sky"
 
 #define DECAL_WAD_COUNT 2
 
@@ -71,7 +71,7 @@ bool CBSP::LoadSkyTextures()
 
     for (int i=0; i<6; i++)
     {
-        sprintf(szFileName, SKY_DIR "\\%s%s.tga", pszSkyName, aszSide[i]);
+        sprintf(szFileName, SKY_DIR "/%s%s.tga", pszSkyName, aszSide[i]);
 
         pImg = LoadTGA(szFileName);
         if (pImg == NULL)
@@ -186,6 +186,15 @@ bool CBSP::LoadSkyTextures()
     return true;
 }
 
+void strchrrp(char* str, char search, char replace)
+{
+    for(char* c=str;*c!=0;c++)
+    {
+        if(*c == search)
+            *c = replace;
+    }
+}
+
 bool CBSP::LoadWadFiles(const char* pszWadstr)
 {
     nWadFiles = 0;
@@ -199,6 +208,8 @@ bool CBSP::LoadWadFiles(const char* pszWadstr)
 
     char* pszWadFiles = (char*) MALLOC((strlen(pszWadstr) + 1) * sizeof(char));
     strcpy(pszWadFiles, pszWadstr);
+    strchrrp(pszWadFiles, '\\', '/');
+
     char* pch = strtok(pszWadFiles, ";");
 
     int nWadCount = 0;
@@ -212,7 +223,7 @@ bool CBSP::LoadWadFiles(const char* pszWadstr)
         bool bFirst = true;
         for(unsigned int i=strlen(pch)-1; i<strlen(pch); i--)
         {
-            if(pch[i] == '\\')
+            if(pch[i] == '/')
             {
                 if(bFirst)
                     bFirst = false;
@@ -397,8 +408,8 @@ void CBSP::LoadDecals()
     // Load Decal WADs
     pDecalWads = new CWAD[DECAL_WAD_COUNT];
 
-    pDecalWads[0].Open(WAD_DIR "\\valve\\decals.wad");
-    pDecalWads[1].Open(WAD_DIR "\\cstrike\\decals.wad");
+    pDecalWads[0].Open(WAD_DIR "/valve/decals.wad");
+    pDecalWads[1].Open(WAD_DIR "/cstrike/decals.wad");
 
     // Count decals
     nDecals = 0;
@@ -717,8 +728,21 @@ void CBSP::LoadLightMaps(unsigned char* pLightMapData)
 // Compare function for brush entity sorting
 int BrushEntityCmp(const void* a, const void* b)
 {
-    unsigned char nRenderMode1 = atoi((*((CEntity**)(a)))->FindProperty("rendermode"));
-    unsigned char nRenderMode2 = atoi((*((CEntity**)(b)))->FindProperty("rendermode"));
+    const char* szRenderMode1 = (*((CEntity**)(a)))->FindProperty("rendermode");
+    const char* szRenderMode2 = (*((CEntity**)(b)))->FindProperty("rendermode");
+
+    unsigned char nRenderMode1;
+    unsigned char nRenderMode2;
+
+    if(szRenderMode1)
+        nRenderMode1 = atoi(szRenderMode1);
+    else
+        nRenderMode1 = RENDER_MODE_NORMAL;
+
+    if(szRenderMode2)
+        nRenderMode2 = atoi(szRenderMode2);
+    else
+        nRenderMode2 = RENDER_MODE_NORMAL;
 
     if (nRenderMode1 == RENDER_MODE_TEXTURE)
         return 1;
@@ -1228,7 +1252,7 @@ CBSP::~CBSP()
 
 bool CBSP::LoadBSPFile(const char* pszFileName)
 {
-    LOG("LOADING BSP FILE: %s\n", strrchr(pszFileName, '\\') + 1);
+    LOG("LOADING BSP FILE: %s\n", strrchr(pszFileName, '/') + 1);
 
     FILE* pfile = fopen(pszFileName, "rb");
     if (pfile == NULL)

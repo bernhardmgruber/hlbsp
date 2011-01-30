@@ -57,11 +57,13 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
 
     if(g_bCaptureMouse)
     {
-        POINT pt;
-        GetCursorPos(&pt);
+        //POINT pt;
+        //GetCursorPos(&pt);
+        int x, y;
+        SDL_GetMouseState(&x, &y);
 
         // Update rotation based on mouse input
-        fZAngle += PLAYER_LOOK_SENS * (float)(int)(g_windowCenter.x - pt.x);
+        fZAngle += PLAYER_LOOK_SENS * (float)(int)(g_windowCenter.x - x);
 
         // Correct z angle to interval [0;360]
         if(fZAngle >= 360.0f)
@@ -71,7 +73,7 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
             fZAngle += 360.0f;
 
         // Update up down view
-        fXAngle += PLAYER_LOOK_SENS * (float)(int)(g_windowCenter.y - pt.y);
+        fXAngle += PLAYER_LOOK_SENS * (float)(int)(g_windowCenter.y - y);
 
         // Correct x angle to interval [-90;90]
         if (fXAngle < -90.0f)
@@ -81,7 +83,7 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
             fXAngle = 90.0f;
 
         // Reset cursor
-        SetCursorPos(g_windowCenter.x, g_windowCenter.y);
+        SDL_WarpMouse(g_windowCenter.x, g_windowCenter.y);
     }
 
     float fTmpMoveSens = PLAYER_MOVE_SENS * dFrameInterval;

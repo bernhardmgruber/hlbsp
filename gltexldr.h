@@ -2,7 +2,7 @@
 #define GLTEXTURELOADER_H_INCLUDED
 
 //#include <windows.h>
-#include <gl/gl.h>
+#include <GL/gl.h>
 #include "imageio.h"
 
 #define CT_NEAREST  0x01

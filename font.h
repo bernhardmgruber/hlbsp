@@ -1,7 +1,7 @@
 #ifndef UNFONT_H_INCLUDED
 #define UNFONT_H_INCLUDED
 
-#include <gl/gl.h>
+#include <GL/gl.h>
 
 GLuint CreateFont(const char* pszFontName, int nFontHeight);
 void DeleteFont(GLuint uFont);

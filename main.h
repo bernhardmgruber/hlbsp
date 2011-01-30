@@ -18,18 +18,20 @@
 #include "3dmath.h"
 #include "font.h"
 
+#ifdef __WIN32__
 extern PFNGLACTIVETEXTUREPROC   glActiveTexture;
 extern PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f;
+#endif
 
 extern CBSP    g_bsp;
 extern CCamera g_camera;
 extern CHUD    g_hud;
 extern CTimer  g_timer;
 
-extern HDC       g_hDC;		 // Handle to device context from windows
-extern HGLRC     g_hRC;		 // OpenGL rendering context
-extern HWND      g_hWnd;		 // Handle to our window
-extern HINSTANCE g_hInstance; // Handle to our application instance
+//extern HDC       g_hDC;		 // Handle to device context from windows
+//extern HGLRC     g_hRC;		 // OpenGL rendering context
+//extern HWND      g_hWnd;		 // Handle to our window
+//extern HINSTANCE g_hInstance; // Handle to our application instance
 
 //extern bool g_abKeys[256];			// Array Used For The Keyboard Routine
 extern bool g_abKeys[SDLK_LAST];
