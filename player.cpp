@@ -123,12 +123,34 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
         vPos.y += sin(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
     }
 
-    // Perform collision detection
-    VECTOR3D vTrace = g_bsp.TraceBox(vOldPos, vPos, {-16,-16,0}, {16,16,72});
-    //VECTOR3D vTrace = g_bsp.TraceRay(vOldPos, vPos);
+    /*static bool opened = false;
+    static FILE* fp;
 
+    if(!opened)
+    {
+        fp = fopen("collisions.log", "w");
+        opened = true;
+    }*/
+
+    //system("cls");
+
+    //vOldPos = {157.1,306.6,-48.0};
+    //vPos = {158.0,314.6,-56.0};
+
+    // Perform collision detection
+    //VECTOR3D vTrace = g_bsp.TraceBox(vOldPos, vPos, {-16,-16,-16}, {16,16,16});
+
+    //fprintf(fp, "%.1f,%.1f,%.1f to %.1f,%.1f,%.1f", vOldPos.x, vOldPos.y, vOldPos.z, vPos.x, vPos.y, vPos.z);
+
+    VECTOR3D vTrace = g_bsp.TraceRay(vOldPos, vPos);
+    //printf("%.1f/%.1f/%.1f\n", vTrace.x, vTrace.y, vTrace.z);
     if(vTrace != vPos)
-		printf("collision\n");
+    {
+		printf("collision %.1f/%.1f/%.1f\n", vTrace.x, vTrace.y, vTrace.z);
+		//fprintf(fp, " collision at %.1f,%.1f,%.1f\n", vTrace.x, vTrace.y, vTrace.z);
+    }
+    //else
+        //fprintf(fp, "\n");
 
     //printf("old: %.1f/%.1f/%.1f new: %.1f/%.1f/%.1f trace: %.1f/%.1f/%.1f\n", vOldPos.x, vOldPos.y, vOldPos.z, vPos.x, vPos.y, vPos.z, vTrace.x, vTrace.y, vTrace.z);
 

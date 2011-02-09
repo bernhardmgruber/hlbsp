@@ -36,13 +36,17 @@ public:
     ~CBSP(); //dtor
 
     bool LoadBSPFile(const char* pszFileName);                  // Loads the entire BSP file into memory
-    void RenderLevel(VECTOR3D vPos);                      // Renders the complete BSP tree
 
     CEntity* FindEntity(const char* pszNewClassName);        // Returns the entity with the given name
 
-    VECTOR3D TraceRay   (VECTOR3D inputStart, VECTOR3D inputEnd);
-    VECTOR3D TraceSphere(VECTOR3D inputStart, VECTOR3D inputEnd, float inputRadius);
-    VECTOR3D TraceBox   (VECTOR3D inputStart, VECTOR3D inputEnd, VECTOR3D inputMins, VECTOR3D inputMaxs);
+    /** Collision detection **/
+    VECTOR3D TraceRay   (VECTOR3D vStart, VECTOR3D vEnd);
+    VECTOR3D TraceSphere(VECTOR3D vStart, VECTOR3D vEnd, float radius);
+    VECTOR3D TraceBox   (VECTOR3D vStart, VECTOR3D vEnd, VECTOR3D vMin, VECTOR3D vMax);
+
+    /** Rendering **/
+    void RenderLevel(VECTOR3D vPos);                      // Renders the complete BSP tree
+    void RenderLeafOutlines();
 
     void Destroy();                                       // Unloads the complete BSP tree and frees all allocated memory
 
@@ -54,6 +58,7 @@ private:
     int nVertices;        // Number of vertices
     int nEdges;           // Number of edges
     int nFaces;           // Number of faces
+    int nClipNodes;
     int nSurfEdges;       // Number of surface edges
     int nModels;          // Number of models
     int nTextureInfos;    // Number of texture infos
@@ -72,12 +77,14 @@ private:
     BSPMARKSURFACE*   pMarkSurfaces;      // Stores the marksurfaces
     BSPPLANE*         pPlanes;            // Stores the planes
     BSPFACE*          pFaces;             // Stores the faces
+    BSPCLIPNODE*      pClipNodes;
     BSPMODEL*         pModels;            // Stores the models
     BSPTEXTUREHEADER  textureHeader;      // Stores the texture header
     BSPMIPTEX*        pMipTextures;       // Stores the miptextures
     BSPMIPTEXOFFSET*  pMipTextureOffsets; // Stores the miptexture offsets
     BSPTEXTUREINFO*   pTextureInfos;      // Stores the texture infos
     BSPFACETEXCOORDS* pFaceTexCoords;     // Stores precalculated texture and lightmap coordinates for every vertex
+
 
     CEntity*                   pEntities;          // Stores the entities
     CEntity**                  ppBrushEntities;    // Pointers to brush entities in *pEntities
@@ -112,9 +119,10 @@ private:
     int TraverseBSPTree(VECTOR3D vPos, int iNode); // Recursivly walks through the BSP tree to find the leaf where the camera is in
 
 	/** Collision detection **/
-    VECTOR3D Trace(VECTOR3D inputStart, VECTOR3D inputEnd);
-    void CheckNode(int nodeIndex, float startFraction, float endFraction, VECTOR3D start, VECTOR3D end);
-    void CheckLeaf(BSPLEAF* leaf, float startFrac, float endFrac, VECTOR3D inputStart, VECTOR3D inputEnd);
+	VECTOR3D TryToStep(VECTOR3D vStart, VECTOR3D vEnd);
+    VECTOR3D Trace(VECTOR3D vStart, VECTOR3D vEnd);
+    void CheckNode(int nodeIndex, float startRatio, float endRatio, VECTOR3D vStart, VECTOR3D vEnd);
+    void CheckLeaf(BSPLEAF *pLeaf, float absoluteStartRatio, float absoluteEndRatio, VECTOR3D vStart, VECTOR3D vEnd);
     bool IsInsideFace(BSPFACE* face, VECTOR3D);
 
 	/** Rendering **/

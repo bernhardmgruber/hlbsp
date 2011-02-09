@@ -1,4 +1,5 @@
 #include "imageio.h"
+#include <windows.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -325,12 +326,13 @@ IMAGE* LoadBMP(const char* szFileName, bool bFromResource)
 #endif // _WINDOWS_H
 
 #ifndef _WINDOWS_H
+#pragma pack(push,2)
 typedef struct tagBITMAPFILEHEADER {
   uint16_t  bfType;
-  uint32_t bfSize;
+  uint32_t  bfSize;
   uint16_t  bfReserved1;
   uint16_t  bfReserved2;
-  uint32_t bfOffBits;
+  uint32_t  bfOffBits;
 } BITMAPFILEHEADER, *PBITMAPFILEHEADER;
 
 typedef struct tagBITMAPINFOHEADER {
@@ -346,6 +348,7 @@ typedef struct tagBITMAPINFOHEADER {
   uint32_t biClrUsed;
   uint32_t biClrImportant;
 } BITMAPINFOHEADER, *PBITMAPINFOHEADER;
+#pragma pack(pop)
 #endif
 
 bool SaveBMP(IMAGE* pImg, const char* szFileName)

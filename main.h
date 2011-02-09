@@ -47,6 +47,7 @@ extern bool g_bRenderBrushEntities;
 extern bool g_bRenderSkybox;
 extern bool g_bRenderDecals;
 extern bool g_bRenderCoords;
+extern bool g_bRenderLeafOutlines;
 extern bool g_bRenderHUD;
 
 extern bool g_bShaderSupport;

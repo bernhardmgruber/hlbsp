@@ -15,7 +15,7 @@
 #define WINDOW_CAPTION "HL BSP"
 
 #define BSP_DIR "data/maps"
-#define BSP_FILE_NAME "cs_assault.bsp"
+#define BSP_FILE_NAME "test.bsp"
 
 //#define FULLSCREEN
 
@@ -52,6 +52,7 @@ bool g_bRenderBrushEntities = true;
 bool g_bRenderSkybox = true;
 bool g_bRenderDecals = true;
 bool g_bRenderCoords = false;
+bool g_bRenderLeafOutlines = false;
 bool g_bRenderHUD = true;
 
 bool g_bShaderSupport;
@@ -329,6 +330,48 @@ int InitGL()										// All Setup For OpenGL Goes Here
     return true;										// Initialization Went OK
 }
 
+void DrawCube(float a)
+{
+    float a2 = a / 2.0f;
+
+    glDisable(GL_CULL_FACE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glBegin(GL_QUADS);
+		// Front Face
+		glVertex3f(-a2, -a2,  a2);	// Bottom Left Of The Texture and Quad
+		glVertex3f( a2, -a2,  a2);	// Bottom Right Of The Texture and Quad
+		glVertex3f( a2,  a2,  a2);	// Top Right Of The Texture and Quad
+		glVertex3f(-a2,  a2,  a2);	// Top Left Of The Texture and Quad
+		// Back Face
+		glVertex3f(-a2, -a2, -a2);	// Bottom Right Of The Texture and Quad
+		glVertex3f(-a2,  a2, -a2);	// Top Right Of The Texture and Quad
+		glVertex3f( a2,  a2, -a2);	// Top Left Of The Texture and Quad
+		glVertex3f( a2, -a2, -a2);	// Bottom Left Of The Texture and Quad
+		// Top Face
+		glVertex3f(-a2,  a2, -a2);	// Top Left Of The Texture and Quad
+		glVertex3f(-a2,  a2,  a2);	// Bottom Left Of The Texture and Quad
+		glVertex3f( a2,  a2,  a2);	// Bottom Right Of The Texture and Quad
+		glVertex3f( a2,  a2, -a2);	// Top Right Of The Texture and Quad
+		// Bottom Face
+		glVertex3f(-a2, -a2, -a2);	// Top Right Of The Texture and Quad
+		glVertex3f( a2, -a2, -a2);	// Top Left Of The Texture and Quad
+		glVertex3f( a2, -a2,  a2);	// Bottom Left Of The Texture and Quad
+		glVertex3f(-a2, -a2,  a2);	// Bottom Right Of The Texture and Quad
+		// Right face
+		glVertex3f( a2, -a2, -a2);	// Bottom Right Of The Texture and Quad
+		glVertex3f( a2,  a2, -a2);	// Top Right Of The Texture and Quad
+		glVertex3f( a2,  a2,  a2);	// Top Left Of The Texture and Quad
+		glVertex3f( a2, -a2,  a2);	// Bottom Left Of The Texture and Quad
+		// Left Face
+		glVertex3f(-a2, -a2, -a2);	// Bottom Left Of The Texture and Quad
+		glVertex3f(-a2, -a2,  a2);	// Bottom Right Of The Texture and Quad
+		glVertex3f(-a2,  a2,  a2);	// Top Right Of The Texture and Quad
+		glVertex3f(-a2,  a2, -a2);	// Top Left Of The Texture and Quad
+	glEnd();
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glEnable(GL_CULL_FACE);
+}
+
 int DrawGLScene()									// Here's Where We Do All The Drawing
 {
     /** UPDATE SCENE **/
@@ -412,6 +455,35 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
         glVertex3i(0,0,-4000);
         glEnd();
     }
+
+    /// Leaf outlines
+    if(g_bRenderLeafOutlines)
+        g_bsp.RenderLeafOutlines();
+
+
+    glBegin(GL_LINE_LOOP);
+    glVertex3f(156.1,298.7,-48.0);
+    glColor3f(1.0f, 0, 0);
+    glVertex3f(157.1,306.6,-56.0);
+    glEnd();
+
+    glPushMatrix();
+    glTranslatef(156.1,298.7,-48.0);
+    glColor3f(1, 1, 1);
+    DrawCube(32.0f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(157.1,306.6,-56.0);
+    glColor3f(1.0f, 0, 0);
+    DrawCube(32.0f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(157.1,306.6,-48.0);
+    glColor3f(0.0f, 1, 0);
+    DrawCube(32.0f);
+    glPopMatrix();
 
     /// HUD
     if (g_bRenderHUD)
@@ -560,6 +632,14 @@ void ProcessEvent(SDL_Event event)
                 g_hud.Printf("textures enabled");
             else
                 g_hud.Printf("textures disabled");
+            break;
+
+        case SDLK_o:
+            g_bRenderLeafOutlines = !g_bRenderLeafOutlines;
+            if(g_bRenderLeafOutlines)
+                g_hud.Printf("leaf outlines enabled");
+            else
+                g_hud.Printf("leaf outlines disabled");
             break;
 
         case SDLK_p:
@@ -712,15 +792,15 @@ int main(int argc, char **argv )
                 }
             }
 
-            if (g_abKeys[SDLK_F1])
+            /*if (g_abKeys[SDLK_F1])
             {
                 g_abKeys[SDLK_F1] = false;
                 SDL_Quit();
-                g_bFullscreen =! g_bFullscreen;
+                g_bFullscreen = !g_bFullscreen;
 
                 if (!CreateSDLWindow(WINDOW_WIDTH, WINDOW_HEIGHT))
                     return 0;
-            }
+            }*/
         }
     }
 

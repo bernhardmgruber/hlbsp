@@ -6,6 +6,8 @@
 #define PLAYER_MOVE_SENS 500 //192
 #define PLAYER_LOOK_SENS 0.15
 
+#define PLAYER_MAX_STEP_HEIGHT 10.0f
+
 class CPlayer
 {
 public:

@@ -188,7 +188,7 @@ bool CBSP::LoadSkyTextures()
 
 void strchrrp(char* str, char search, char replace)
 {
-    for(char* c=str;*c!=0;c++)
+    for(char* c=str; *c!=0; c++)
     {
         if(*c == search)
             *c = replace;
@@ -1290,6 +1290,9 @@ bool CBSP::LoadBSPFile(const char* pszFileName)
     nFaces = header.lump[LUMP_FACES].nLength / sizeof(BSPFACE);
     pFaces = (BSPFACE*) MALLOC(nFaces * sizeof(BSPFACE));
 
+    nClipNodes = header.lump[LUMP_CLIPNODES].nLength / sizeof(BSPCLIPNODE);
+    pClipNodes = (BSPCLIPNODE*) MALLOC(nClipNodes * sizeof(BSPCLIPNODE));
+
     // Get the number of surface pEdges and allocate memory
     nSurfEdges = header.lump[LUMP_SURFEDGES].nLength / sizeof(BSPSURFEDGE);
     pSurfEdges = (BSPSURFEDGE*) MALLOC(nSurfEdges * sizeof(BSPSURFEDGE));
@@ -1333,6 +1336,11 @@ bool CBSP::LoadBSPFile(const char* pszFileName)
     fseek(pfile, header.lump[LUMP_FACES].nOffset, SEEK_SET);
     // Read in the pFaces
     fread(pFaces, sizeof(BSPFACE), nFaces, pfile);
+
+    // Seek to the position in the file that stores the clipnodes information
+    fseek(pfile, header.lump[LUMP_CLIPNODES].nOffset, SEEK_SET);
+    // Read in the clipnodes
+    fread(pClipNodes, sizeof(BSPCLIPNODE), nClipNodes, pfile);
 
     // Seek to the position in the file that stores the surface edge information
     fseek(pfile, header.lump[LUMP_SURFEDGES].nOffset, SEEK_SET);
@@ -1554,7 +1562,7 @@ void CBSP::RenderLevel(VECTOR3D vPos)
     memset(pbFacesDrawn, false, sizeof(bool) * nFaces);
 
     int iLeaf = TraverseBSPTree(vPos, 0); //Get the leaf where the camera is in
-
+    //printf("Current Leaf %d\n", iLeaf);
     /** RENDER STATIC GEOMETRY **/
     if (g_bRenderStaticBSP)
         RenderBSP(0, iLeaf, vPos);
@@ -1598,6 +1606,53 @@ void CBSP::RenderLevel(VECTOR3D vPos)
     glDisable(GL_DEPTH_TEST);
 }
 
+void CBSP::RenderLeafOutlines()
+{
+    glLineWidth(1.0f);
+    glLineStipple(1, 0xF0F0);
+    glEnable(GL_LINE_STIPPLE);
+    for(int i=0;i<nLeafs;i++)
+    {
+        srand(i);
+        glColor3ub(rand()%255, rand()%255, rand()%255);
+        BSPLEAF *curLeaf = &pLeafs[i];
+
+        glBegin(GL_LINES);
+        // Draw right face of bounding box
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMaxs[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMins[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMins[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMins[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMins[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMaxs[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMaxs[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMaxs[1], curLeaf->nMaxs[2]);
+
+        // Draw left face of bounding box
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMins[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMaxs[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMaxs[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMaxs[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMaxs[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMins[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMins[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMins[1], curLeaf->nMins[2]);
+
+        // Connect the pFaces
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMaxs[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMaxs[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMaxs[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMaxs[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMins[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMins[1], curLeaf->nMins[2]);
+        glVertex3f(curLeaf->nMins[0], curLeaf->nMins[1], curLeaf->nMaxs[2]);
+        glVertex3f(curLeaf->nMaxs[0], curLeaf->nMins[1], curLeaf->nMaxs[2]);
+        glEnd();
+    }
+    glDisable(GL_LINE_STIPPLE);
+    glColor3f(1,1,1);
+}
+
 CEntity* CBSP::FindEntity(const char* pszNewClassName)
 {
     static int i;
@@ -1624,17 +1679,14 @@ CEntity* CBSP::FindEntity(const char* pszNewClassName)
 }
 
 // collision detection source: http://www.devmaster.net/articles/quake3collision/ 27.12.2010
-#define TT_RAY 0
-#define TT_SPHERE 1
-#define TT_BOX 2
 
-float traceRadius;
+/*float traceRadius;
 int traceType;
 VECTOR3D traceMins;
 VECTOR3D traceMaxs;
-VECTOR3D traceExtents;
+VECTOR3D traceExtents;*/
 
-VECTOR3D CBSP::TraceRay(VECTOR3D inputStart, VECTOR3D inputEnd)
+/*VECTOR3D CBSP::TraceRay(VECTOR3D inputStart, VECTOR3D inputEnd)
 {
     traceType = TT_RAY;
     return Trace(inputStart, inputEnd);
@@ -1666,14 +1718,14 @@ VECTOR3D CBSP::TraceBox(VECTOR3D inputStart, VECTOR3D inputEnd, VECTOR3D inputMi
         traceExtents.z = -traceMins.z > traceMaxs.z ? -traceMins.z : traceMaxs.z;
         return Trace(inputStart, inputEnd);
     }
-}
+}*/
 
-float outputFraction;
+/*float outputFraction;
 bool outputStartsOut;
 bool outputAllSolid;
-bool debug = false;
+bool debug = false;*/
 
-VECTOR3D CBSP::Trace(VECTOR3D inputStart, VECTOR3D inputEnd)
+/*VECTOR3D CBSP::Trace(VECTOR3D inputStart, VECTOR3D inputEnd)
 {
     outputStartsOut = true;
     outputAllSolid = false;
@@ -1692,9 +1744,9 @@ VECTOR3D CBSP::Trace(VECTOR3D inputStart, VECTOR3D inputEnd)
         // collided with something
         return inputStart + outputFraction * (inputEnd - inputStart);
     }
-}
+}*/
 
-void CBSP::CheckNode(int nodeIndex, float startFraction, float endFraction, VECTOR3D start, VECTOR3D end)
+/*void CBSP::CheckNode(int nodeIndex, float startFraction, float endFraction, VECTOR3D start, VECTOR3D end)
 {
     if (nodeIndex < 0)
     {
@@ -1802,9 +1854,9 @@ void CBSP::CheckNode(int nodeIndex, float startFraction, float endFraction, VECT
         // check the second side
         CheckNode(node->iChildren[1], middleFraction, endFraction, middle, end);
     }
-}
+}*/
 
-void CBSP::CheckLeaf(BSPLEAF* leaf, float startFrac, float endFrac, VECTOR3D inputStart, VECTOR3D inputEnd)
+/*void CBSP::CheckLeaf(BSPLEAF* leaf, float startFrac, float endFrac, VECTOR3D inputStart, VECTOR3D inputEnd)
 {
     //system("cls");
     float startFraction = -1.0f;
@@ -1927,12 +1979,11 @@ void CBSP::CheckLeaf(BSPLEAF* leaf, float startFrac, float endFrac, VECTOR3D inp
             outputFraction = startFrac + startFraction * (endFrac - startFrac);
         }
     }
-}
+}*/
 
 #define EPSILON_PRECISE  0.0000001
 #define MODULUS(p) (sqrt(p.x*p.x + p.y*p.y + p.z*p.z))
 #define TWOPI 6.283185307179586476925287
-#define RTOD 57.2957795
 
 bool CBSP::IsInsideFace(BSPFACE* face, VECTOR3D p)
 {
@@ -1974,8 +2025,518 @@ bool CBSP::IsInsideFace(BSPFACE* face, VECTOR3D p)
         anglesum += acos(costheta);
     }
 
-	return (fabs(anglesum - TWOPI) < EPSILON);
+    return (fabs(anglesum - TWOPI) < EPSILON);
 }
+
+/*************** FROM QUAKE3 *************/
+
+#define TRACE_TYPE_RAY 0
+#define TRACE_TYPE_SPHERE 1
+#define TRACE_TYPE_BOX 2
+
+bool bCollided;
+bool bTryStep;
+
+VECTOR3D CBSP::TryToStep(VECTOR3D vStart, VECTOR3D vEnd)
+{
+    // In this function we loop until we either found a reasonable height
+    // that we can step over, or find out that we can't step over anything.
+    // We check 10 times, each time increasing the step size to check for
+    // a collision.  If we don't collide, then we climb over the step.
+
+    VECTOR3D vStepStart = vStart;
+    VECTOR3D vStepEnd = vEnd;
+
+    // Go through and check different heights to step up
+    for(float height = 1.0f; height <= PLAYER_MAX_STEP_HEIGHT; height++)
+    {
+        // Reset our variables for each loop interation
+        bCollided = false;
+        bTryStep = false;
+
+        // Increment step height
+        vStepStart.z++;
+        vStepEnd.z++;
+
+        // Test to see if the new position we are trying to step collides or not
+        VECTOR3D vStepPosition = Trace(vStepStart, vStepEnd);
+
+        // If we didn't collide, we can step!
+        if(!bCollided)
+        {
+
+            // Return the current position since we stepped up somewhere
+            return vStepPosition;
+        }
+    }
+
+    // If we can't step, then we just return the original position of the collision
+    return vStart;
+}
+
+/////////////////////////////////// TRACE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+/////
+/////	This takes a start and end position (general) to test against the BSP brushes
+/////
+/////////////////////////////////// TRACE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+
+float traceRatio;
+VECTOR3D vCollisionNormal;
+bool bGrounded;
+
+VECTOR3D CBSP::Trace(VECTOR3D vStart, VECTOR3D vEnd)
+{
+    // Initially we set our trace ratio to 1.0f, which means that we don't have
+    // a collision or intersection point, so we can move freely.
+    traceRatio = 1.0f;
+
+    // We start out with the first node (0), setting our start and end ratio to 0 and 1.
+    // We will recursively go through all of the nodes to see which brushes we should check.
+    CheckNode(0, 0.0f, 1.0f, vStart, vEnd);
+
+    // If the traceRatio is STILL 1.0f, then we never collided and just return our end position
+    if(traceRatio == 1.0f)
+    {
+        return vEnd;
+    }
+    else	// Else COLLISION!!!!
+    {
+        // Set our new position to a position that is right up to the brush we collided with
+        VECTOR3D vNewPosition = vStart + ((vEnd - vStart) * traceRatio);
+
+        // Get the distance from the end point to the new position we just got
+        VECTOR3D vMove = vEnd - vNewPosition;
+
+        // Get the distance we need to travel backwards to the new slide position.
+        // This is the distance of course along the normal of the plane we collided with.
+        float distance = DotProduct(vMove, vCollisionNormal);
+
+        // Get the new end position that we will end up (the slide position).
+        VECTOR3D vEndPosition = vEnd - vCollisionNormal * distance;
+
+        // Since we got a new position for our sliding vector, we need to check
+        // to make sure that new sliding position doesn't collide with anything else.
+        vNewPosition = Trace(vNewPosition, vEndPosition);
+
+        if(vCollisionNormal.y > 0.2f || bGrounded)
+            bGrounded = true;
+        else
+            bGrounded = false;
+
+        // Return the new position to be used by our camera (or player)
+        return vNewPosition;
+    }
+}
+
+
+/////////////////////////////////// TRACE RAY \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+/////
+/////	This takes a start and end position (ray) to test against the BSP brushes
+/////
+/////////////////////////////////// TRACE RAY \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+
+int traceType;
+
+VECTOR3D CBSP::TraceRay(VECTOR3D vStart, VECTOR3D vEnd)
+{
+    // We don't use this function, but we set it up to allow us to just check a
+    // ray with the BSP tree brushes.  We do so by setting the trace type to TYPE_RAY.
+    traceType = TRACE_TYPE_RAY;
+
+    // Run the normal Trace() function with our start and end
+    // position and return a new position
+    return Trace(vStart, vEnd);
+}
+
+
+/////////////////////////////////// TRACE SPHERE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+/////
+/////	This tests a sphere around our movement vector against the BSP brushes for collision
+/////
+/////////////////////////////////// TRACE SPHERE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+
+float traceRadius;
+
+VECTOR3D CBSP::TraceSphere(VECTOR3D vStart, VECTOR3D vEnd, float radius)
+{
+    // Here we initialize the type of trace (SPHERE) and initialize other data
+    traceType = TRACE_TYPE_SPHERE;
+    bCollided = false;
+
+    // Here we initialize our variables for a new round of collision checks
+    bTryStep = false;
+    bGrounded = false;
+
+    traceRadius = radius;
+
+    // Get the new position that we will return to the camera or player
+    VECTOR3D vNewPosition = Trace(vStart, vEnd);
+
+    // Let's check to see if we collided with something and we should try to step up
+    if(bCollided && bTryStep)
+    {
+        // Try and step up what we collided with
+        vNewPosition = TryToStep(vNewPosition, vEnd);
+    }
+
+    // Return the new position to be changed for the camera or player
+    return vNewPosition;
+}
+
+
+/////////////////////////////////// TRACE BOX \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+/////
+/////	This takes a start and end position to test a AABB (box) against the BSP brushes
+/////
+/////////////////////////////////// TRACE BOX \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+
+VECTOR3D vTraceMaxs;
+VECTOR3D vTraceMins;
+VECTOR3D vExtents;
+
+VECTOR3D CBSP::TraceBox(VECTOR3D vStart, VECTOR3D vEnd, VECTOR3D vMin, VECTOR3D vMax)
+{
+    traceType = TRACE_TYPE_BOX;			// Set the trace type to a BOX
+    vTraceMaxs = vMax;			// Set the max value of our AABB
+    vTraceMins = vMin;			// Set the min value of our AABB
+    bCollided = false;			// Reset the collised flag
+
+    // Here we initialize our variables for a new round of collision checks
+    bTryStep = false;
+    bGrounded = false;
+
+    // Grab the extend of our box (the largest size for each x, y, z axis)
+    vExtents.x = -vTraceMins.x > vTraceMaxs.x ? -vTraceMins.x : vTraceMaxs.x;
+    vExtents.y = -vTraceMins.y > vTraceMaxs.y ? -vTraceMins.y : vTraceMaxs.y;
+    vExtents.z = -vTraceMins.z > vTraceMaxs.z ? -vTraceMins.z : vTraceMaxs.z;
+
+
+    // Check if our movement collided with anything, then get back our new position
+    VECTOR3D vNewPosition = Trace(vStart, vEnd);
+
+    // Let's check to see if we collided with something and we should try to step up
+    if(bCollided && bTryStep)
+    {
+        // Try and step up what we collided with
+        vNewPosition = TryToStep(vNewPosition, vEnd);
+    }
+
+    // Return our new position
+    return vNewPosition;
+}
+
+
+/////////////////////////////////// CHECK NODE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+/////
+/////	This traverses the BSP to find the brushes closest to our position
+/////
+/////////////////////////////////// CHECK NODE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+
+void CBSP::CheckNode(int nodeIndex, float startRatio, float endRatio, VECTOR3D vStart, VECTOR3D vEnd)
+{
+    //printf("CheckNode %d\n", nodeIndex);
+    // Check if the next node is a leaf
+    if(nodeIndex < 0)
+    {
+        //printf("CheckLeaf %d\n", ~nodeIndex);
+        // If this node in the BSP is a leaf, we need to negate and add 1 to offset
+        // the real node index into the m_pLeafs[] array.  You could also do [~nodeIndex].
+        BSPLEAF *pLeaf = &pLeafs[~nodeIndex];
+
+        // We have a leaf, so let's go through all of the brushes for that leaf
+        /*for(int i = 0; i < pLeaf->numOfLeafBrushes; i++)
+        {
+        	// Get the current brush that we going to check
+        	tBSPBrush *pBrush = &m_pBrushes[m_pLeafBrushes[pLeaf->leafBrush + i]];
+
+        	// Check if we have brush sides and the current brush is solid and collidable
+        	if((pBrush->numOfBrushSides > 0) && (m_pTextures[pBrush->textureID].textureType & 1))
+        	{
+        		// Now we delve into the dark depths of the real calculations for collision.
+        		// We can now check the movement vector against our brush planes.
+        		CheckBrush(pBrush, vStart, vEnd);
+        	}
+        }*/
+
+            if (pLeaf->nMarkSurfaces > 0)
+            {
+                CheckLeaf(pLeaf, startRatio, endRatio, vStart, vEnd);
+            }
+
+        // Since we found the brushes, we can go back up and stop recursing at this level
+        return;
+    }
+
+    // Grab the next node to work with and grab this node's plane data
+    BSPNODE *pNode = &pNodes[nodeIndex];
+    BSPPLANE *pPlane = &pPlanes[pNode->iPlane];
+
+    // Here we use the plane equation to find out where our initial start position is
+    // according the the node that we are checking.  We then grab the same info for the end pos.
+    float startDistance = DotProduct(vStart, pPlane->vNormal) - pPlane->fDist;
+    float endDistance = DotProduct(vEnd, pPlane->vNormal) - pPlane->fDist;
+    float offset = 0.0f;
+
+    // If we are doing sphere collision, include an offset for our collision tests below
+    if(traceType == TRACE_TYPE_SPHERE)
+        offset = traceRadius;
+
+    // Here we check to see if we are working with a BOX or not
+    else if(traceType == TRACE_TYPE_BOX)
+    {
+        // Get the distance our AABB is from the current splitter plane
+        offset = (float)(fabs( vExtents.x * pPlane->vNormal.x ) +
+                         fabs( vExtents.y * pPlane->vNormal.y ) +
+                         fabs( vExtents.z * pPlane->vNormal.z ) );
+    }
+
+    // Here we check to see if the start and end point are both in front of the current node.
+    // If so, we want to check all of the nodes in front of this current splitter plane.
+    if(startDistance >= offset && endDistance >= offset)
+    {
+        // Traverse the BSP tree on all the nodes in front of this current splitter plane
+        CheckNode(pNode->iChildren[0], startRatio, endRatio, vStart, vEnd);
+    }
+    // If both points are behind the current splitter plane, traverse down the back nodes
+    else if(startDistance < -offset && endDistance < -offset)
+    {
+        // Traverse the BSP tree on all the nodes in back of this current splitter plane
+        CheckNode(pNode->iChildren[1], startRatio, endRatio, vStart, vEnd);
+    }
+    else
+    {
+        // If we get here, then our ray needs to be split in half to check the nodes
+        // on both sides of the current splitter plane.  Thus we create 2 ratios.
+        float Ratio1 = 1.0f, Ratio2 = 0.0f, middleRatio = 0.0f;
+        VECTOR3D vMiddle;	// This stores the middle point for our split ray
+
+        // Start of the side as the front side to check
+        int side = pNode->iChildren[0];
+
+        // Here we check to see if the start point is in back of the plane (negative)
+        if(startDistance < endDistance)
+        {
+            // Since the start position is in back, let's check the back nodes
+            side = pNode->iChildren[1];
+
+            // Here we create 2 ratios that hold a distance from the start to the
+            // extent closest to the start (take into account a sphere and epsilon).
+            float inverseDistance = 1.0f / (startDistance - endDistance);
+            Ratio1 = (startDistance - offset - EPSILON) * inverseDistance;
+            Ratio2 = (startDistance + offset + EPSILON) * inverseDistance;
+        }
+        // Check if the starting point is greater than the end point (positive)
+        else if(startDistance > endDistance)
+        {
+            // This means that we are going to recurse down the front nodes first.
+            // We do the same thing as above and get 2 ratios for split ray.
+            float inverseDistance = 1.0f / (startDistance - endDistance);
+            Ratio1 = (startDistance + offset + EPSILON) * inverseDistance;
+            Ratio2 = (startDistance - offset - EPSILON) * inverseDistance;
+        }
+
+        // Make sure that we have valid numbers and not some weird float problems.
+        // This ensures that we have a value from 0 to 1 as a good ratio should be :)
+        if (Ratio1 < 0.0f)
+            Ratio1 = 0.0f;
+        else if (Ratio1 > 1.0f)
+            Ratio1 = 1.0f;
+
+        if (Ratio2 < 0.0f)
+            Ratio2 = 0.0f;
+        else if (Ratio2 > 1.0f)
+            Ratio2 = 1.0f;
+
+        // Just like we do in the Trace() function, we find the desired middle
+        // point on the ray, but instead of a point we get a middleRatio percentage.
+        middleRatio = startRatio + ((endRatio - startRatio) * Ratio1);
+        vMiddle = vStart + ((vEnd - vStart) * Ratio1);
+
+        // Now we recurse on the current side with only the first half of the ray
+        CheckNode(side, startRatio, middleRatio, vStart, vMiddle);
+
+        // Now we need to make a middle point and ratio for the other side of the node
+        middleRatio = startRatio + ((endRatio - startRatio) * Ratio2);
+        vMiddle = vStart + ((vEnd - vStart) * Ratio2);
+
+        // Depending on which side should go last, traverse the bsp with the
+        // other side of the split ray (movement vector).
+        if(side == pNode->iChildren[1])
+            CheckNode(pNode->iChildren[0], middleRatio, endRatio, vMiddle, vEnd);
+        else
+            CheckNode(pNode->iChildren[1], middleRatio, endRatio, vMiddle, vEnd);
+    }
+}
+
+
+/////////////////////////////////// CHECK LEAF \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+/////
+/////	This checks our movement vector against all the planes of the leaf
+/////
+/////////////////////////////////// CHECK LEAF \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+
+void CBSP::CheckLeaf(BSPLEAF *pLeaf, float absoluteStartRatio, float absoluteEndRatio, VECTOR3D vStart, VECTOR3D vEnd)
+{
+    float startRatio = -1.0f;		// Like in BrushCollision.htm, start a ratio at -1
+    float endRatio = 1.0f;			// Set the end ratio to 1
+    bool startsOut = true;			// This tells us if we starting outside the brush
+
+    // Go through all of the brush sides and check collision against each plane
+    //for(int i=0; i<pBrush->numOfBrushSides; i++)
+    for(int i=0;i<pLeaf->nMarkSurfaces;i++)
+    {
+        // Here we grab the current brush side and plane in this brush
+        //tBSPBrushSide *pBrushSide = &pBrushSides[pBrush->brushSide + i];
+        //tBSPPlane *pPlane = &pPlanes[pBrushSide->plane];
+
+        BSPFACE *face = &pFaces[pMarkSurfaces[pLeaf->iFirstMarkSurface + i]];
+        BSPPLANE plane = pPlanes[face->iPlane]; // make a copy
+
+        if(face->nPlaneSide)
+        {
+            plane.vNormal = -1 * plane.vNormal;
+            plane.fDist = -plane.fDist;
+        }
+
+        // Let's store a variable for the offset (like for sphere collision)
+        float offset = 0.0f;
+
+        // If we are testing sphere collision we need to add the sphere radius
+        if(traceType == TRACE_TYPE_SPHERE)
+            offset = traceRadius;
+
+        // Test the start and end points against the current plane of the brush side.
+        // Notice that we add an offset to the distance from the origin, which makes
+        // our sphere collision work.
+        float startDistance = DotProduct(vStart, plane.vNormal) - (plane.fDist + offset);
+        float endDistance = DotProduct(vEnd, plane.vNormal) - (plane.fDist + offset);
+
+        // Store the offset that we will check against the plane
+        VECTOR3D vOffset = {0,0,0};
+
+        // If we are using AABB collision
+        if(traceType == TRACE_TYPE_BOX)
+        {
+            // Grab the closest corner (x, y, or z value) that is closest to the plane
+            vOffset.x = (plane.vNormal.x < 0) ? vTraceMaxs.x : vTraceMins.x;
+            vOffset.y = (plane.vNormal.y < 0) ? vTraceMaxs.y : vTraceMins.y;
+            vOffset.z = (plane.vNormal.z < 0) ? vTraceMaxs.z : vTraceMins.z;
+
+            // Use the plane equation to grab the distance our start position is from the plane.
+            startDistance = DotProduct(vStart + vOffset, plane.vNormal) - plane.fDist;
+
+            // Get the distance our end position is from this current brush plane
+            endDistance = DotProduct(vEnd + vOffset, plane.vNormal) - plane.fDist;
+        }
+
+        /*if(face->nPlaneSide)
+        {
+            startDistance *= -1;
+            endDistance *= -1;
+        }*/
+
+        // Make sure we start outside of the brush's volume
+        if(startDistance > 0)
+            startsOut = false;
+
+        // Continue checking since both the start and end position are in front of the plane
+        if((startDistance > 0) && (endDistance > 0))
+        {
+            //printf("continue\n");
+            continue; // return;
+        }
+
+        // Stop checking since both the start and end position are behind the plane
+        else if((startDistance < 0) && (endDistance < 0))
+        {
+            // both are outside the leaf
+            //printf("outside the leaf\n");
+            continue; // return;
+        }
+
+        // plane intersection, check if inside all surface edges
+        float rayStartDistance = DotProduct(vStart, plane.vNormal) - plane.fDist;
+        float rayEndDistance = DotProduct(vEnd, plane.vNormal) - plane.fDist;
+        VECTOR3D intersectionPoint = vStart + (rayStartDistance / (rayStartDistance - rayEndDistance)) * (vEnd - vStart);
+
+        if(!IsInsideFace(face, intersectionPoint))
+            continue;
+
+        // If the distance of the start point is greater than the end point, we have a collision!
+        if(startDistance > endDistance)
+        {
+            // we are leaving the leaf
+
+            // This gets a ratio from our starting point to the approximate collision spot
+            float Ratio1 = (startDistance - EPSILON) / (startDistance - endDistance);
+
+            // If this is the first time coming here, then this will always be true,
+            if(Ratio1 > startRatio)
+            {
+                // Set the startRatio (currently the closest collision distance from start)
+                startRatio = Ratio1;
+                bCollided = true;		// Let us know we collided!
+
+                // Store the normal of plane that we collided with for sliding calculations
+                vCollisionNormal = plane.vNormal;
+
+                // This checks first tests if we actually moved along the x or y-axis,
+                // meaning that we went in a direction somewhere.  The next check makes
+                // sure that we don't always check to step every time we collide.  If
+                // the normal of the plane has a Z value of 1, that means it's just the
+                // flat ground and we don't need to check if we can step over it, it's flat!
+                if((vStart.x != vEnd.x || vStart.y != vEnd.y) && plane.vNormal.z != 1)
+                {
+                    // We can try and step over the wall we collided with
+                    bTryStep = true;
+                }
+
+                // Here we make sure that we don't slide slowly down walls when we
+                // jump and collide into them.  We only want to say that we are on
+                // the ground if we actually have stopped from falling.  A wall wouldn't
+                // have a high z value for the normal, it would most likely be 0.
+                if(vCollisionNormal.z >= 0.2f)
+                    bGrounded = true;
+            }
+        }
+        else
+        {
+            // we are entering the leaf
+            //printf("lol2\n");
+            // Get the ratio of the current brush side for the endRatio
+            float Ratio = (startDistance + EPSILON) / (startDistance - endDistance);
+
+            // If the ratio is less than the current endRatio, assign a new endRatio.
+            // This will usually always be true when starting out.
+            if(Ratio < endRatio)
+                endRatio = Ratio;
+        }
+    }
+
+    // If we didn't start outside of the brush we don't want to count this collision - return;
+    if(startsOut) // !
+        return;
+
+    // If our startRatio is less than the endRatio there was a collision!!!
+    if(startRatio < endRatio)
+    {
+        // Make sure the startRatio moved from the start and check if the collision
+        // ratio we just got is less than the current ratio stored in m_traceRatio.
+        // We want the closest collision to our original starting position.
+        if(startRatio > -1 && startRatio < traceRatio)
+        {
+            // If the startRatio is less than 0, just set it to 0
+            if(startRatio < 0)
+                startRatio = 0;
+
+            // Store the new ratio in our member variable for later
+            //traceRatio = startRatio;
+            traceRatio = absoluteStartRatio + startRatio * (absoluteEndRatio - absoluteStartRatio);
+        }
+    }
+}
+
+/********** END FROM QUAKE 3 ***************/
 
 void CBSP::Destroy()
 {

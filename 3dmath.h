@@ -1,7 +1,7 @@
 #ifndef _3DMATH_
 #define _3DMATH_
 
-#define EPSILON 0.01f
+#define EPSILON 0.03125f // 1/32
 
 #define DEGTORAD(x) ((x) * M_PI / 180.0)
 #define RADTODEG(x) ((x) * 180.0 / M_PI)
