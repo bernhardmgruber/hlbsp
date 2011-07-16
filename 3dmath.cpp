@@ -47,12 +47,19 @@ bool operator==(VECTOR3D v1, VECTOR3D v2)
 {
 	VECTOR3D v = v1 - v2;
 
-	if(fabs(v.x) > EPSILON)
+	/*if(fabs(v.x) > EPSILON)
 		return false;
 	if(fabs(v.y) > EPSILON)
 		return false;
 	if(fabs(v.z) > EPSILON)
-		return false;
+		return false;*/
+
+    if(v.x != 0)
+        return false;
+    if(v.y != 0)
+        return false;
+    if(v.z != 0)
+        return false;
 
 	return true;
 }

@@ -1,5 +1,7 @@
 /*
-    Link against: opengl32, glu32
+    Link against:
+	Windows: opengl32, glu32, gdi32, sdl
+    Linux: SDL, GL, GLU
 */
 #include "main.h"
 
@@ -15,7 +17,7 @@
 #define WINDOW_CAPTION "HL BSP"
 
 #define BSP_DIR "data/maps"
-#define BSP_FILE_NAME "test.bsp"
+#define BSP_FILE_NAME "cs_assault.bsp"
 
 //#define FULLSCREEN
 
@@ -327,7 +329,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
     // HUD
     g_hud.Init();
 
-    return true;										// Initialization Went OK
+    return true;
 }
 
 void DrawCube(float a)
@@ -372,7 +374,36 @@ void DrawCube(float a)
 	glEnable(GL_CULL_FACE);
 }
 
-int DrawGLScene()									// Here's Where We Do All The Drawing
+void TraverseClipNodes(int iNode)
+{
+    //printf("trav %d\n", iNode);
+    if(iNode < 0)
+    {
+        //printf("render %d\n", ~iNode);
+       g_bsp.RenderLeafOutlines(~iNode);
+    }
+    else
+    {
+        TraverseClipNodes(g_bsp.pClipNodes[iNode].iChildren[0]);
+        TraverseClipNodes(g_bsp.pClipNodes[iNode].iChildren[1]);
+    }
+}
+
+void DrawPlane(BSPPLANE p)
+{
+    VECTOR3D v = p.vNormal * p.fDist;
+    glPointSize(10.0f);
+    glColor3f(1.0, 0.0, 0.0);
+    glBegin(GL_POINTS);
+    glVertex3f(v.x, v.y, v.z);
+    glEnd();
+    glBegin(GL_LINES);
+    glVertex3f(v.x, v.y, v.z);
+    glVertex3f(v.x + p.vNormal.x * 20,v.y + p.vNormal.y * 20,v.z + p.vNormal.z * 20);
+    glEnd();
+}
+
+int DrawGLScene()
 {
     /** UPDATE SCENE **/
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
@@ -458,10 +489,11 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
 
     /// Leaf outlines
     if(g_bRenderLeafOutlines)
-        g_bsp.RenderLeafOutlines();
+        g_bsp.RenderLeavesOutlines();
 
 
-    glBegin(GL_LINE_LOOP);
+    /*
+    glBegin(GL_LINE_LOOP);iNode
     glVertex3f(156.1,298.7,-48.0);
     glColor3f(1.0f, 0, 0);
     glVertex3f(157.1,306.6,-56.0);
@@ -483,7 +515,12 @@ int DrawGLScene()									// Here's Where We Do All The Drawing
     glTranslatef(157.1,306.6,-48.0);
     glColor3f(0.0f, 1, 0);
     DrawCube(32.0f);
-    glPopMatrix();
+    glPopMatrix();*/
+
+    /*for(int i=0;i<g_bsp.nClipNodes;i++)
+    {
+        DrawPlane(g_bsp.pPlanes[g_bsp.pClipNodes[i].iPlane]);
+    }*/
 
     /// HUD
     if (g_bRenderHUD)
@@ -509,6 +546,9 @@ bool CreateSDLWindow(int width, int height)
     // enable 2x anti-aliasing
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+
+	// vsync
+	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
 
     unsigned int flags = SDL_OPENGL | SDL_RESIZABLE;
     if(g_bFullscreen)

@@ -4,6 +4,13 @@
 #include <stdint.h>
 #include "3dmath.h"
 
+/*
+ Hulls:
+( 0 0 0 ) ( 0 0 0 )
+( -16 -16 -24 ) ( 16 16 32 )
+( -32 -32 -32 ) ( 32 32 32 )
+( -16 -16 -24 ) ( 16 16 32 )
+*/
 #define	MAX_MAP_HULLS		4
 
 #define	MAX_MAP_MODELS		400
@@ -12,7 +19,7 @@
 #define	MAX_MAP_ENTSTRING	(128*1024)
 
 #define	MAX_MAP_PLANES		32767
-#define	MAX_MAP_NODES		32767		// because negative shorts are contents
+#define	MAX_MAP_NODES		32767		// because negative shorts are leaves
 #define	MAX_MAP_CLIPNODES	32767		//
 #define	MAX_MAP_LEAFS		8192
 #define	MAX_MAP_VERTS		65535
@@ -189,7 +196,7 @@ typedef struct _BSPMODEL
 typedef struct _BSPCLIPNODE
 {
     int32_t iPlane;       // Index into planes
-    int16_t iChildren[2]; // negative numbers are contents
+    int16_t iChildren[2]; // negative numbers are contents behind and in front of the plane
 } BSPCLIPNODE;
 
 #endif // BSPV32FILEDEFS_H_INCLUDED

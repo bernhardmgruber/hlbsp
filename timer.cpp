@@ -18,8 +18,6 @@ void CTimer::Tick()
     double dCurrentTime = GetTime();
     dInterval = dCurrentTime - dLastTime;
 
-    //fTPS = 1.0 / dInterval;
-
     dLastTime = dCurrentTime;
 
     static int nFrameCounter = 0;

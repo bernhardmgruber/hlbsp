@@ -40,17 +40,18 @@ public:
     CEntity* FindEntity(const char* pszNewClassName);        // Returns the entity with the given name
 
     /** Collision detection **/
-    VECTOR3D TraceRay   (VECTOR3D vStart, VECTOR3D vEnd);
-    VECTOR3D TraceSphere(VECTOR3D vStart, VECTOR3D vEnd, float radius);
-    VECTOR3D TraceBox   (VECTOR3D vStart, VECTOR3D vEnd, VECTOR3D vMin, VECTOR3D vMax);
+    VECTOR3D Move(VECTOR3D vStart, VECTOR3D vEnd, int hull);
+    //VECTOR3D TraceSphere(VECTOR3D vStart, VECTOR3D vEnd, float radius);
+    //VECTOR3D TraceBox   (VECTOR3D vStart, VECTOR3D vEnd, VECTOR3D vMin, VECTOR3D vMax);
 
     /** Rendering **/
     void RenderLevel(VECTOR3D vPos);                      // Renders the complete BSP tree
-    void RenderLeafOutlines();
+    void RenderLeavesOutlines();
+    void RenderLeafOutlines(int iLeaf);
 
     void Destroy();                                       // Unloads the complete BSP tree and frees all allocated memory
 
-private:
+//private:
     int nNodes;           // Number of nodes
     int nLeafs;           // Number of leafs
     int nMarkSurfaces;    // Number of marksurfaces
@@ -121,9 +122,8 @@ private:
 	/** Collision detection **/
 	VECTOR3D TryToStep(VECTOR3D vStart, VECTOR3D vEnd);
     VECTOR3D Trace(VECTOR3D vStart, VECTOR3D vEnd);
-    void CheckNode(int nodeIndex, float startRatio, float endRatio, VECTOR3D vStart, VECTOR3D vEnd);
-    void CheckLeaf(BSPLEAF *pLeaf, float absoluteStartRatio, float absoluteEndRatio, VECTOR3D vStart, VECTOR3D vEnd);
-    bool IsInsideFace(BSPFACE* face, VECTOR3D);
+    int HullPointContents(int iNode, VECTOR3D p);
+    bool RecursiveHullCheck (int iNode, float p1f, float p2f, VECTOR3D p1, VECTOR3D p2);
 
 	/** Rendering **/
     void RenderSkybox(VECTOR3D vPos);                       // Calls the display list, which draws the skybox to the screen

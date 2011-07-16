@@ -53,7 +53,7 @@ void CPlayer::SetPosition(VECTOR2D v)
 void CPlayer::UpdateFromInput(double dFrameInterval)
 {
     // Save old position
-    VECTOR3D vOldPos = vPos;
+    VECTOR3D vNewPos = vPos;
 
     if(g_bCaptureMouse)
     {
@@ -90,67 +90,45 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
 
     if (g_abKeys[SDLK_SPACE]) // UP
     {
-        vPos.z += fTmpMoveSens;
+        vNewPos.z += fTmpMoveSens;
     }
 
     if (g_abKeys[SDLK_LCTRL]) // DOWN
     {
-        vPos.z -= fTmpMoveSens;
+        vNewPos.z -= fTmpMoveSens;
     }
 
     // TODO: If strafing and moving reduce speed to keep total move per frame constant
     if (g_abKeys[SDLK_w]) // FORWARD
     {
-        vPos.x += cos(DEGTORAD(fZAngle)) * fTmpMoveSens;
-        vPos.y += sin(DEGTORAD(fZAngle)) * fTmpMoveSens;
+        vNewPos.x += cos(DEGTORAD(fZAngle)) * fTmpMoveSens;
+        vNewPos.y += sin(DEGTORAD(fZAngle)) * fTmpMoveSens;
     }
 
     if (g_abKeys[SDLK_s]) // BACKWARD
     {
-        vPos.x -= cos(DEGTORAD(fZAngle)) * fTmpMoveSens;
-        vPos.y -= sin(DEGTORAD(fZAngle)) * fTmpMoveSens;
+        vNewPos.x -= cos(DEGTORAD(fZAngle)) * fTmpMoveSens;
+        vNewPos.y -= sin(DEGTORAD(fZAngle)) * fTmpMoveSens;
     }
 
     if (g_abKeys[SDLK_a]) // LEFT
     {
-        vPos.x += cos(DEGTORAD(fZAngle + 90.0f)) * fTmpMoveSens;
-        vPos.y += sin(DEGTORAD(fZAngle + 90.0f)) * fTmpMoveSens;
+        vNewPos.x += cos(DEGTORAD(fZAngle + 90.0f)) * fTmpMoveSens;
+        vNewPos.y += sin(DEGTORAD(fZAngle + 90.0f)) * fTmpMoveSens;
     }
 
     if (g_abKeys[SDLK_d]) // RIGHT
     {
-        vPos.x += cos(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
-        vPos.y += sin(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
+        vNewPos.x += cos(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
+        vNewPos.y += sin(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
     }
 
-    /*static bool opened = false;
-    static FILE* fp;
-
-    if(!opened)
-    {
-        fp = fopen("collisions.log", "w");
-        opened = true;
-    }*/
-
-    //system("cls");
-
-    //vOldPos = {157.1,306.6,-48.0};
-    //vPos = {158.0,314.6,-56.0};
+    //vPos = {0,0,0};
+    //vNewPos = {0,100,0};
 
     // Perform collision detection
-    //VECTOR3D vTrace = g_bsp.TraceBox(vOldPos, vPos, {-16,-16,-16}, {16,16,16});
-
-    //fprintf(fp, "%.1f,%.1f,%.1f to %.1f,%.1f,%.1f", vOldPos.x, vOldPos.y, vOldPos.z, vPos.x, vPos.y, vPos.z);
-
-    VECTOR3D vTrace = g_bsp.TraceRay(vOldPos, vPos);
+    VECTOR3D vTrace = g_bsp.Move(vPos, vNewPos, 0);
     //printf("%.1f/%.1f/%.1f\n", vTrace.x, vTrace.y, vTrace.z);
-    if(vTrace != vPos)
-    {
-		printf("collision %.1f/%.1f/%.1f\n", vTrace.x, vTrace.y, vTrace.z);
-		//fprintf(fp, " collision at %.1f,%.1f,%.1f\n", vTrace.x, vTrace.y, vTrace.z);
-    }
-    //else
-        //fprintf(fp, "\n");
 
     //printf("old: %.1f/%.1f/%.1f new: %.1f/%.1f/%.1f trace: %.1f/%.1f/%.1f\n", vOldPos.x, vOldPos.y, vOldPos.z, vPos.x, vPos.y, vPos.z, vTrace.x, vTrace.y, vTrace.z);
 
