@@ -332,7 +332,7 @@ int InitGL()										// All Setup For OpenGL Goes Here
     return true;
 }
 
-void DrawCube(float a)
+/*void DrawCube(float a)
 {
     float a2 = a / 2.0f;
 
@@ -372,24 +372,9 @@ void DrawCube(float a)
 	glEnd();
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glEnable(GL_CULL_FACE);
-}
+}*/
 
-void TraverseClipNodes(int iNode)
-{
-    //printf("trav %d\n", iNode);
-    if(iNode < 0)
-    {
-        //printf("render %d\n", ~iNode);
-       g_bsp.RenderLeafOutlines(~iNode);
-    }
-    else
-    {
-        TraverseClipNodes(g_bsp.pClipNodes[iNode].iChildren[0]);
-        TraverseClipNodes(g_bsp.pClipNodes[iNode].iChildren[1]);
-    }
-}
-
-void DrawPlane(BSPPLANE p)
+/*void DrawPlane(BSPPLANE p)
 {
     VECTOR3D v = p.vNormal * p.fDist;
     glPointSize(10.0f);
@@ -401,11 +386,14 @@ void DrawPlane(BSPPLANE p)
     glVertex3f(v.x, v.y, v.z);
     glVertex3f(v.x + p.vNormal.x * 20,v.y + p.vNormal.y * 20,v.z + p.vNormal.z * 20);
     glEnd();
-}
+}*/
 
 int DrawGLScene()
 {
-    /** UPDATE SCENE **/
+    //
+    // UPDATE SCENE
+    //
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
     glLoadIdentity();									// Reset The Current Modelview Matrix
 
@@ -424,7 +412,10 @@ int DrawGLScene()
     g_camera.UpdateFromInput(g_timer.dInterval);
     g_camera.Look();
 
-    /** DRAW SCENE **/
+    //
+    // DRAW SCENE
+    //
+
     // Enable Shader
     if (g_bUseShader)
     {
@@ -442,7 +433,7 @@ int DrawGLScene()
     if (g_bUseShader)
         glUseProgram(0);
 
-    /// Brightness
+    // Brightness
     glPushMatrix();
     glLoadIdentity();
 
@@ -458,6 +449,7 @@ int DrawGLScene()
     glDisable(GL_BLEND);
     glPopMatrix();
 
+    // Coords
     if (g_bRenderCoords)
     {
         glLineWidth(3.0f);
@@ -487,48 +479,17 @@ int DrawGLScene()
         glEnd();
     }
 
-    /// Leaf outlines
+    // Leaf outlines
     if(g_bRenderLeafOutlines)
         g_bsp.RenderLeavesOutlines();
 
-
-    /*
-    glBegin(GL_LINE_LOOP);iNode
-    glVertex3f(156.1,298.7,-48.0);
-    glColor3f(1.0f, 0, 0);
-    glVertex3f(157.1,306.6,-56.0);
-    glEnd();
-
-    glPushMatrix();
-    glTranslatef(156.1,298.7,-48.0);
-    glColor3f(1, 1, 1);
-    DrawCube(32.0f);
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslatef(157.1,306.6,-56.0);
-    glColor3f(1.0f, 0, 0);
-    DrawCube(32.0f);
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslatef(157.1,306.6,-48.0);
-    glColor3f(0.0f, 1, 0);
-    DrawCube(32.0f);
-    glPopMatrix();*/
-
-    /*for(int i=0;i<g_bsp.nClipNodes;i++)
-    {
-        DrawPlane(g_bsp.pPlanes[g_bsp.pClipNodes[i].iPlane]);
-    }*/
-
-    /// HUD
+    // HUD
     if (g_bRenderHUD)
     {
         g_hud.Render();
     }
 
-    return true;										// Everything Went OK
+    return true;
 }
 
 bool CreateSDLWindow(int width, int height)

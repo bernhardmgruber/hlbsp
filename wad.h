@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include "imageio.h"
-#include "bspv30filedefs.h"
+#include "bspdef.h"
 
 typedef struct
 {

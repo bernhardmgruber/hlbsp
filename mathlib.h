@@ -15,7 +15,14 @@ typedef struct _VECTOR2D
 // structure for a float triple
 typedef struct _VECTOR3D
 {
-    float x, y, z;
+    union
+    {
+        struct
+        {
+            float x, y, z;
+        };
+        float coords[3];
+    };
 } VECTOR3D;
 
 VECTOR3D operator-(VECTOR3D v1, VECTOR3D v2);                   // Vector substraction

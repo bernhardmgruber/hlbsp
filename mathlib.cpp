@@ -1,4 +1,4 @@
-#include "3dmath.h"
+#include "mathlib.h"
 #include <math.h>
 
 VECTOR3D operator-(VECTOR3D v1, VECTOR3D v2)

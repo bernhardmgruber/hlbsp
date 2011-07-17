@@ -1,7 +1,7 @@
 #ifndef CAMERA_H_INCLUDED
 #define CAMERA_H_INCLUDED
 
-#include "3dmath.h"
+#include "mathlib.h"
 #include "player.h"
 
 #define CAMERA_MOVE_SENS 500 //old: 192

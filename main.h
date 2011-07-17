@@ -15,7 +15,7 @@
 #include "camera.h"
 #include "hud.h"
 #include "timer.h"
-#include "3dmath.h"
+#include "mathlib.h"
 #include "font.h"
 
 #ifdef __WIN32__

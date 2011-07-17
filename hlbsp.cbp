@@ -7,8 +7,8 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Win_Debug">
-				<Option output="bin/Debug/hlbsp" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Debug/" />
+				<Option output="bin\Debug\hlbsp" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Debug\" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -22,8 +22,8 @@
 				</Linker>
 			</Target>
 			<Target title="Win_Release">
-				<Option output="bin/Release/hlbsp" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Release/" />
+				<Option output="bin\Release\hlbsp" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Release\" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -39,8 +39,8 @@
 				</Linker>
 			</Target>
 			<Target title="Linux_Debug">
-				<Option output="bin/Debug/hlbsp" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Debug/" />
+				<Option output="bin\Debug\hlbsp" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Debug\" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -53,8 +53,8 @@
 				</Linker>
 			</Target>
 			<Target title="Linux_Release">
-				<Option output="bin/Release/hlbsp" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Release/" />
+				<Option output="bin\Release\hlbsp" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Release\" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -72,9 +72,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="3dmath.cpp" />
-		<Unit filename="3dmath.h" />
-		<Unit filename="bspv30filedefs.h" />
+		<Unit filename="bspdef.h" />
 		<Unit filename="camera.cpp" />
 		<Unit filename="camera.h" />
 		<Unit filename="entity.cpp" />
@@ -93,10 +91,12 @@
 		<Unit filename="imageio.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="main.h" />
+		<Unit filename="mathlib.cpp" />
+		<Unit filename="mathlib.h" />
 		<Unit filename="player.cpp" />
 		<Unit filename="player.h" />
-		<Unit filename="shader/main.frag" />
-		<Unit filename="shader/main.vert" />
+		<Unit filename="shader\main.frag" />
+		<Unit filename="shader\main.vert" />
 		<Unit filename="timer.cpp" />
 		<Unit filename="timer.h" />
 		<Unit filename="wad.cpp" />

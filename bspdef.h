@@ -2,15 +2,8 @@
 #define BSPV32FILEDEFS_H_INCLUDED
 
 #include <stdint.h>
-#include "3dmath.h"
+#include "mathlib.h"
 
-/*
- Hulls:
-( 0 0 0 ) ( 0 0 0 )
-( -16 -16 -24 ) ( 16 16 32 )
-( -32 -32 -32 ) ( 32 32 32 )
-( -16 -16 -24 ) ( 16 16 32 )
-*/
 #define	MAX_MAP_HULLS		4
 
 #define	MAX_MAP_MODELS		400
@@ -80,6 +73,14 @@
 #define PLANE_ANYX 3 // Non-axial plane is snapped to the nearest
 #define PLANE_ANYY 4
 #define PLANE_ANYZ 5
+
+// Render modes
+#define RENDER_MODE_NORMAL   0
+#define RENDER_MODE_COLOR	 1
+#define RENDER_MODE_TEXTURE  2
+#define RENDER_MODE_GLOW	 3
+#define RENDER_MODE_SOLID	 4
+#define RENDER_MODE_ADDITIVE 5
 
 // Stores the individual lump info in the header
 typedef struct _BSPLUMP

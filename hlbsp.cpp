@@ -6,24 +6,10 @@
 #include <string.h>
 #include <assert.h>
 
-
 #define WAD_DIR "data/wads"
 #define SKY_DIR "data/textures/sky"
 
 #define DECAL_WAD_COUNT 2
-
-#define RENDER_MODE_NORMAL   0
-#define RENDER_MODE_COLOR	1
-#define RENDER_MODE_TEXTURE  2
-#define RENDER_MODE_GLOW	 3
-#define RENDER_MODE_SOLID	4
-#define RENDER_MODE_ADDITIVE 5
-
-/**
- *============================================================================================
- *									   PRIVATE
- *============================================================================================
-**/
 
 void CBSP::AdjustTextureToPowerOfTwo(IMAGE* pImg)
 {
@@ -94,8 +80,6 @@ bool CBSP::LoadSkyTextures()
 
     *pdlSkyBox = glGenLists(1);
     glNewList(*pdlSkyBox, GL_COMPILE);
-
-
 
     //http://enter.diehlsworld.de/ogl/skyboxartikel/skybox.htm
     glDepthMask(0); // prevent writing depth coords
@@ -595,7 +579,7 @@ void CBSP::LoadLightMaps(unsigned char* pLightMapData)
             //Allocate pLightmapCoords
             pFaceTexCoords[i].pLightmapCoords = (BSPTEXCOORDS*) MALLOC(sizeof(BSPTEXCOORDS) * pFaces[i].nEdges);
 
-            /************ QRAD ***********/
+            /* *********** QRAD ********** */
 
             float fMinU = 999999;
             float fMinV = 999999;
@@ -633,9 +617,9 @@ void CBSP::LoadLightMaps(unsigned char* pLightMapData)
             int nWidth = (int)(fTexMaxU - fTexMinU) + 1;
             int nHeight = (int)(fTexMaxV - fTexMinV) + 1;
 
-            /************ end QRAD ***********/
+            /* *********** end QRAD ********* */
 
-            /*********** http://www.gamedev.net/community/forums/topic.asp?topic_id=538713 (last refresh: 20.02.2010) ***********/
+            /* ********** http://www.gamedev.net/community/forums/topic.asp?topic_id=538713 (last refresh: 20.02.2010) ********** */
 
             float fMidPolyU = (fMinU + fMaxU) / 2.0;
             float fMidPolyV = (fMinV + fMaxV) / 2.0;
@@ -661,7 +645,7 @@ void CBSP::LoadLightMaps(unsigned char* pLightMapData)
                 pFaceTexCoords[i].pLightmapCoords[j].fT = fLightMapV / (float)nHeight;
             }
 
-            /*********** end http://www.gamedev.net/community/forums/topic.asp?topic_id=538713 ***********/
+            /* ********** end http://www.gamedev.net/community/forums/topic.asp?topic_id=538713 ********** */
 
             // Find unbound texture slots
             glGenTextures(1, &pnLightmapLookUp[i]);
@@ -1212,12 +1196,6 @@ void CBSP::RenderDecals()
     glDisable(GL_POLYGON_OFFSET_FILL);
 }
 
-/**
- *============================================================================================
- *										PUBLIC
- *============================================================================================
-**/
-
 CBSP::CBSP()
 {
     pVertices = NULL;
@@ -1253,14 +1231,14 @@ CBSP::~CBSP()
 
 bool CBSP::LoadBSPFile(const char* pszFileName)
 {
-    LOG("LOADING BSP FILE: %s\n", strrchr(pszFileName, '/') + 1);
-
     FILE* pfile = fopen(pszFileName, "rb");
     if (pfile == NULL)
     {
         MSGBOX_ERROR("Map file %s not found", pszFileName);
         return false;
     }
+
+    LOG("LOADING BSP FILE: %s\n", strrchr(pszFileName, '/') + 1);
 
     // Read in the header
     fread(&header, sizeof(BSPHEADER), 1, pfile);
@@ -1684,53 +1662,51 @@ CEntity* CBSP::FindEntity(const char* pszNewClassName)
     return NULL;
 }
 
-/**************** FROM QUAKE 1 ***********/
+/* *************** FROM QUAKE 1 ********** */
 
 int hull;
-bool allsolid;
-float traceRatio;
-VECTOR3D vCollisionNormal;
 
 VECTOR3D CBSP::Trace(VECTOR3D vStart, VECTOR3D vEnd)
 {
     if(vStart == vEnd)
         return vEnd; // no move
 
-    printf("begin trace start %.1f/%.1f/%.1f end %.1f/%.1f/%.1f \n", vStart.x, vStart.y, vStart.z, vEnd.x, vEnd.y, vEnd.z);
-    // Initially we set our trace ratio to 1.0f, which means that we don't have
-    // a collision or intersection point, so we can move freely.
-    traceRatio = 1.0f;
+    //printf("begin trace start %.1f/%.1f/%.1f end %.1f/%.1f/%.1f \n", vStart.x, vStart.y, vStart.z, vEnd.x, vEnd.y, vEnd.z);
 
-    allsolid = true;
+    // create a default trace
+    TRACE trace;
+    memset(&trace, 0, sizeof(trace));
+    trace.allsolid = true;
+    trace.ratio = 1.0f;
 
     // We start out with the first node (0), setting our start and end ratio to 0 and 1.
     // We will recursively go through all of the nodes to see which brushes we should check.
     //CheckNode(pModels[0].iHeadNodes[hull], 0.0f, 1.0f, vStart, vEnd);
-    RecursiveHullCheck(pModels[0].iHeadNodes[hull], 0, 1, vStart, vEnd);
+    RecursiveHullCheck(pModels[0].iHeadNodes[hull], 0, 1, vStart, vEnd, trace);
 
-    printf("end trace %f\n", traceRatio);
+    //printf("end trace %f\n", traceRatio);
 
     // If the traceRatio is STILL 1.0f, then we never collided and just return our end position
-    if(traceRatio == 1.0f)
+    if(trace.ratio == 1.0f)
     {
         return vEnd;
     }
     else	// Else COLLISION!!!!
     {
-        printf("coll normal %.1f/%.1f/%.1f\n", vCollisionNormal.x, vCollisionNormal.y, vCollisionNormal.z);
+        //printf("coll normal %.1f/%.1f/%.1f\n", vCollisionNormal.x, vCollisionNormal.y, vCollisionNormal.z);
 
         // Set our new position to a position that is right up to the brush we collided with
-        VECTOR3D vNewPosition = vStart + ((vEnd - vStart) * traceRatio);
+        VECTOR3D vNewPosition = vStart + ((vEnd - vStart) * trace.ratio);
 
         // Get the distance from the end point to the new position we just got
         VECTOR3D vMove = vEnd - vNewPosition;
 
         // Get the distance we need to travel backwards to the new slide position.
         // This is the distance of course along the normal of the plane we collided with.
-        float distance = DotProduct(vMove, vCollisionNormal);
+        float distance = DotProduct(vMove, trace.plane.vNormal);
 
         // Get the new end position that we will end up (the slide position).
-        VECTOR3D vEndPosition = vEnd - vCollisionNormal * distance;
+        VECTOR3D vEndPosition = vEnd - trace.plane.vNormal * distance;
 
         // Since we got a new position for our sliding vector, we need to check
         // to make sure that new sliding position doesn't collide with anything else.
@@ -1744,6 +1720,7 @@ VECTOR3D CBSP::Trace(VECTOR3D vStart, VECTOR3D vEnd)
 VECTOR3D CBSP::Move(VECTOR3D vStart, VECTOR3D vEnd, int h)
 {
     hull = h;
+
     return Trace(vStart, vEnd);
 }
 
@@ -1775,60 +1752,51 @@ int CBSP::HullPointContents(int iNode, VECTOR3D p)
     return iNode;
 }
 
-bool CBSP::RecursiveHullCheck (int iNode, float p1f, float p2f, VECTOR3D p1, VECTOR3D p2)
+bool CBSP::RecursiveHullCheck (int iNode, float p1f, float p2f, VECTOR3D p1, VECTOR3D p2, TRACE& trace)
 {
-    BSPCLIPNODE* node;
-    BSPPLANE    *plane;
-    float       t1, t2;
-    float       frac;
-    //int         i;
-    VECTOR3D      mid;
-    int         side;
-    float       midf;
-
-// check for empty
+    // check for empty
     if (iNode < 0)
     {
         if (iNode != CONTENTS_SOLID)
         {
-            allsolid = false;
+            trace.allsolid = false;
             //if (iNode == CONTENTS_EMPTY)
-            //    trace->inopen = true;
+            //    trace.inopen = true;
             //else
-            //    trace->inwater = true;
+            //    trace.inwater = true;
         }
         //else
-            //trace->startsolid = true;
+            //trace.startsolid = true;
         return true;        // empty
     }
 
-    //if (iNode < hull->firstclipnode || iNode > hull->lastclipnode)
-    //    Sys_Error ("RecursiveHullCheck: bad node number");
-    assert(iNode >= 0 && iNode < nClipNodes);
+    assert(iNode < nClipNodes);
 
-//
-// find the point distances
-//
-    node = pClipNodes + iNode;
-    plane = pPlanes + node->iPlane;
+    // find the point distances
+    BSPCLIPNODE* node = pClipNodes + iNode;
+    BSPPLANE* plane = pPlanes + node->iPlane;
 
-    /*if (plane->type < 3)
+    float t1, t2;
+
+    if (plane->nType < 3)
     {
-        t1 = p1[plane->type] - plane->dist;
-        t2 = p2[plane->type] - plane->dist;
+        t1 = p1.coords[plane->nType] - plane->fDist;
+        t2 = p2.coords[plane->nType] - plane->fDist;
     }
-    else*/
+    else
     {
         t1 = DotProduct (plane->vNormal, p1) - plane->fDist;
         t2 = DotProduct (plane->vNormal, p2) - plane->fDist;
     }
 
     if (t1 >= 0 && t2 >= 0)
-        return RecursiveHullCheck ( node->iChildren[0], p1f, p2f, p1, p2);
+        return RecursiveHullCheck ( node->iChildren[0], p1f, p2f, p1, p2, trace);
     if (t1 < 0 && t2 < 0)
-        return RecursiveHullCheck ( node->iChildren[1], p1f, p2f, p1, p2);
+        return RecursiveHullCheck ( node->iChildren[1], p1f, p2f, p1, p2, trace);
 
     // put the crosspoint DIST_EPSILON pixels on the near side
+    float frac;
+
     if (t1 < 0)
         frac = (t1 + EPSILON)/(t1-t2);
     else
@@ -1838,14 +1806,13 @@ bool CBSP::RecursiveHullCheck (int iNode, float p1f, float p2f, VECTOR3D p1, VEC
     if (frac > 1)
         frac = 1;
 
-    midf = p1f + (p2f - p1f)*frac;
-    //for (i=0 ; i<3 ; i++)
-    mid = p1 + frac * (p2 - p1);
+    float midf = p1f + (p2f - p1f)*frac;
+    VECTOR3D mid = p1 + frac * (p2 - p1);
 
-    side = (t1 < 0);
+    int side = (t1 < 0);
 
     // move up to the node
-    if (!RecursiveHullCheck (node->iChildren[side], p1f, midf, p1, mid) )
+    if (!RecursiveHullCheck (node->iChildren[side], p1f, midf, p1, mid, trace) )
         return false;
 
     /*#ifdef PARANOID
@@ -1859,25 +1826,25 @@ bool CBSP::RecursiveHullCheck (int iNode, float p1f, float p2f, VECTOR3D p1, VEC
 
     if (HullPointContents (node->iChildren[side^1], mid) != CONTENTS_SOLID)
         // go past the node
-        return RecursiveHullCheck (node->iChildren[side^1], midf, p2f, mid, p2);
+        return RecursiveHullCheck (node->iChildren[side^1], midf, p2f, mid, p2, trace);
 
-    if (allsolid)
+    if (trace.allsolid)
         return false;       // never got out of the solid area
 
-//==================
-// the other side of the node is solid, this is the impact point
-//==================
+    // the other side of the node is solid, this is the impact point
     if (!side)
     {
         //VectorCopy (plane->normal, trace->plane.normal);
         //trace->plane.dist = plane->dist;
-        vCollisionNormal = plane->vNormal;
+        trace.plane = *plane;
     }
     else
     {
         //VectorSubtract (vec3_origin, plane->normal, trace->plane.normal);
         //trace->plane.dist = -plane->dist;
-        vCollisionNormal = -1 * plane->vNormal;
+        //vCollisionNormal = -1 * plane->vNormal;
+        trace.plane.vNormal = -1 * plane->vNormal;
+        trace.plane.fDist = -plane->fDist;
     }
 
     while (HullPointContents (pModels[0].iHeadNodes[hull], mid) == CONTENTS_SOLID)
@@ -1887,24 +1854,23 @@ bool CBSP::RecursiveHullCheck (int iNode, float p1f, float p2f, VECTOR3D p1, VEC
         if (frac < 0)
         {
             //trace->fraction = midf;
-            traceRatio = midf;
+            trace.ratio = midf;
             //VectorCopy (mid, trace->endpos);
             printf ("backup past 0\n");
             return false;
         }
-        midf = p1f + (p2f - p1f)*frac;
-        //for (i=0 ; i<3 ; i++)
-            mid = p1 + frac*(p2 - p1);
+        midf = p1f + (p2f - p1f) * frac;
+        mid = p1 + frac * (p2 - p1);
     }
 
     //trace->fraction = midf;
-    traceRatio = midf;
+    trace.ratio = midf;
     //VectorCopy (mid, trace->endpos);
 
     return false;
 }
 
-/**************** END FROM QUAKE 1 **************/
+/* *************** END FROM QUAKE 1 ************* */
 
 void CBSP::Destroy()
 {

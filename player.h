@@ -1,7 +1,7 @@
 #ifndef PLAYER_H_INCLUDED
 #define PLAYER_H_INCLUDED
 
-#include "3dmath.h"
+#include "mathlib.h"
 
 #define PLAYER_MOVE_SENS 500 //192
 #define PLAYER_LOOK_SENS 0.15
