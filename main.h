@@ -6,10 +6,9 @@
 //#include <gl/glu.h>	  // Header for OpenGl utility functions
 //#include <gl/glext.h> // Header for OpenGL extension definitions
 
+#include "GLee/GLee.h"
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
-
-#include "glsl.h"
 
 #include "hlbsp.h"
 #include "camera.h"
@@ -18,10 +17,10 @@
 #include "mathlib.h"
 #include "font.h"
 
-#ifdef __WIN32__
-extern PFNGLACTIVETEXTUREPROC   glActiveTexture;
-extern PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f;
-#endif
+//#ifdef __WIN32__
+//extern PFNGLACTIVETEXTUREPROC   glActiveTexture;
+//extern PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f;
+//#endif
 
 extern CBSP    g_bsp;
 extern CCamera g_camera;
@@ -58,7 +57,7 @@ extern bool g_bFlashlight;
 extern bool g_bCaptureMouse;
 extern VECTOR2D g_windowCenter;
 
-extern bool g_bTexNPO2Support;
+//extern bool g_bTexNPO2Support;
 
 extern unsigned int g_nWinWidth;
 extern unsigned int g_nWinHeight;

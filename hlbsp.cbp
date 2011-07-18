@@ -72,6 +72,10 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="GLee\GLee.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="GLee\GLee.h" />
 		<Unit filename="bspdef.h" />
 		<Unit filename="camera.cpp" />
 		<Unit filename="camera.h" />
@@ -79,10 +83,6 @@
 		<Unit filename="entity.h" />
 		<Unit filename="font.cpp" />
 		<Unit filename="font.h" />
-		<Unit filename="glsl.cpp" />
-		<Unit filename="glsl.h" />
-		<Unit filename="gltexldr.cpp" />
-		<Unit filename="gltexldr.h" />
 		<Unit filename="hlbsp.cpp" />
 		<Unit filename="hlbsp.h" />
 		<Unit filename="hud.cpp" />

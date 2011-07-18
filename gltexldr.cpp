@@ -1,5 +1,4 @@
 #include "gltexldr.h"
-#include "main.h"
 
 bool LoadTexture(GLuint* texture, const char* fileName, unsigned char mode)
 {

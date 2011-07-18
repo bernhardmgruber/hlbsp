@@ -82,21 +82,31 @@
 #define RENDER_MODE_SOLID	 4
 #define RENDER_MODE_ADDITIVE 5
 
-// Stores the individual lump info in the header
+/**
+ *  @brief Describes a lump in the BSP file
+ *  To read the different lumps from the given BSP file, every lump entry file states the beginning of each lump as an offset relativly to the beginning of the file. Additionally, the lump entry also gives the length of the addressed lump in bytes.
+ */
 typedef struct _BSPLUMP
 {
-	int32_t nOffset; // File offset to data
-	int32_t nLength; // Length of data
+	int32_t nOffset; ///< File offset to data
+	int32_t nLength; ///< Length of data
 } BSPLUMP;
 
-// BSP files begin with a header, which consists of a magic number followed by a directory giving the location and length of each data lump
+/**
+ *  @brief The BSP file header
+ *  The file header begins with an 32bit integer containing the file version of the BSP file (the magic number). This should be 30 for a valid BSP file used by the Half-Life Engine.
+ *  Subseqently, there is an array of entries for the so-called lumps. A lump is more or less a section of the file containing a specific type of data. The lump entries in the file header address these lumps, accessed by the 15 predefined indexes.
+ */
 typedef struct _BSPHEADER
 {
-	int32_t nVersion;			// Must be 30 for a valid HL BSP file
-	BSPLUMP lump[HEADER_LUMPS]; // Store the directory of lumps
+	int32_t nVersion;			///< Version number, must be 30 for a valid HL BSP file
+	BSPLUMP lump[HEADER_LUMPS]; ///< Stores the directory of lumps.
 } BSPHEADER;
 
-// Node lump contains node structures
+/**
+ *  @brief Describes a node of the BSP Tree
+ *
+ */
 typedef struct _BSPNODE
 {
 	uint32_t iPlane;			 // Index into pPlanes lump

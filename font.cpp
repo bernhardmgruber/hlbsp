@@ -1,10 +1,13 @@
 #include "font.h"
-#include "main.h"
 
-#ifndef __WIN32__
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <GL/glx.h>
+#include <SDL/SDL.h>
+
+#ifdef __WIN32__
+#   include <windows.h>
+#else
+#   include <X11/Xlib.h>
+#   include <X11/Xutil.h>
+#   include <GL/glx.h>
 #endif
 
 GLuint CreateFont(const char* pszFontName, int nFontHeight)

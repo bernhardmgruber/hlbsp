@@ -44,7 +44,7 @@ void CPlayer::SetViewAngles(float fx, float fz)
     fZAngle = fz;
 }
 
-void CPlayer::SetPosition(VECTOR2D v)
+void CPlayer::SetViewAngles(VECTOR2D v)
 {
     fXAngle = v.x;
     fZAngle = v.y;

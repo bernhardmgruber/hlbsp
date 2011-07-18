@@ -2,7 +2,8 @@
 #define BSPLOADER_H_INCLUDED
 
 //#include <windows.h>
-#include <GL/gl.h>
+#include "GLee/GLee.h"
+#include "GL/GL.h"
 #include "bspdef.h"
 #include "entity.h"
 #include "wad.h"

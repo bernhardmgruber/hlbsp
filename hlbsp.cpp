@@ -13,7 +13,7 @@
 
 void CBSP::AdjustTextureToPowerOfTwo(IMAGE* pImg)
 {
-    if (g_bTexNPO2Support)
+    if (GLEE_ARB_texture_non_power_of_two)
         return;
 
     if (((pImg->nWidth & (pImg->nWidth - 1)) == 0) && ((pImg->nHeight & (pImg->nHeight - 1)) == 0))

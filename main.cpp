@@ -10,7 +10,6 @@
 #include "camera.h"
 #include "timer.h"
 #include "font.h"
-#include "glsl.h"
 #include "hud.h"
 
 #define WINDOW_CLASS_NAME "hlbsp"
@@ -24,10 +23,10 @@
 #define WINDOW_HEIGHT 768
 #define WINDOW_WIDTH 1024
 
-#ifdef __WIN32__
-PFNGLACTIVETEXTUREPROC   glActiveTexture   = NULL;
-PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
-#endif
+//#ifdef __WIN32__
+//PFNGLACTIVETEXTUREPROC   glActiveTexture   = NULL;
+//PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
+//#endif
 
 CBSP    g_bsp;
 CCamera g_camera;
@@ -64,8 +63,6 @@ bool g_bFlashlight = false;
 
 bool g_bCaptureMouse = false;
 VECTOR2D g_windowCenter;
-
-bool g_bTexNPO2Support;
 
 unsigned int g_nWinWidth = WINDOW_WIDTH;
 unsigned int g_nWinHeight = WINDOW_HEIGHT;
@@ -189,6 +186,68 @@ bool CheckExtension(const char* pszExtensionName)
     return false;
 }
 
+bool glslShaderSourceFile(GLuint uObj, const char* pszFileName)
+{
+    //read in shader source
+    FILE* pShaderFile = fopen(pszFileName, "rb");
+    if (pShaderFile == NULL)
+        return false;
+
+    fseek(pShaderFile, 0, SEEK_END);
+    size_t nFileSize= ftell(pShaderFile);
+    fseek(pShaderFile, 0, SEEK_SET);
+
+    char* pszShaderSource = (char*) malloc(sizeof(char) * (nFileSize + 1)); // zero at end of string
+    if(pszShaderSource == NULL)
+    {
+        printf("Memory allocation failed\n");
+        return false;
+    }
+
+    size_t nResult = fread(pszShaderSource, sizeof(char), nFileSize, pShaderFile);
+
+    if(nResult != nFileSize)
+    {
+        printf("Error reading Shader %s\n", pszFileName);
+        return false;
+    }
+
+    pszShaderSource[nFileSize] = 0;
+
+    glShaderSource(uObj, 1, (const char**)&pszShaderSource, NULL);
+    printf("Read shader from file %s\n", pszFileName);
+
+    free(pszShaderSource);
+    fclose(pShaderFile);
+
+    return true;
+}
+
+void glslPrintProgramInfoLog(GLuint uObj)
+{
+    int infologLength = 0;
+    int charsWritten  = 0;
+    char *infoLog;
+
+    glGetProgramiv(uObj, GL_INFO_LOG_LENGTH,&infologLength);
+
+    if (infologLength > 0)
+    {
+        infoLog = (char *)malloc(infologLength);
+        if(infoLog == NULL)
+        {
+            printf("Memory allocation failed\n");
+            return;
+        }
+        glGetProgramInfoLog(uObj, infologLength, &charsWritten, infoLog);
+        if(strcmp(infoLog, ""))
+            printf("%s\r", infoLog);
+        else
+            printf("(no program info log)\n");
+        free(infoLog);
+    }
+}
+
 int InitGL()										// All Setup For OpenGL Goes Here
 {
     LOG("Setting rendering states ...\n");
@@ -207,57 +266,44 @@ int InitGL()										// All Setup For OpenGL Goes Here
 
     glEnable(GL_MULTISAMPLE);
 
+    //
     // Extensions
-    #ifdef __WIN32__
-    LOG("Getting multitexture extension function pointers ...\n");
-    if (CheckExtension("GL_ARB_multitexture"))
-    {
-        // Obtain the functions entry point
-        if ((glActiveTexture = (PFNGLACTIVETEXTUREARBPROC) SDL_GL_GetProcAddress("glActiveTexture")) == NULL)
-        {
-            MSGBOX_ERROR("Error retrieving function pointer. glActiveTexture is not supported");
-            return false;
-        }
-        if ((glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FARBPROC)SDL_GL_GetProcAddress("glMultiTexCoord2f")) == NULL)
-        {
-            MSGBOX_ERROR("Error retrieving function pointer. glMultiTexCoord2f is not supported");
-            return false;
-        }
-    }
-    else
+    //
+
+    LOG("Checking extensions ...\n");
+
+    LOG("GL_ARB_multitexture ...");
+    if(!GLEE_ARB_multitexture)
     {
         MSGBOX_ERROR("GL_ARB_multitexture is not supported. Please upgrade your video driver.");
         return false;
     }
-    #endif
+    LOG(" OK\n");
 
-    LOG("Checking ARB_texture_non_power_of_two extension ...\n");
-    g_bTexNPO2Support = CheckExtension("GL_ARB_texture_non_power_of_two");
-    if(g_bTexNPO2Support)
-        LOG("Supported, no image scaling needed\n");
+    LOG("GL_ARB_texture_non_power_of_two ...");
+    if(GLEE_ARB_texture_non_power_of_two)
+        LOG(" OK (no lightmap scaling needed)\n");
     else
-        LOG("Not supported, lightmaps will be scaled to 16 x 16\n");
+        LOG(" NOT SUPPORTED (lightmaps will be scaled to 16 x 16)\n");
 
-    // BSP file
-    if (!g_bsp.LoadBSPFile(BSP_DIR "/" BSP_FILE_NAME))
-        return false;
-
-    // Shader
-    LOG("Checking GLSL shader support ...\n");
-    if (!glslCheckSupport())
+    LOG("GLSL Shaders ...");
+    if (GLEE_ARB_shader_objects &&
+        GLEE_ARB_shading_language_100 &&
+        GL_ARB_vertex_shader &&
+        GL_ARB_fragment_shader)
     {
-        MSGBOX_WARNING("GLSL shaders are not supported. Several features will not be available.");
-        g_bShaderSupport = false;
-    }
-    else
-    {
-        if (!glslInitProcs())
-        {
-            MSGBOX_ERROR("Error retrieving shader function pointers. Several features will not be available.");
-            g_bShaderSupport = false;
-        }
+        LOG(" OK\n");
         g_bShaderSupport = true;
     }
+    else
+    {
+        LOG(" NOT SUPPORTED (Several features will not be available)\n");
+        g_bShaderSupport = false;
+    }
+
+    //
+    // Shader
+    //
 
     if (g_bShaderSupport)
     {
@@ -280,7 +326,6 @@ int InitGL()										// All Setup For OpenGL Goes Here
 
         glLinkProgram(g_shpMain);
 
-        //LOG("Program Info Log:\n");
         glslPrintProgramInfoLog(g_shpMain);
     }
 
@@ -288,7 +333,17 @@ int InitGL()										// All Setup For OpenGL Goes Here
     if(!g_bShaderSupport)
         g_bUseShader = false;
 
+    //
+    // BSP file
+    //
+
+    if (!g_bsp.LoadBSPFile(BSP_DIR "/" BSP_FILE_NAME))
+        return false;
+
+    //
     // lighting for compelex flashlight
+    //
+
     glEnable(GL_LIGHT0);
 
     // set light position
@@ -304,7 +359,10 @@ int InitGL()										// All Setup For OpenGL Goes Here
     glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.01f);
     glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0001f);
 
+    //
     // Create local player
+    //
+
     LOG("Creating local player ...\n");
     CEntity* info_player_start = g_bsp.FindEntity("info_player_start");
 
@@ -326,7 +384,10 @@ int InitGL()										// All Setup For OpenGL Goes Here
 
     g_camera.BindPlayer(&g_player);
 
+    //
     // HUD
+    //
+
     g_hud.Init();
 
     return true;
@@ -511,7 +572,7 @@ bool CreateSDLWindow(int width, int height)
 	// vsync
 	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
 
-    unsigned int flags = SDL_OPENGL | SDL_RESIZABLE;
+    unsigned int flags = SDL_HWSURFACE | SDL_OPENGL | SDL_DOUBLEBUF | SDL_RESIZABLE;
     if(g_bFullscreen)
         flags |= SDL_FULLSCREEN;
 

@@ -19,7 +19,7 @@ public:
 
     VECTOR2D GetViewAngles();               // Returns a vector containing the current view angles
     void SetViewAngles(float fx, float fz); // Sets the current view angles
-    void SetPosition(VECTOR2D v); // Sets the current view angles
+    void SetViewAngles(VECTOR2D v); // Sets the current view angles
 
     void UpdateFromInput(double dFrameInterval); // Updates the position of the coord system according to user input and passed time since the last frame
 
