@@ -31,6 +31,9 @@ void main()
 
     if (bNightvision)
         Nightvision();
+
+    // Brightness
+    gl_FragColor = gl_FragColor * 2.0;
 }
 
 varying vec4 diffuse,ambientGlobal, ambient;

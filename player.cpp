@@ -9,6 +9,10 @@ CPlayer::CPlayer()
     vPos.y = 0.0f;
     vPos.z = 0.0f;
 
+    vVel.x = 0.0f;
+    vVel.y = 0.0f;
+    vVel.z = 0.0f;
+
     fZAngle = 0.0f;
     fXAngle = 0.0f;
 }
@@ -50,15 +54,17 @@ void CPlayer::SetViewAngles(VECTOR2D v)
     fZAngle = v.y;
 }
 
-void CPlayer::UpdateFromInput(double dFrameInterval)
+void CPlayer::Update(double dFrameInterval)
 {
     // Save old position
     VECTOR3D vNewPos = vPos;
 
+    //
+    // Update from user input
+    //
+
     if(g_bCaptureMouse)
     {
-        //POINT pt;
-        //GetCursorPos(&pt);
         int x, y;
         SDL_GetMouseState(&x, &y);
 
@@ -123,13 +129,20 @@ void CPlayer::UpdateFromInput(double dFrameInterval)
         vNewPos.y += sin(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
     }
 
-    //vPos = {0,0,0};
-    //vNewPos = {0,100,0};
+    //
+    // Physics
+    //
 
+    // gravity
+    vNewPos.z -= 3;
+
+    //
     // Perform collision detection
-    VECTOR3D vTrace = g_bsp.Move(vPos, vNewPos, 0);
-    //printf("%.1f/%.1f/%.1f\n", vTrace.x, vTrace.y, vTrace.z);
+    //
 
+    VECTOR3D vTrace = g_bsp.Move(vPos, vNewPos, 0);
+
+    //printf("%.1f/%.1f/%.1f\n", vTrace.x, vTrace.y, vTrace.z);
     //printf("old: %.1f/%.1f/%.1f new: %.1f/%.1f/%.1f trace: %.1f/%.1f/%.1f\n", vOldPos.x, vOldPos.y, vOldPos.z, vPos.x, vPos.y, vPos.z, vTrace.x, vTrace.y, vTrace.z);
 
     vPos = vTrace;

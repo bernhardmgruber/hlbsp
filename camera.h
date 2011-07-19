@@ -26,7 +26,7 @@ public:
     float GetMoveSens();               // Returns the current movement sensitivity
     void SetMoveSens(float fNewMoveSens); // Sets the current movement sensitivity
 
-    void UpdateFromInput(double dFrameInterval); // Updates the position of the coord system according to user input and passed time since the last frame
+    void Update(double dFrameInterval); // Updates the position of the coord system according to user input and passed time since the last frame
     void Look();
 
     void SetMode(int iMode);

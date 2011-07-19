@@ -65,7 +65,7 @@ void CCamera::SetMoveSens(float fNewMoveSens)
     fMoveSens = fNewMoveSens;
 }
 
-void CCamera::UpdateFromInput(double dFrameInterval)
+void CCamera::Update(double dFrameInterval)
 {
     if(mode == CAMERA_MODE_PLAYER_EGO)
     {
