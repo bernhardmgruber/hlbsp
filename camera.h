@@ -20,6 +20,10 @@ public:
     void SetPosition(VECTOR3D v); // Sets the current position
 
     VECTOR2D GetViewAngles();               // Returns a vector containing the current view angles
+
+    /// Returns a vector pointing representing the current view direction
+    VECTOR3D GetViewVector();
+
     void SetViewAngles(float fx, float fz); // Sets the current view angles
     void SetPosition(VECTOR2D v); // Sets the current view angles
 
@@ -37,8 +41,8 @@ private:
 
     VECTOR3D vPos; // Current position
 
-    float fXAngle; // Angle of up down rotation
-    float fZAngle; // Angle of side to side rotation
+    float pitch; // Angle of up down rotation
+    float yaw; // Angle of side to side rotation
 
     float fMoveSens; // Movement sensitivity
     float fLookSens; // Look sensitivity

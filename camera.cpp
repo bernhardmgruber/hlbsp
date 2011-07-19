@@ -11,8 +11,8 @@ CCamera::CCamera()
     vPos.y = 0.0f;
     vPos.z = 0.0f;
 
-    fZAngle = 0.0f;
-    fXAngle = 0.0f;
+    yaw = 0.0f;
+    pitch = 0.0f;
 
     fMoveSens = CAMERA_MOVE_SENS;
     fLookSens = CAMERA_LOOK_SENS;
@@ -38,21 +38,37 @@ void CCamera::SetPosition(VECTOR3D v)
 VECTOR2D CCamera::GetViewAngles()
 {
     VECTOR2D vec;
-    vec.x = fXAngle;
-    vec.y = fZAngle;
+    vec.x = pitch;
+    vec.y = yaw;
     return vec;
+}
+
+VECTOR3D CCamera::GetViewVector()
+{
+    VECTOR3D v;
+    v.x = 1;
+    v.y = 0;
+    v.z = 0;
+
+    // rotate pitch along -y
+    v = RotateY(-pitch, v);
+
+    // rotate yaw along z
+    v = RotateZ(yaw, v);
+
+    return v;
 }
 
 void CCamera::SetViewAngles(float fx, float fz)
 {
-    fXAngle = fx;
-    fZAngle = fz;
+    pitch = fx;
+    yaw = fz;
 }
 
 void CCamera::SetPosition(VECTOR2D v)
 {
-    fXAngle = v.x;
-    fZAngle = v.y;
+    pitch = v.x;
+    yaw = v.y;
 }
 
 float CCamera::GetMoveSens()
@@ -72,8 +88,8 @@ void CCamera::Update(double dFrameInterval)
         // if a player is bound, get his position and view angles
         vPos = pPlayer->GetPosition();
         VECTOR2D view = pPlayer->GetViewAngles();
-        fXAngle = view.x;
-        fZAngle = view.y;
+        pitch = view.x;
+        yaw = view.y;
     }
     else
     {
@@ -86,24 +102,24 @@ void CCamera::Update(double dFrameInterval)
             SDL_GetMouseState(&x, &y);
 
             // Update rotation based on mouse input
-            fZAngle += fLookSens * (float)(int)(nMouseOriginX - x);
+            yaw += fLookSens * (float)(int)(nMouseOriginX - x);
 
             // Correct z angle to interval [0;360]
-            if(fZAngle >= 360.0f)
-                fZAngle -= 360.0f;
+            if(yaw >= 360.0f)
+                yaw -= 360.0f;
 
-            if(fZAngle < 0.0f)
-                fZAngle += 360.0f;
+            if(yaw < 0.0f)
+                yaw += 360.0f;
 
             // Update up down view
-            fXAngle += fLookSens * (float)(int)(nMouseOriginY - y);
+            pitch += fLookSens * (float)(int)(nMouseOriginY - y);
 
             // Correct x angle to interval [-90;90]
-            if (fXAngle < -90.0f)
-                fXAngle = -90.0f;
+            if (pitch < -90.0f)
+                pitch = -90.0f;
 
-            if (fXAngle > 90.0f)
-                fXAngle = 90.0f;
+            if (pitch > 90.0f)
+                pitch = 90.0f;
 
             // Reset cursor
             SDL_WarpMouse(nMouseOriginX, nMouseOriginY);
@@ -124,26 +140,26 @@ void CCamera::Update(double dFrameInterval)
         // TODO: If strafing and moving reduce speed to keep total move per frame constant
         if (g_abKeys[SDLK_w]) // FORWARD
         {
-            vPos.x += cos(DEGTORAD(fZAngle)) * fTmpMoveSens;
-            vPos.y += sin(DEGTORAD(fZAngle)) * fTmpMoveSens;
+            vPos.x += cos(DEGTORAD(yaw)) * fTmpMoveSens;
+            vPos.y += sin(DEGTORAD(yaw)) * fTmpMoveSens;
         }
 
         if (g_abKeys[SDLK_s]) // BACKWARD
         {
-            vPos.x -= cos(DEGTORAD(fZAngle)) * fTmpMoveSens;
-            vPos.y -= sin(DEGTORAD(fZAngle)) * fTmpMoveSens;
+            vPos.x -= cos(DEGTORAD(yaw)) * fTmpMoveSens;
+            vPos.y -= sin(DEGTORAD(yaw)) * fTmpMoveSens;
         }
 
         if (g_abKeys[SDLK_a]) // LEFT
         {
-            vPos.x += cos(DEGTORAD(fZAngle + 90.0f)) * fTmpMoveSens;
-            vPos.y += sin(DEGTORAD(fZAngle + 90.0f)) * fTmpMoveSens;
+            vPos.x += cos(DEGTORAD(yaw + 90.0f)) * fTmpMoveSens;
+            vPos.y += sin(DEGTORAD(yaw + 90.0f)) * fTmpMoveSens;
         }
 
         if (g_abKeys[SDLK_d]) // RIGHT
         {
-            vPos.x += cos(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
-            vPos.y += sin(DEGTORAD(fZAngle - 90.0f)) * fTmpMoveSens;
+            vPos.x += cos(DEGTORAD(yaw - 90.0f)) * fTmpMoveSens;
+            vPos.y += sin(DEGTORAD(yaw - 90.0f)) * fTmpMoveSens;
         }
     }
 }
@@ -152,9 +168,9 @@ void CCamera::Look()
 {
     // In BSP v30 the z axis points up and we start looking parallel to x axis.
     // Look Up/Down
-    glRotatef(-fXAngle - 90.0f, 1.0f, 0.0f, 0.0f);
+    glRotatef(-pitch - 90.0f, 1.0f, 0.0f, 0.0f);
     // Look Left/Right
-    glRotatef(-fZAngle + 90.0f, 0.0f, 0.0f, 1.0f);
+    glRotatef(-yaw + 90.0f, 0.0f, 0.0f, 1.0f);
     // Move
     glTranslatef(-vPos.x, -vPos.y, -vPos.z);
 }

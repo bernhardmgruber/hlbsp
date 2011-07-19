@@ -54,10 +54,13 @@ private:
     VECTOR3D vVel;
 
     /// Angle of up down rotation
-    float fXAngle;
+    float pitch;
 
     /// Angle of side to side rotation
-    float fZAngle;
+    float yaw;
+
+    /// If true, the player is crouching
+    bool crouching;
 };
 
 #endif // PLAYER_H_INCLUDED

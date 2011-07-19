@@ -48,7 +48,8 @@ void CHUD::Render()
     VECTOR3D pos = g_camera.GetPosition();
     glPrintf(FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT), g_nFontHUD, "Cam pos: %.1fx %.1fy %.1fz", pos.x, pos.y, pos.z);
     VECTOR2D view = g_camera.GetViewAngles();
-    glPrintf(FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT), g_nFontHUD, "Cam view: %.1f°pitch %.1f°yaw", view.x, view.y);
+    VECTOR3D viewVec = g_camera.GetViewVector();
+    glPrintf(FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT), g_nFontHUD, "Cam view: %.1f°pitch %.1f°yaw (vec: %.1fx %.1fy %.1fz)", view.x, view.y, viewVec.x, viewVec.y, viewVec.z);
 
     /** console **/
     nCurrentY = FONT_HUD_SPACE;

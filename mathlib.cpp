@@ -113,3 +113,36 @@ bool PointInPlane(VECTOR3D vPoint, VECTOR3D vNormal, float fDist)
     else
         return false;
 }
+
+VECTOR3D RotateX(float a, VECTOR3D v)
+{
+    a = DEGTORAD(a);
+
+    VECTOR3D res;
+    res.x = v.x;
+    res.y = v.y * cos(a) + v.z * -sin(a);
+    res.z = v.y * sin(a) + v.z *  cos(a);
+    return res;
+}
+
+VECTOR3D RotateY(float a, VECTOR3D v)
+{
+    a = DEGTORAD(a);
+
+    VECTOR3D res;
+    res.x = v.x *  cos(a) + v.z * sin(a);
+    res.y = v.y;
+    res.z = v.x * -sin(a) + v.z * cos(a);
+    return res;
+}
+
+VECTOR3D RotateZ(float a, VECTOR3D v)
+{
+    a = DEGTORAD(a);
+
+    VECTOR3D res;
+    res.x = v.x * cos(a) + v.y * -sin(a);
+    res.y = v.x * sin(a) + v.y *  cos(a);
+    res.z = v.z;
+    return res;
+}

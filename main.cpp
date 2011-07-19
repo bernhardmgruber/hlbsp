@@ -366,9 +366,9 @@ int InitGL()										// All Setup For OpenGL Goes Here
     const char* pszAngle = info_player_start->FindProperty("angle");
     if(pszAngle != NULL)
     {
-        float fZAngle;
-        sscanf(pszAngle, "%f", &fZAngle);
-        g_player.SetViewAngles(0.0f, fZAngle);
+        float yaw;
+        sscanf(pszAngle, "%f", &yaw);
+        g_player.SetViewAngles(0.0f, yaw);
     }
 
     g_camera.BindPlayer(&g_player);

@@ -39,4 +39,8 @@ VECTOR3D CrossProduct(VECTOR3D v1, VECTOR3D v2);                // Returns the c
 bool PointInBox(VECTOR3D vPoint, short vMin[3], short vMax[3]); // Returns a bool spezifing whether or not a point is in the defined box
 bool PointInPlane(VECTOR3D vPoint, VECTOR3D vNormal, float fDist);
 
+VECTOR3D RotateX(float a, VECTOR3D v);
+VECTOR3D RotateY(float a, VECTOR3D v);
+VECTOR3D RotateZ(float a, VECTOR3D v);
+
 #endif
