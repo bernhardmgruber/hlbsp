@@ -1,8 +1,10 @@
-uniform bool bUnit1Enabled;
-uniform bool bUnit2Enabled;
+uniform bool unit1Enabled;
+uniform bool unit2Enabled;
 
-uniform bool bFlashlight;
-uniform bool bNightvision;
+uniform bool flashlight;
+uniform bool nightvision;
+
+uniform mat4 matrix;
 
 varying vec4 diffuse, ambientGlobal, ambient;
 varying vec3 normal, lightDir, halfVector;
@@ -10,7 +12,7 @@ varying float dist;
 
 void main()
 {
-	if(bFlashlight)
+	if (flashlight)
 	{
 		vec4 ecPos;
 		vec3 aux;
@@ -36,10 +38,10 @@ void main()
 		ambientGlobal = gl_LightModel.ambient * gl_FrontMaterial.ambient;
 	}
 
-	gl_Position = ftransform();
+	gl_Position = matrix * gl_Vertex;
 
-	if(bUnit1Enabled)
+	if(unit1Enabled)
 		gl_TexCoord[0] = gl_MultiTexCoord0;
-	if(bUnit2Enabled)
+	if(unit2Enabled)
 		gl_TexCoord[1] = gl_MultiTexCoord1;
 }

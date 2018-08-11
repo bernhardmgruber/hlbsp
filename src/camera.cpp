@@ -1,9 +1,5 @@
 #include "camera.h"
 
-#include <GL/glew.h>
-#include <GL/GL.h>
-#include <cmath>
-
 auto Camera::position() const -> vec3 {
 	return m_position;
 }
@@ -84,14 +80,11 @@ void Camera::update(double t, float xDelta, float yDelta, uint8_t directions) {
 	}
 }
 
-void Camera::look() {
-	glLoadIdentity();
-
-	// In BSP v30 the z axis points up and we start looking parallel to x axis.
-	// look up/down
-	glRotatef(-m_pitch - 90.0f, 1.0f, 0.0f, 0.0f);
-	// look left/right
-	glRotatef(-m_yaw + 90.0f, 0.0f, 0.0f, 1.0f);
-	// move
-	glTranslatef(-m_position.x, -m_position.y, -m_position.z);
+auto Camera::viewMatrix() const -> glm::mat4 {
+	// in BSP v30 the z axis points up and we start looking parallel to x axis
+	glm::mat4 mat;
+	mat = glm::rotate(mat, degToRad(-m_pitch - 90.0f), { 1.0f, 0.0f, 0.0f }); // look up/down
+	mat = glm::rotate(mat, degToRad(-m_yaw   + 90.0f), { 0.0f, 0.0f, 1.0f }); // look left/right
+	mat = glm::translate(mat, -m_position); // move
+	return mat;
 }

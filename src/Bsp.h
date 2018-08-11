@@ -35,17 +35,11 @@ public:
 	~Bsp();
 
 	auto FindEntity(std::string_view name) -> Entity*;
+	auto FindEntity(std::string_view name) const -> const Entity*;
 	auto FindEntities(std::string_view name) -> std::vector<Entity*>;
 
 	auto hasSkyBox() const -> bool;
-
-	// Rendering
-	void RenderSkybox(vec3 vPos) const;
-	void RenderStaticGeometry(vec3 vPos) const;
-	void RenderBrushEntities(vec3 vPos) const;
-	void RenderDecals() const;
-	void RenderLeavesOutlines() const;
-	void RenderLeafOutlines(int iLeaf) const;
+	auto loadSkyBox() const -> std::optional<std::array<Image, 6>>;
 
 private:
 	bsp30::Header                     header{};     // Stores the header
@@ -93,16 +87,10 @@ private:
 
 	void ParseEntities(const std::string& entitiesString); // Parses the entity lump of the bsp file into single entity classes
 
-	void              CountVisLeafs(int iNode, int& count);                         // Counts the number of visLeaves recursively
+	void CountVisLeafs(int iNode, int& count);                         // Counts the number of visLeaves recursively
 	auto uncompressPVS(int iLeaf, const std::vector<std::uint8_t>& pVisList) const -> std::vector<bool>; // Get the PVS for a given leaf and return it in the form of a pointer to a bool array
 
 	int findLeaf(vec3 pos, int node = 0) const; // Recursivly walks through the BSP tree to find the leaf where the camera is in
-
-	/** Rendering **/
-	void RenderFace(int iFace) const;                             // Renders a face (polygon) by the given index
-	void RenderLeaf(int iLeaf) const;                             // Renders a leaf of the BSP tree by rendering each face of the leaf by the given index
-	void RenderBSP(int iNode, int iCurrentLeaf, vec3 vPos) const; // Recursively walks through the BSP tree and draws it
-	void RenderBrushEntity(int iEntity, vec3 vPos) const;         // Renders a brush entity by rendering each face of the associated model by the given index
 
 	friend class GLRenderer;
 };

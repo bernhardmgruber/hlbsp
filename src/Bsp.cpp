@@ -635,213 +635,6 @@ int Bsp::findLeaf(vec3 pos, int node) const {
 	return -1;
 }
 
-void Bsp::RenderSkybox(vec3 vPos) const {
-	glPushMatrix();
-	glTranslatef(vPos.x, vPos.y, vPos.z);
-	glCallList(*skyBoxDL);
-	glPopMatrix();
-}
-
-void Bsp::RenderFace(int face) const {
-	if (facesDrawn[face])
-		return;
-	facesDrawn[face] = true;
-
-	if (faces[face].styles[0] == 0xFF)
-		return;
-
-	auto renderTriangle = [&](int i) {
-		vec3 normal = planes[faces[face].planeIndex].normal;
-		if (faces[face].planeSide)
-			normal = -normal;
-		glNormal3f(normal.x, normal.y, normal.z);
-
-		int edge = surfEdges[faces[face].firstEdgeIndex + i];
-		if (edge > 0)
-			glVertex3f(vertices[edges[edge].vertexIndex[0]].x, vertices[edges[edge].vertexIndex[0]].y, vertices[edges[edge].vertexIndex[0]].z);
-		else {
-			edge *= -1;
-			glVertex3f(vertices[edges[edge].vertexIndex[1]].x, vertices[edges[edge].vertexIndex[1]].y, vertices[edges[edge].vertexIndex[1]].z);
-		}
-	};
-
-	// if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
-	bool bLightmapAvail = static_cast<signed>(faces[face].lightmapOffset) != -1 && header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
-
-	if (bLightmapAvail && g_bLightmaps && g_bTextures) {
-		// We need both texture units for textures and lightmaps
-
-		// base texture
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glBindTexture(GL_TEXTURE_2D, textureIds[textureInfos[faces[face].textureInfo].miptexIndex]);
-
-		// light map
-		glActiveTexture(GL_TEXTURE1_ARB);
-		glBindTexture(GL_TEXTURE_2D, lightmapTexIds[face]);
-
-		glBegin(GL_TRIANGLE_FAN);
-		for (int i = 0; i < faces[face].edgeCount; i++) {
-			glMultiTexCoord2f(GL_TEXTURE0_ARB, faceTexCoords[face].texCoords[i].s, faceTexCoords[face].texCoords[i].t);
-			glMultiTexCoord2f(GL_TEXTURE1_ARB, faceTexCoords[face].lightmapCoords[i].s, faceTexCoords[face].lightmapCoords[i].t);
-			renderTriangle(i);
-		}
-		glEnd();
-	} else {
-		// We need one texture unit for either textures or lightmaps
-		glActiveTexture(GL_TEXTURE0_ARB);
-
-		if (g_bLightmaps)
-			glBindTexture(GL_TEXTURE_2D, lightmapTexIds[face]);
-		else
-			glBindTexture(GL_TEXTURE_2D, textureIds[textureInfos[faces[face].textureInfo].miptexIndex]);
-
-		glBegin(GL_TRIANGLE_FAN);
-		for (int i = 0; i < faces[face].edgeCount; i++) {
-			if (g_bLightmaps)
-				glTexCoord2f(faceTexCoords[face].lightmapCoords[i].s, faceTexCoords[face].lightmapCoords[i].t);
-			else
-				glTexCoord2f(faceTexCoords[face].texCoords[i].s, faceTexCoords[face].texCoords[i].t);
-			renderTriangle(i);
-		}
-		glEnd();
-	}
-}
-
-void Bsp::RenderLeaf(int leaf) const {
-	for (int i = 0; i < leaves[leaf].markSurfaceCount; i++)
-		RenderFace(markSurfaces[leaves[leaf].firstMarkSurface + i]);
-}
-
-void Bsp::RenderBSP(int iNode, int iCurrentLeaf, vec3 vPos) const {
-	if (iNode < 0) {
-		if (iNode == -1)
-			return;
-
-		if (iCurrentLeaf > 0)
-			if (!visLists.empty() && !visLists[iCurrentLeaf - 1].empty() && !visLists[iCurrentLeaf - 1][~iNode - 1])
-				return;
-
-		RenderLeaf(~iNode);
-
-		return;
-	}
-
-	const auto dist = [&] {
-		switch (planes[nodes[iNode].planeIndex].type) {
-			case bsp30::PLANE_X: return vPos.x - planes[nodes[iNode].planeIndex].dist;
-			case bsp30::PLANE_Y: return vPos.y - planes[nodes[iNode].planeIndex].dist;
-			case bsp30::PLANE_Z: return vPos.z - planes[nodes[iNode].planeIndex].dist;
-			default:             return glm::dot(planes[nodes[iNode].planeIndex].normal, vPos) - planes[nodes[iNode].planeIndex].dist;
-		}
-	}();
-
-	const auto child1 = dist > 0 ? 1 : 0;
-	const auto child2 = dist > 0 ? 0 : 1;
-	RenderBSP(nodes[iNode].childIndex[child1], iCurrentLeaf, vPos);
-	RenderBSP(nodes[iNode].childIndex[child2], iCurrentLeaf, vPos);
-}
-
-void Bsp::RenderBrushEntity(int iEntity, vec3 vPos) const {
-	const auto& ent = entities[brushEntities[iEntity]];
-
-	// Model
-	int iModel = std::stoi(ent.findProperty("model")->substr(1));
-
-	// Alpha value
-	unsigned char nAlpha;
-	if (const auto renderamt = ent.findProperty("renderamt"))
-		nAlpha = std::stoi(*renderamt);
-	else
-		nAlpha = 255;
-
-	// Rendermode
-	unsigned char nRenderMode;
-	if (const auto pszRenderMode = ent.findProperty("rendermode"))
-		nRenderMode = std::stoi(*pszRenderMode);
-	else
-		nRenderMode = bsp30::RENDER_MODE_NORMAL;
-
-	glPushMatrix();
-	glTranslatef(models[iModel].vOrigin.x, models[iModel].vOrigin.y, models[iModel].vOrigin.z);
-
-	switch (nRenderMode) {
-		case bsp30::RENDER_MODE_NORMAL:
-			break;
-		case bsp30::RENDER_MODE_TEXTURE:
-			glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-			glDepthMask(0u);
-
-			glActiveTexture(GL_TEXTURE0_ARB);
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-			break;
-		case bsp30::RENDER_MODE_SOLID:
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.25);
-			break;
-		case bsp30::RENDER_MODE_ADDITIVE:
-			glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_ONE, GL_ONE);
-			glDepthMask(0u);
-
-			glActiveTexture(GL_TEXTURE0_ARB);
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-			break;
-	}
-
-	RenderBSP(models[iModel].headNodesIndex[0], -1, vPos);
-
-	switch (nRenderMode) {
-		case bsp30::RENDER_MODE_NORMAL:
-			break;
-		case bsp30::RENDER_MODE_TEXTURE:
-		case bsp30::RENDER_MODE_ADDITIVE:
-			glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-			glDisable(GL_BLEND);
-			glDepthMask(1u);
-
-			glActiveTexture(GL_TEXTURE0_ARB);
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-			break;
-		case bsp30::RENDER_MODE_SOLID:
-			glDisable(GL_ALPHA_TEST);
-			break;
-	}
-
-	glPopMatrix();
-}
-
-void Bsp::RenderDecals() const {
-	glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonOffset(0.0f, -2.0f);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	for (auto& decal : decals) {
-		glBindTexture(GL_TEXTURE_2D, decal.nTex);
-
-		glBegin(GL_TRIANGLE_FAN);
-		glTexCoord2f(0, 0);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[0].x, decal.vec[0].y, decal.vec[0].z);
-		glTexCoord2f(1, 0);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[1].x, decal.vec[1].y, decal.vec[1].z);
-		glTexCoord2f(1, 1);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[2].x, decal.vec[2].y, decal.vec[2].z);
-		glTexCoord2f(0, 1);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[3].x, decal.vec[3].y, decal.vec[3].z);
-		glEnd();
-	}
-
-	glDisable(GL_BLEND);
-	glDisable(GL_POLYGON_OFFSET_FILL);
-}
-
 Bsp::Bsp(const fs::path& filename, bool& g_bTextures, bool& g_bLightmaps)
 	: g_bTextures(g_bTextures), g_bLightmaps(g_bLightmaps) {
 	std::ifstream file(filename, std::ios::binary);
@@ -1016,74 +809,16 @@ Bsp::~Bsp() {
 		glDeleteLists(*skyBoxDL, 1);
 }
 
-void Bsp::RenderStaticGeometry(vec3 vPos) const {
-	for (auto&& b : facesDrawn)
-		b = false;
-
-	const int iLeaf = findLeaf(vPos); //Get the leaf where the camera is in
-	RenderBSP(0, iLeaf, vPos);
-}
-
-void Bsp::RenderBrushEntities(vec3 vPos) const {
-	for (int i = 0; i < brushEntities.size(); i++) // TODO(bernh): implement PVS for pEntities
-		RenderBrushEntity(i, vPos);
-}
-
-void Bsp::RenderLeafOutlines(int iLeaf) const {
-	srand(iLeaf);
-	glColor3ub(rand() % 255, rand() % 255, rand() % 255);
-	const auto& curLeaf = leaves[iLeaf];
-
-	glBegin(GL_LINES);
-	// Draw right face of bounding box
-	glVertex3f(curLeaf.upper[0], curLeaf.upper[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.lower[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.lower[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.lower[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.lower[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.upper[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.upper[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.upper[1], curLeaf.upper[2]);
-
-	// Draw left face of bounding box
-	glVertex3f(curLeaf.lower[0], curLeaf.lower[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.upper[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.upper[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.upper[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.upper[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.lower[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.lower[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.lower[1], curLeaf.lower[2]);
-
-	// Connect the faces
-	glVertex3f(curLeaf.lower[0], curLeaf.upper[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.upper[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.upper[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.upper[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.lower[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.lower[1], curLeaf.lower[2]);
-	glVertex3f(curLeaf.lower[0], curLeaf.lower[1], curLeaf.upper[2]);
-	glVertex3f(curLeaf.upper[0], curLeaf.lower[1], curLeaf.upper[2]);
-	glEnd();
-}
-
-void Bsp::RenderLeavesOutlines() const {
-	glLineWidth(1.0f);
-	glLineStipple(1, 0xF0F0);
-	glEnable(GL_LINE_STIPPLE);
-	for (int i = 0; i < leaves.size(); i++) {
-		RenderLeafOutlines(i);
-	}
-	glDisable(GL_LINE_STIPPLE);
-	glColor3f(1, 1, 1);
-}
-
 auto Bsp::FindEntity(std::string_view name) -> Entity* {
 	for (auto& e : entities)
 		if (auto classname = e.findProperty("classname"))
 			if (*classname == name)
 				return &e;
 	return nullptr;
+}
+
+auto Bsp::FindEntity(std::string_view name) const -> const Entity* {
+	return const_cast<Bsp&>(*this).FindEntity(name);
 }
 
 std::vector<Entity*> Bsp::FindEntities(std::string_view name) {
@@ -1097,4 +832,24 @@ std::vector<Entity*> Bsp::FindEntities(std::string_view name) {
 
 auto Bsp::hasSkyBox() const -> bool {
 	return skyBoxDL.has_value();
+}
+
+auto Bsp::loadSkyBox() const -> std::optional<std::array<Image, 6>> {
+	std::clog << "Loading sky textures ...\n";
+
+	const auto worldspawn = FindEntity("worldspawn");
+	if (worldspawn == nullptr)
+		return {};
+	const auto skyname = worldspawn->findProperty("skyname");
+	if (skyname == nullptr)
+		return {}; // we don't have a sky texture
+
+	GLuint nSkyTex[6];
+	glGenTextures(6, nSkyTex);
+
+	char size[6][3] = { "ft", "bk", "rt", "lf", "up", "dn" };
+	std::array<Image, 6> result;
+	for (auto i = 0; i < 6; i++)
+		result[i] = Image(SKY_DIR / (*skyname + size[i] + ".tga"));
+	return result;
 }

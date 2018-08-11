@@ -63,17 +63,14 @@ void Window::update() {
 }
 
 void Window::draw() {
-	camera.look();
-	const auto& pos = camera.position();
-
-	m_renderer.beginFrame(m_settings);
-	m_renderer.render(bsp, pos);
+	m_renderer.beginFrame(m_settings, camera.viewMatrix());
+	m_renderer.render(bsp, camera.position());
 
 	if (m_settings.renderCoords)
 		m_renderer.renderCoords();
 
 	if (m_settings.renderHUD)
-		m_renderer.renderHud(hud, m_width, m_height, pos, camera.viewAngles(), camera.viewVector(), timer.TPS);
+		m_renderer.renderHud(hud, m_width, m_height, camera.position(), camera.viewAngles(), camera.viewVector(), timer.TPS);
 }
 
 void Window::onResize(int width, int height) {

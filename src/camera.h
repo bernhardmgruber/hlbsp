@@ -30,7 +30,8 @@ public:
 	void setMoveSens(float newMoveSens);
 
 	void update(double t, float xDelta, float yDelta, uint8_t directions);
-	void look();
+
+	auto viewMatrix() const -> glm::mat4;
 
 private:
 	vec3 m_position;

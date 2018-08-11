@@ -1,14 +1,11 @@
 #pragma once
 
-#include <GL/glew.h>
-#include <glm/vec2.hpp>
-
+#include "GLRenderer.h"
 #include "GlfwWindow.h"
 #include "camera.h"
 #include "Bsp.h"
 #include "hud.h"
 #include "timer.h"
-#include "GLRenderer.h"
 
 class Window : public GlfwWindow {
 public:

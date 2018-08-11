@@ -1,8 +1,8 @@
-uniform bool bUnit1Enabled;
-uniform bool bUnit2Enabled;
+uniform bool unit1Enabled;
+uniform bool unit2Enabled;
 
-uniform bool bFlashlight;
-uniform bool bNightvision;
+uniform bool flashlight;
+uniform bool nightvision;
 
 uniform sampler2D tex1;
 uniform sampler2D tex2;
@@ -18,18 +18,18 @@ void main()
 	vec4 texel1 = vec4(1.0);
 	vec4 texel2 = vec4(1.0);
 
-	if(bUnit1Enabled)
+	if(unit1Enabled)
 		texel1 = texture2D(tex1, gl_TexCoord[0].st);
-	if(bUnit2Enabled)
+	if(unit2Enabled)
 		texel2 = texture2D(tex2, gl_TexCoord[1].st);
 
 	//gl_FragColor = mix(texel1, texel2, 0.5);
 	gl_FragColor = vec4(texel1.rgb * texel2.rgb, texel1.a);
 
-	if (bFlashlight)
+	if (flashlight)
 		ComplexFlashlight();
 
-	if (bNightvision)
+	if (nightvision)
 		Nightvision();
 
 	// Brightness
