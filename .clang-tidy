@@ -1,0 +1,21 @@
+---
+Checks: >
+    *,
+    -llvm-include-order,
+    -llvm-header-guard,
+    -google-readability-namespace-comments,
+    -llvm-namespace-comment,
+    -google-runtime-references,
+    -google-readability-braces-around-statements,
+    -hicpp-braces-around-statements,
+    -readability-braces-around-statements,
+    -fuchsia-default-arguments,
+    -readability-implicit-bool-conversion
+
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+FormatStyle: none
+User: bernh
+CheckOptions:
+...
