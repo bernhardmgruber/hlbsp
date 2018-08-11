@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Image.h"
+#include "BspRenderable.h"
 
 namespace {
 	const fs::path BSP_DIR       = "../../data/maps";
@@ -12,7 +13,11 @@ namespace {
 }
 
 Window::Window()
-	: GlfwWindow(WINDOW_CAPTION), bsp(BSP_DIR / BSP_FILE_NAME, m_settings.textures, m_settings.lightmaps) {
+	: GlfwWindow(WINDOW_CAPTION)
+	, bsp(BSP_DIR / BSP_FILE_NAME , m_settings.textures, m_settings.lightmaps) {
+
+	m_renderer.addRenderable(std::make_unique<BspRenderable>(bsp, camera));
+
 	onResize(m_width, m_height);
 
 	// place camera at spawn
@@ -64,7 +69,7 @@ void Window::update() {
 
 void Window::draw() {
 	m_renderer.beginFrame(m_settings, camera.viewMatrix());
-	m_renderer.render(bsp, camera.position());
+	m_renderer.render();
 
 	if (m_settings.renderCoords)
 		m_renderer.renderCoords();

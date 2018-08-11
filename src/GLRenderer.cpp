@@ -1,12 +1,14 @@
 #include "GLRenderer.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <iostream>
 
 #include "IPSS.h"
 #include "IO.h"
-#include "Bsp.h"
 #include "Hud.h"
 #include "font.h"
+#include "mathlib.h"
 
 namespace {
 	constexpr auto  FONT_HUD_HEIGHT = 12;
@@ -15,29 +17,6 @@ namespace {
 
 	constexpr auto CONSOLE_WIDTH = 400;
 	constexpr auto CONSOLE_HEIGHT = 300;
-
-	void glslShaderSourceFile(GLuint object, const fs::path& filename) {
-		const auto source = readTextFile(filename);
-		const auto p = source.c_str();
-		glShaderSource(object, 1, &p, nullptr);
-		std::clog << "Read shader from file " << filename << "\n";
-	}
-
-	void glslPrintProgramInfoLog(GLuint object) {
-		GLint infologLength = 0;
-		glGetProgramiv(object, GL_INFO_LOG_LENGTH, &infologLength);
-
-		if (infologLength > 0) {
-			std::string infoLog;
-			infoLog.resize(infologLength);
-			GLint charsWritten = 0;
-			glGetProgramInfoLog(object, infologLength, &charsWritten, infoLog.data());
-			if (infoLog[0] != 0 && infoLog != "")
-				std::clog << infoLog << "\n";
-			else
-				std::clog << "(no program info log)\n";
-		}
-	}
 }
 
 GLRenderer::GLRenderer() {
@@ -90,25 +69,6 @@ GLRenderer::GLRenderer() {
 	std::clog << " OK\n";
 
 	//
-	// Shader
-	//
-
-	std::clog << "Loading shaders ...\n";
-	GLuint vsMain = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fsMain = glCreateShader(GL_FRAGMENT_SHADER);
-
-	glslShaderSourceFile(vsMain, "../../src/shader/main.vert");
-	glslShaderSourceFile(fsMain, "../../src/shader/main.frag");
-
-	glCompileShader(vsMain);
-	glCompileShader(fsMain);
-
-	m_shaderProgram = glCreateProgram();
-	glAttachShader(m_shaderProgram, vsMain);
-	glAttachShader(m_shaderProgram, fsMain);
-	glLinkProgram(m_shaderProgram);
-
-	//
 	// configure lighting for flashlight
 	//
 
@@ -134,6 +94,11 @@ GLRenderer::GLRenderer() {
 #endif
 }
 
+void GLRenderer::addRenderable(std::unique_ptr<IRenderable> renderable)
+{
+	m_renderables.emplace_back(std::move(renderable));
+}
+
 void GLRenderer::resizeViewport(int width, int height)
 {
 	glViewport(0, 0, width, height);
@@ -142,75 +107,15 @@ void GLRenderer::resizeViewport(int width, int height)
 
 void GLRenderer::beginFrame(RenderSettings settings, glm::mat4 viewMatrix) {
 	m_settings = settings;
+	m_settings.matrix = m_projectionMatrix * viewMatrix;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
-
-	// Enable Shader
-	glUseProgram(m_shaderProgram);
-
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "tex1"), 0);
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "tex2"), 1);
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "nightvision"), static_cast<GLint>(m_settings.nightvision));
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "flashlight"), static_cast<GLint>(m_settings.flashlight));
-
-	const auto matrix = m_projectionMatrix * viewMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(matrix));
 }
 
-void GLRenderer::render(const Bsp& bsp, const glm::vec3 cameraPos) {
-	// render sky box
-	if (bsp.hasSkyBox() && m_settings.renderSkybox) {
-		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 1);
-		renderSkyBox(bsp, cameraPos);
-		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
-	}
-
-	// turn on needed texture units
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), static_cast<GLint>(m_settings.textures || m_settings.lightmaps));
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), static_cast<GLint>(m_settings.textures && m_settings.lightmaps));
-
-	glEnable(GL_DEPTH_TEST);
-
-	if (m_settings.renderStaticBSP)
-		renderStaticGeometry(bsp, cameraPos);
-
-	if (m_settings.renderBrushEntities)
-		renderBrushEntities(bsp, cameraPos);
-
-	// Turn off second unit, if it was enabled
-	if (m_settings.useShader)
-		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), 0);
-	else {
-		if (m_settings.lightmaps && m_settings.textures) {
-			glActiveTexture(GL_TEXTURE1_ARB);
-			glDisable(GL_TEXTURE_2D);
-		}
-	}
-
-	if (m_settings.renderDecals) {
-		glActiveTexture(GL_TEXTURE0_ARB);
-		renderDecals(bsp);
-	}
-
-	// Turn off first unit, if it was enabled
-	if (m_settings.useShader)
-		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
-	else {
-		if (m_settings.lightmaps || m_settings.textures) {
-			glActiveTexture(GL_TEXTURE0_ARB);
-			glDisable(GL_TEXTURE_2D);
-		}
-	}
-
-	glDisable(GL_DEPTH_TEST);
-
-	if (m_settings.useShader)
-		glUseProgram(0);
-
-	// Leaf outlines
-	if (m_settings.renderLeafOutlines)
-		renderLeafOutlines(bsp);
+void GLRenderer::render() {
+	for (auto& renderable : m_renderables)
+		renderable->render(m_settings);
 }
 
 void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int height, glm::vec3 cameraPos, glm::vec2 cameraAngles, glm::vec3 cameraView, double fps) {
@@ -273,275 +178,4 @@ void GLRenderer::renderCoords() {
 	glVertex3i(0, 0, 0);
 	glVertex3i(0, 0, -4000);
 	glEnd();
-}
-
-void GLRenderer::renderSkyBox(const Bsp& bsp, const glm::vec3 cameraPos) {
-	glPushMatrix();
-	glTranslatef(cameraPos.x, cameraPos.y, cameraPos.z);
-	glCallList(*bsp.skyBoxDL);
-	glPopMatrix();
-}
-
-void GLRenderer::renderStaticGeometry(const Bsp& bsp, vec3 vPos) {
-	for (auto&& b : bsp.facesDrawn)
-		b = false;
-
-	const int iLeaf = bsp.findLeaf(vPos); //Get the leaf where the camera is in
-	renderBSP(bsp, 0, iLeaf, vPos);
-}
-
-void GLRenderer::renderBrushEntities(const Bsp& bsp, vec3 vPos) {
-	for (int i = 0; i < bsp.brushEntities.size(); i++) // TODO(bernh): implement PVS for pEntities
-		renderBrushEntity(bsp, i, vPos);
-}
-
-void GLRenderer::renderDecals(const Bsp& bsp) {
-	glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonOffset(0.0f, -2.0f);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	for (auto& decal : bsp.decals) {
-		glBindTexture(GL_TEXTURE_2D, decal.nTex);
-
-		glBegin(GL_TRIANGLE_FAN);
-		glTexCoord2f(0, 0);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[0].x, decal.vec[0].y, decal.vec[0].z);
-		glTexCoord2f(1, 0);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[1].x, decal.vec[1].y, decal.vec[1].z);
-		glTexCoord2f(1, 1);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[2].x, decal.vec[2].y, decal.vec[2].z);
-		glTexCoord2f(0, 1);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[3].x, decal.vec[3].y, decal.vec[3].z);
-		glEnd();
-	}
-
-	glDisable(GL_BLEND);
-	glDisable(GL_POLYGON_OFFSET_FILL);
-}
-
-
-void GLRenderer::renderLeafOutlines(const Bsp& bsp)
-{
-	glLineWidth(1.0f);
-	glLineStipple(1, 0xF0F0);
-	glEnable(GL_LINE_STIPPLE);
-	for (const auto& leaf : bsp.leaves)
-		renderLeafOutlines(leaf);
-	glDisable(GL_LINE_STIPPLE);
-	glColor3f(1, 1, 1);
-}
-
-void GLRenderer::renderLeafOutlines(const bsp30::Leaf& leaf) {
-	srand(reinterpret_cast<unsigned>(&leaf));
-	glColor3ub(rand() % 255, rand() % 255, rand() % 255);
-
-	glBegin(GL_LINES);
-	// Draw right face of bounding box
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-
-	// Draw left face of bounding box
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-
-	// Connect the faces
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-	glEnd();
-}
-
-
-void GLRenderer::renderFace(const Bsp& bsp, int face) {
-	if (bsp.facesDrawn[face])
-		return;
-	bsp.facesDrawn[face] = true;
-
-	if (bsp.faces[face].styles[0] == 0xFF)
-		return;
-
-	auto renderTriangle = [&](int i) {
-		vec3 normal = bsp.planes[bsp.faces[face].planeIndex].normal;
-		if (bsp.faces[face].planeSide)
-			normal = -normal;
-		glNormal3f(normal.x, normal.y, normal.z);
-
-		int edge = bsp.surfEdges[bsp.faces[face].firstEdgeIndex + i];
-		if (edge > 0)
-			glVertex3f(bsp.vertices[bsp.edges[edge].vertexIndex[0]].x, bsp.vertices[bsp.edges[edge].vertexIndex[0]].y, bsp.vertices[bsp.edges[edge].vertexIndex[0]].z);
-		else {
-			edge *= -1;
-			glVertex3f(bsp.vertices[bsp.edges[edge].vertexIndex[1]].x, bsp.vertices[bsp.edges[edge].vertexIndex[1]].y, bsp.vertices[bsp.edges[edge].vertexIndex[1]].z);
-		}
-	};
-
-	// if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
-	bool bLightmapAvail = static_cast<signed>(bsp.faces[face].lightmapOffset) != -1 && bsp.header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
-
-	if (bLightmapAvail && m_settings.lightmaps && m_settings.textures) {
-		// We need both texture units for textures and lightmaps
-
-		// base texture
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glBindTexture(GL_TEXTURE_2D, bsp.textureIds[bsp.textureInfos[bsp.faces[face].textureInfo].miptexIndex]);
-
-		// light map
-		glActiveTexture(GL_TEXTURE1_ARB);
-		glBindTexture(GL_TEXTURE_2D, bsp.lightmapTexIds[face]);
-
-		glBegin(GL_TRIANGLE_FAN);
-		for (int i = 0; i < bsp.faces[face].edgeCount; i++) {
-			glMultiTexCoord2f(GL_TEXTURE0_ARB, bsp.faceTexCoords[face].texCoords[i].s, bsp.faceTexCoords[face].texCoords[i].t);
-			glMultiTexCoord2f(GL_TEXTURE1_ARB, bsp.faceTexCoords[face].lightmapCoords[i].s, bsp.faceTexCoords[face].lightmapCoords[i].t);
-			renderTriangle(i);
-		}
-		glEnd();
-	}
-	else {
-		// We need one texture unit for either textures or lightmaps
-		glActiveTexture(GL_TEXTURE0_ARB);
-
-		if (m_settings.lightmaps)
-			glBindTexture(GL_TEXTURE_2D, bsp.lightmapTexIds[face]);
-		else
-			glBindTexture(GL_TEXTURE_2D, bsp.textureIds[bsp.textureInfos[bsp.faces[face].textureInfo].miptexIndex]);
-
-		glBegin(GL_TRIANGLE_FAN);
-		for (int i = 0; i < bsp.faces[face].edgeCount; i++) {
-			if (m_settings.lightmaps)
-				glTexCoord2f(bsp.faceTexCoords[face].lightmapCoords[i].s, bsp.faceTexCoords[face].lightmapCoords[i].t);
-			else
-				glTexCoord2f(bsp.faceTexCoords[face].texCoords[i].s, bsp.faceTexCoords[face].texCoords[i].t);
-			renderTriangle(i);
-		}
-		glEnd();
-	}
-}
-
-void GLRenderer::renderLeaf(const Bsp& bsp, int leaf) {
-	for (int i = 0; i < bsp.leaves[leaf].markSurfaceCount; i++)
-		renderFace(bsp, bsp.markSurfaces[bsp.leaves[leaf].firstMarkSurface + i]);
-}
-
-void GLRenderer::renderBSP(const Bsp& bsp, int iNode, int iCurrentLeaf, vec3 vPos) {
-	if (iNode < 0) {
-		if (iNode == -1)
-			return;
-
-		if (iCurrentLeaf > 0)
-			if (!bsp.visLists.empty() && !bsp.visLists[iCurrentLeaf - 1].empty() && !bsp.visLists[iCurrentLeaf - 1][~iNode - 1])
-				return;
-
-		renderLeaf(bsp, ~iNode);
-
-		return;
-	}
-
-	const auto dist = [&] {
-		switch (bsp.planes[bsp.nodes[iNode].planeIndex].type) {
-		case bsp30::PLANE_X: return vPos.x - bsp.planes[bsp.nodes[iNode].planeIndex].dist;
-		case bsp30::PLANE_Y: return vPos.y - bsp.planes[bsp.nodes[iNode].planeIndex].dist;
-		case bsp30::PLANE_Z: return vPos.z - bsp.planes[bsp.nodes[iNode].planeIndex].dist;
-		default:             return glm::dot(bsp.planes[bsp.nodes[iNode].planeIndex].normal, vPos) - bsp.planes[bsp.nodes[iNode].planeIndex].dist;
-		}
-	}();
-
-	const auto child1 = dist > 0 ? 1 : 0;
-	const auto child2 = dist > 0 ? 0 : 1;
-	renderBSP(bsp, bsp.nodes[iNode].childIndex[child1], iCurrentLeaf, vPos);
-	renderBSP(bsp, bsp.nodes[iNode].childIndex[child2], iCurrentLeaf, vPos);
-}
-
-void GLRenderer::renderBrushEntity(const Bsp& bsp, int iEntity, vec3 vPos) {
-	const auto& ent = bsp.entities[bsp.brushEntities[iEntity]];
-
-	// Model
-	int iModel = std::stoi(ent.findProperty("model")->substr(1));
-
-	// Alpha value
-	unsigned char nAlpha;
-	if (const auto renderamt = ent.findProperty("renderamt"))
-		nAlpha = std::stoi(*renderamt);
-	else
-		nAlpha = 255;
-
-	// Rendermode
-	unsigned char nRenderMode;
-	if (const auto pszRenderMode = ent.findProperty("rendermode"))
-		nRenderMode = std::stoi(*pszRenderMode);
-	else
-		nRenderMode = bsp30::RENDER_MODE_NORMAL;
-
-	glPushMatrix();
-	glTranslatef(bsp.models[iModel].vOrigin.x, bsp.models[iModel].vOrigin.y, bsp.models[iModel].vOrigin.z);
-
-	switch (nRenderMode) {
-	case bsp30::RENDER_MODE_NORMAL:
-		break;
-	case bsp30::RENDER_MODE_TEXTURE:
-		glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		glDepthMask(0u);
-
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		break;
-	case bsp30::RENDER_MODE_SOLID:
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.25);
-		break;
-	case bsp30::RENDER_MODE_ADDITIVE:
-		glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE);
-		glDepthMask(0u);
-
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		break;
-	}
-
-	renderBSP(bsp, bsp.models[iModel].headNodesIndex[0], -1, vPos);
-
-	switch (nRenderMode) {
-	case bsp30::RENDER_MODE_NORMAL:
-		break;
-	case bsp30::RENDER_MODE_TEXTURE:
-	case bsp30::RENDER_MODE_ADDITIVE:
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		glDisable(GL_BLEND);
-		glDepthMask(1u);
-
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		break;
-	case bsp30::RENDER_MODE_SOLID:
-		glDisable(GL_ALPHA_TEST);
-		break;
-	}
-
-	glPopMatrix();
 }

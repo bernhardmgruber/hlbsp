@@ -92,5 +92,5 @@ private:
 
 	int findLeaf(vec3 pos, int node = 0) const; // Recursivly walks through the BSP tree to find the leaf where the camera is in
 
-	friend class GLRenderer;
+	friend class BspRenderable;
 };
