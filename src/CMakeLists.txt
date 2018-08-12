@@ -8,7 +8,7 @@ source_group("" FILES ${source_files})
 if(MSVC)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		GLEW::GLEW
-		${GLFW_LIBRARIES}
+		glfw
 		opengl32
 		glu32
 		Winmm
@@ -19,7 +19,7 @@ if(MSVC)
 else()
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		GLEW::GLEW
-		${GLFW_LIBRARIES}
+		glfw
 		GL
 		GLU
 		X11
