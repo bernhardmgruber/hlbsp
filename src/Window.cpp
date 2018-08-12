@@ -131,14 +131,6 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 				toggleFullscreen();
 				break;
 
-			case GLFW_KEY_F2:
-				m_settings.useShader = !m_settings.useShader;
-				if (m_settings.useShader)
-					hud.print("shaders enabled");
-				else
-					hud.print("shaders disabled");
-				break;
-
 			case GLFW_KEY_F5: {
 				Image pImg(m_width, m_height, 3);
 				glReadPixels(0, 0, pImg.width, pImg.height, GL_RGB, GL_UNSIGNED_BYTE, pImg.data.data());

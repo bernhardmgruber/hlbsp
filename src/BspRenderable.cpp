@@ -179,15 +179,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 		renderBrushEntities(cameraPos);
 
 	// Turn off second unit, if it was enabled
-	if (settings.useShader)
-		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), 0);
-	else {
-		if (settings.lightmaps && settings.textures) {
-			glActiveTexture(GL_TEXTURE1_ARB);
-			glDisable(GL_TEXTURE_2D);
-		}
-	}
-
+	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), 0);
 	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
 
 	if (settings.renderDecals) {
@@ -196,19 +188,11 @@ void BspRenderable::render(const RenderSettings& settings) {
 	}
 
 	// Turn off first unit, if it was enabled
-	if (settings.useShader)
-		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
-	else {
-		if (settings.lightmaps || settings.textures) {
-			glActiveTexture(GL_TEXTURE0_ARB);
-			glDisable(GL_TEXTURE_2D);
-		}
-	}
+	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
 
 	glDisable(GL_DEPTH_TEST);
 
-	if (settings.useShader)
-		glUseProgram(0);
+	glUseProgram(0);
 
 	// Leaf outlines
 	if (settings.renderLeafOutlines)

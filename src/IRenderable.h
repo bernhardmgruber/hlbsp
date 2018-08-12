@@ -15,7 +15,6 @@ struct RenderSettings {
 	bool renderLeafOutlines = false;
 	bool renderHUD = true;
 
-	bool useShader = true;
 	bool nightvision = false;
 	bool flashlight = false;
 
