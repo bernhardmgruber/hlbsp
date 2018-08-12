@@ -188,6 +188,8 @@ void BspRenderable::render(const RenderSettings& settings) {
 		}
 	}
 
+	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
+
 	if (settings.renderDecals) {
 		glActiveTexture(GL_TEXTURE0_ARB);
 		renderDecals();
@@ -425,8 +427,8 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 	else
 		nRenderMode = bsp30::RENDER_MODE_NORMAL;
 
-	glPushMatrix();
-	glTranslatef(m_bsp->models[iModel].vOrigin.x, m_bsp->models[iModel].vOrigin.y, m_bsp->models[iModel].vOrigin.z);
+	const auto matrix = glm::translate(m_settings->matrix, m_bsp->models[iModel].vOrigin);
+	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(matrix));
 
 	switch (nRenderMode) {
 	case bsp30::RENDER_MODE_NORMAL:
@@ -473,6 +475,4 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 		glDisable(GL_ALPHA_TEST);
 		break;
 	}
-
-	glPopMatrix();
 }
