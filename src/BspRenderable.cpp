@@ -161,14 +161,13 @@ void BspRenderable::render(const RenderSettings& settings) {
 		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 1);
 		glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(matrix));
 		glCallList(*m_skyBoxDL);
-		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
 	}
 
 	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
 
 	// turn on needed texture units
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), static_cast<GLint>(settings.textures || settings.lightmaps));
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), static_cast<GLint>(settings.textures && settings.lightmaps));
+	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), static_cast<GLint>(settings.textures));
+	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), static_cast<GLint>(settings.lightmaps));
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -178,7 +177,6 @@ void BspRenderable::render(const RenderSettings& settings) {
 	if (settings.renderBrushEntities)
 		renderBrushEntities(cameraPos);
 
-	// Turn off second unit, if it was enabled
 	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), 0);
 	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
 
@@ -299,7 +297,27 @@ void BspRenderable::renderFace(int face) {
 	if (m_bsp->faces[face].styles[0] == 0xFF)
 		return;
 
-	auto renderTriangle = [&](int i) {
+	// if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
+	const bool bLightmapAvail = static_cast<signed>(m_bsp->faces[face].lightmapOffset) != -1 && m_bsp->header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
+
+	if (m_settings->textures) {
+		glActiveTexture(GL_TEXTURE0_ARB);
+		glBindTexture(GL_TEXTURE_2D, m_bsp->textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex]);
+	}
+
+	if (m_settings->lightmaps && bLightmapAvail) {
+		glActiveTexture(GL_TEXTURE1_ARB);
+		glBindTexture(GL_TEXTURE_2D, m_bsp->lightmapTexIds[face]);
+	}
+
+	glBegin(GL_TRIANGLE_FAN);
+	for (int i = 0; i < m_bsp->faces[face].edgeCount; i++) {
+
+		if (m_settings->textures)
+			glMultiTexCoord2f(GL_TEXTURE0_ARB, m_bsp->faceTexCoords[face].texCoords[i].s, m_bsp->faceTexCoords[face].texCoords[i].t);
+		if (m_settings->lightmaps && bLightmapAvail)
+			glMultiTexCoord2f(GL_TEXTURE1_ARB, m_bsp->faceTexCoords[face].lightmapCoords[i].s, m_bsp->faceTexCoords[face].lightmapCoords[i].t);
+
 		auto normal = m_bsp->planes[m_bsp->faces[face].planeIndex].normal;
 		if (m_bsp->faces[face].planeSide)
 			normal = -normal;
@@ -314,49 +332,8 @@ void BspRenderable::renderFace(int face) {
 			const auto& v = m_bsp->vertices[m_bsp->edges[edge].vertexIndex[1]];
 			glVertex3f(v.x, v.y, v.z);
 		}
-	};
-
-	// if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
-	bool bLightmapAvail = static_cast<signed>(m_bsp->faces[face].lightmapOffset) != -1 && m_bsp->header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
-
-	if (bLightmapAvail && m_settings->lightmaps && m_settings->textures) {
-		// We need both texture units for textures and lightmaps
-
-		// base texture
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glBindTexture(GL_TEXTURE_2D, m_bsp->textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex]);
-
-		// light map
-		glActiveTexture(GL_TEXTURE1_ARB);
-		glBindTexture(GL_TEXTURE_2D, m_bsp->lightmapTexIds[face]);
-
-		glBegin(GL_TRIANGLE_FAN);
-		for (int i = 0; i < m_bsp->faces[face].edgeCount; i++) {
-			glMultiTexCoord2f(GL_TEXTURE0_ARB, m_bsp->faceTexCoords[face].texCoords[i].s, m_bsp->faceTexCoords[face].texCoords[i].t);
-			glMultiTexCoord2f(GL_TEXTURE1_ARB, m_bsp->faceTexCoords[face].lightmapCoords[i].s, m_bsp->faceTexCoords[face].lightmapCoords[i].t);
-			renderTriangle(i);
-		}
-		glEnd();
 	}
-	else {
-		// We need one texture unit for either textures or lightmaps
-		glActiveTexture(GL_TEXTURE0_ARB);
-
-		if (m_settings->lightmaps)
-			glBindTexture(GL_TEXTURE_2D, m_bsp->lightmapTexIds[face]);
-		else
-			glBindTexture(GL_TEXTURE_2D, m_bsp->textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex]);
-
-		glBegin(GL_TRIANGLE_FAN);
-		for (int i = 0; i < m_bsp->faces[face].edgeCount; i++) {
-			if (m_settings->lightmaps)
-				glTexCoord2f(m_bsp->faceTexCoords[face].lightmapCoords[i].s, m_bsp->faceTexCoords[face].lightmapCoords[i].t);
-			else
-				glTexCoord2f(m_bsp->faceTexCoords[face].texCoords[i].s, m_bsp->faceTexCoords[face].texCoords[i].t);
-			renderTriangle(i);
-		}
-		glEnd();
-	}
+	glEnd();
 }
 
 void BspRenderable::renderLeaf(int leaf) {
