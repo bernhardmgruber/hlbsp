@@ -300,17 +300,19 @@ void BspRenderable::renderFace(int face) {
 		return;
 
 	auto renderTriangle = [&](int i) {
-		vec3 normal = m_bsp->planes[m_bsp->faces[face].planeIndex].normal;
+		auto normal = m_bsp->planes[m_bsp->faces[face].planeIndex].normal;
 		if (m_bsp->faces[face].planeSide)
 			normal = -normal;
 		glNormal3f(normal.x, normal.y, normal.z);
 
 		int edge = m_bsp->surfEdges[m_bsp->faces[face].firstEdgeIndex + i];
-		if (edge > 0)
-			glVertex3f(m_bsp->vertices[m_bsp->edges[edge].vertexIndex[0]].x, m_bsp->vertices[m_bsp->edges[edge].vertexIndex[0]].y, m_bsp->vertices[m_bsp->edges[edge].vertexIndex[0]].z);
-		else {
+		if (edge > 0) {
+			const auto& v = m_bsp->vertices[m_bsp->edges[edge].vertexIndex[0]];
+			glVertex3f(v.x, v.y, v.z);
+		} else {
 			edge *= -1;
-			glVertex3f(m_bsp->vertices[m_bsp->edges[edge].vertexIndex[1]].x, m_bsp->vertices[m_bsp->edges[edge].vertexIndex[1]].y, m_bsp->vertices[m_bsp->edges[edge].vertexIndex[1]].z);
+			const auto& v = m_bsp->vertices[m_bsp->edges[edge].vertexIndex[1]];
+			glVertex3f(v.x, v.y, v.z);
 		}
 	};
 
