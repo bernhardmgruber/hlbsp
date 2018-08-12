@@ -48,7 +48,7 @@ void Window::update() {
 	glfwSetWindowTitle(handle(), windowText.str().c_str());
 
 	// camera
-	glm::dvec2 delta;
+	glm::dvec2 delta{0, 0};
 	if (m_captureMouse) {
 		glm::dvec2 pos;
 		glfwGetCursorPos(handle(), &pos.x, &pos.y);

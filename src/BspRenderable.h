@@ -23,7 +23,6 @@ public:
 private:
 	void loadSkyTextures();
 
-	void renderSkyBox(const glm::vec3 cameraPos);
 	void renderStaticGeometry(vec3 vPos);
 	void renderBrushEntities(vec3 vPos);
 	void renderDecals();

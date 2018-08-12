@@ -152,16 +152,19 @@ void BspRenderable::render(const RenderSettings& settings) {
 	glUniform1i(glGetUniformLocation(m_shaderProgram, "tex2"), 1);
 	glUniform1i(glGetUniformLocation(m_shaderProgram, "nightvision"), static_cast<GLint>(settings.nightvision));
 	glUniform1i(glGetUniformLocation(m_shaderProgram, "flashlight"), static_cast<GLint>(settings.flashlight));
-	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
-
+	
 	const auto& cameraPos = m_camera->position();
 
 	// render sky box
 	if (m_skyBoxDL && settings.renderSkybox) {
+		const auto matrix = glm::translate(m_settings->matrix, cameraPos);
 		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 1);
-		renderSkyBox(cameraPos);
+		glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(matrix));
+		glCallList(*m_skyBoxDL);
 		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
 	}
+
+	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
 
 	// turn on needed texture units
 	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), static_cast<GLint>(settings.textures || settings.lightmaps));
@@ -208,13 +211,6 @@ void BspRenderable::render(const RenderSettings& settings) {
 	// Leaf outlines
 	if (settings.renderLeafOutlines)
 		renderLeafOutlines();
-}
-
-void BspRenderable::renderSkyBox(const glm::vec3 cameraPos) {
-	glPushMatrix();
-	glTranslatef(cameraPos.x, cameraPos.y, cameraPos.z);
-	glCallList(*m_skyBoxDL);
-	glPopMatrix();
 }
 
 void BspRenderable::renderStaticGeometry(vec3 vPos) {
