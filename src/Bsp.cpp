@@ -39,123 +39,6 @@ namespace {
 	}
 }
 
-void Bsp::LoadSkyTextures() {
-	std::clog << "Loading sky textures ...\n";
-
-	const auto worldspawn = FindEntity("worldspawn");
-	if (worldspawn == nullptr)
-		return;
-	const auto skyname = worldspawn->findProperty("skyname");
-	if (skyname == nullptr)
-		return; // we don't have a sky texture
-
-	GLuint nSkyTex[6];
-	glGenTextures(6, nSkyTex);
-
-	char size[6][3] = {"ft", "bk", "rt", "lf", "up", "dn"};
-	for (auto i = 0; i < 6; i++) {
-		Image img(SKY_DIR / (*skyname + size[i] + ".tga"));
-
-		glBindTexture(GL_TEXTURE_2D, nSkyTex[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.width, img.height, 0, img.channels == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, img.data.data());
-	}
-
-	//Create Displaylist
-	skyBoxDL = glGenLists(1);
-	glNewList(*skyBoxDL, GL_COMPILE);
-
-	//http://enter.diehlsworld.de/ogl/skyboxartikel/skybox.htm
-	glDepthMask(0); // prevent writing depth coords
-
-	float fAHalf = 100; //half length of the edge of the cube
-
-	//front
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[0]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(fAHalf, -fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(-fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
-	glEnd();
-
-	//back
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[1]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-fAHalf, fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(fAHalf, fAHalf, -fAHalf);
-	glEnd();
-
-	//right
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[2]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(fAHalf, fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(fAHalf, -fAHalf, -fAHalf);
-	glEnd();
-
-	//left
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[3]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(-fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-fAHalf, fAHalf, -fAHalf);
-	glEnd();
-
-	//up
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[4]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(-fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(fAHalf, -fAHalf, fAHalf);
-	glEnd();
-
-	//down
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[5]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-fAHalf, fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(fAHalf, fAHalf, -fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(fAHalf, -fAHalf, -fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
-	glEnd();
-
-	glDepthMask(1);
-
-	glEndList();
-}
-
 void Bsp::LoadWadFiles(std::string wadStr) {
 	for (auto& c : wadStr)
 		if (c == '\\')
@@ -756,12 +639,6 @@ Bsp::Bsp(const fs::path& filename, bool& g_bTextures, bool& g_bLightmaps)
 	LoadDecals();
 
 	// ===========================
-	// Skybox Operations
-	// ===========================
-
-	LoadSkyTextures();
-
-	// ===========================
 	// Visibility List Operations
 	// ===========================
 
@@ -803,10 +680,6 @@ Bsp::~Bsp() {
 		if (lightmapTexId != 0)
 			glDeleteTextures(1, &lightmapTexId);
 	}
-
-	//displaylists
-	if (skyBoxDL)
-		glDeleteLists(*skyBoxDL, 1);
 }
 
 auto Bsp::FindEntity(std::string_view name) -> Entity* {
@@ -828,10 +701,6 @@ std::vector<Entity*> Bsp::FindEntities(std::string_view name) {
 			if (*classname == name)
 				result.push_back(&e);
 	return result;
-}
-
-auto Bsp::hasSkyBox() const -> bool {
-	return skyBoxDL.has_value();
 }
 
 auto Bsp::loadSkyBox() const -> std::optional<std::array<Image, 6>> {

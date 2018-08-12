@@ -27,6 +27,121 @@ BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 	glslPrintProgramInfoLog(m_shaderProgram);
 }
 
+BspRenderable::~BspRenderable() {
+	if (m_skyBoxDL)
+		glDeleteLists(*m_skyBoxDL, 1);
+}
+
+void BspRenderable::loadSkyTextures() {
+	std::clog << "Loading sky textures ...\n";
+
+	const auto images = m_bsp->loadSkyBox();
+	if (!images)
+		return;
+
+	GLuint nSkyTex[6];
+	glGenTextures(6, nSkyTex);
+	for (auto i = 0; i < 6; i++) {
+		glBindTexture(GL_TEXTURE_2D, nSkyTex[i]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (*images)[i].width, (*images)[i].height, 0, (*images)[i].channels == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (*images)[i].data.data());
+	}
+
+	//Create Displaylist
+	m_skyBoxDL = glGenLists(1);
+	glNewList(*m_skyBoxDL, GL_COMPILE);
+
+	//http://enter.diehlsworld.de/ogl/skyboxartikel/skybox.htm
+	glDepthMask(0); // prevent writing depth coords
+
+	float fAHalf = 100; //half length of the edge of the cube
+
+						//front
+	glBindTexture(GL_TEXTURE_2D, nSkyTex[0]);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(fAHalf, -fAHalf, -fAHalf);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(fAHalf, -fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(-fAHalf, -fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
+	glEnd();
+
+	//back
+	glBindTexture(GL_TEXTURE_2D, nSkyTex[1]);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(-fAHalf, fAHalf, -fAHalf);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(-fAHalf, fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(fAHalf, fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(fAHalf, fAHalf, -fAHalf);
+	glEnd();
+
+	//right
+	glBindTexture(GL_TEXTURE_2D, nSkyTex[2]);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(fAHalf, fAHalf, -fAHalf);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(fAHalf, fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(fAHalf, -fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(fAHalf, -fAHalf, -fAHalf);
+	glEnd();
+
+	//left
+	glBindTexture(GL_TEXTURE_2D, nSkyTex[3]);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(-fAHalf, -fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(-fAHalf, fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(-fAHalf, fAHalf, -fAHalf);
+	glEnd();
+
+	//up
+	glBindTexture(GL_TEXTURE_2D, nSkyTex[4]);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(fAHalf, fAHalf, fAHalf);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(-fAHalf, fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(-fAHalf, -fAHalf, fAHalf);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(fAHalf, -fAHalf, fAHalf);
+	glEnd();
+
+	//down
+	glBindTexture(GL_TEXTURE_2D, nSkyTex[5]);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(-fAHalf, fAHalf, -fAHalf);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(fAHalf, fAHalf, -fAHalf);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(fAHalf, -fAHalf, -fAHalf);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
+	glEnd();
+
+	glDepthMask(1);
+
+	glEndList();
+}
+
 void BspRenderable::render(const RenderSettings& settings) {
 	m_settings = &settings;
 
@@ -42,7 +157,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 	const auto& cameraPos = m_camera->position();
 
 	// render sky box
-	if (m_bsp->hasSkyBox() && settings.renderSkybox) {
+	if (m_skyBoxDL && settings.renderSkybox) {
 		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 1);
 		renderSkyBox(cameraPos);
 		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
@@ -98,7 +213,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 void BspRenderable::renderSkyBox(const glm::vec3 cameraPos) {
 	glPushMatrix();
 	glTranslatef(cameraPos.x, cameraPos.y, cameraPos.z);
-	glCallList(*m_bsp->skyBoxDL);
+	glCallList(*m_skyBoxDL);
 	glPopMatrix();
 }
 

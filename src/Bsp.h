@@ -38,7 +38,6 @@ public:
 	auto FindEntity(std::string_view name) const -> const Entity*;
 	auto FindEntities(std::string_view name) -> std::vector<Entity*>;
 
-	auto hasSkyBox() const -> bool;
 	auto loadSkyBox() const -> std::optional<std::array<Image, 6>>;
 
 private:
@@ -70,13 +69,11 @@ private:
 
 	std::vector<GLuint>   lightmapTexIds; // Stores a lookup table where faces use their index to find the index of their lightmap texture
 	std::vector<GLuint>   textureIds;     // Stores a lookup table where faces use their index to find the index of their texture
-	std::optional<GLuint> skyBoxDL;       // displaylist index which stores the skybox, if NULL, there is no skybox.
 	mutable std::vector<bool>     facesDrawn;     // Boolarray which avoids drawing faces twice by marking each drawn face's index in the array
 
 	bool& g_bTextures;
 	bool& g_bLightmaps;
 
-	void LoadSkyTextures();                                                                    // Loads the sky textures from disk and creates a display list for faster rendering
 	void LoadWadFiles(std::string wadStr);                                                     // Loads and prepares the wad files for further texture loading
 	void UnloadWadFiles();                                                                     // Unloads all wad files and frees allocated memory
 	void LoadTextures(std::ifstream& file);                                                    // Loads the textures either from the wad file or directly from the bsp file

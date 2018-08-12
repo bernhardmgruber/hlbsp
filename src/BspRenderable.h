@@ -5,6 +5,8 @@
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
+#include <optional>
+
 #include "bspdef.h"
 #include "IRenderable.h"
 
@@ -14,10 +16,13 @@ class Camera;
 class BspRenderable : public IRenderable {
 public:
 	BspRenderable(const Bsp& bsp, const Camera& camera);
+	~BspRenderable();
 
 	virtual void render(const RenderSettings& settings) override;
 
 private:
+	void loadSkyTextures();
+
 	void renderSkyBox(const glm::vec3 cameraPos);
 	void renderStaticGeometry(vec3 vPos);
 	void renderBrushEntities(vec3 vPos);
@@ -35,5 +40,6 @@ private:
 
 	const RenderSettings* m_settings = nullptr;
 
+	std::optional<GLuint> m_skyBoxDL;
 	GLuint m_shaderProgram;
 };
