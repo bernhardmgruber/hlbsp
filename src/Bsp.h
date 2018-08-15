@@ -12,15 +12,9 @@
 
 namespace fs = std::experimental::filesystem;
 
-// texture coordinates for a vertex
-struct TexCoord {
-	float s;
-	float t;
-};
-
 struct FaceTexCoords {
-	std::vector<TexCoord> texCoords;
-	std::vector<TexCoord> lightmapCoords;
+	std::vector<glm::vec2> texCoords;
+	std::vector<glm::vec2> lightmapCoords;
 };
 
 struct Decal {

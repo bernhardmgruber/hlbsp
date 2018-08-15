@@ -1,6 +1,7 @@
 #include "BspRenderable.h"
 
 #include <iostream>
+#include <numeric>
 
 #include "glsl.h"
 #include "Bsp.h"
@@ -18,13 +19,17 @@ BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 	glslShaderSourceFile(fsMain, "../../src/shader/main.frag");
 
 	glCompileShader(vsMain);
+	glslPrintShaderInfoLog(vsMain);
 	glCompileShader(fsMain);
+	glslPrintShaderInfoLog(fsMain);
 
 	m_shaderProgram = glCreateProgram();
 	glAttachShader(m_shaderProgram, vsMain);
 	glAttachShader(m_shaderProgram, fsMain);
 	glLinkProgram(m_shaderProgram);
 	glslPrintProgramInfoLog(m_shaderProgram);
+
+	buildBuffers();
 }
 
 BspRenderable::~BspRenderable() {
@@ -171,19 +176,40 @@ void BspRenderable::render(const RenderSettings& settings) {
 
 	glEnable(GL_DEPTH_TEST);
 
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+	glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, position)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, normal)));
+	glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, texCoord)));
+	glVertexAttribPointer(3, 2, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, lightmapCoord)));
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+	glEnableVertexAttribArray(3);
+
 	if (settings.renderStaticBSP)
 		renderStaticGeometry(cameraPos);
 
 	if (settings.renderBrushEntities)
 		renderBrushEntities(cameraPos);
 
+	glDisableVertexAttribArray(3);
+
 	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), 0);
 	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
 
-	if (settings.renderDecals) {
-		glActiveTexture(GL_TEXTURE0_ARB);
+	glBindBuffer(GL_ARRAY_BUFFER, m_decalVbo);
+	glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, normal)));
+	glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, texCoord)));
+
+	if (settings.renderDecals)
 		renderDecals();
-	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+
 
 	// Turn off first unit, if it was enabled
 	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
@@ -216,23 +242,11 @@ void BspRenderable::renderDecals() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	for (const auto& decal : m_bsp->decals) {
-		glBindTexture(GL_TEXTURE_2D, decal.nTex);
+	glActiveTexture(GL_TEXTURE0_ARB);
 
-		glBegin(GL_TRIANGLE_FAN);
-		glTexCoord2f(0, 0);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[0].x, decal.vec[0].y, decal.vec[0].z);
-		glTexCoord2f(1, 0);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[1].x, decal.vec[1].y, decal.vec[1].z);
-		glTexCoord2f(1, 1);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[2].x, decal.vec[2].y, decal.vec[2].z);
-		glTexCoord2f(0, 1);
-		glNormal3f(decal.normal.x, decal.normal.y, decal.normal.z);
-		glVertex3f(decal.vec[3].x, decal.vec[3].y, decal.vec[3].z);
-		glEnd();
+	for (auto i = 0; i < m_bsp->decals.size(); i++) {
+		glBindTexture(GL_TEXTURE_2D, m_bsp->decals[i].nTex);
+		glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
 	}
 
 	glDisable(GL_BLEND);
@@ -310,30 +324,7 @@ void BspRenderable::renderFace(int face) {
 		glBindTexture(GL_TEXTURE_2D, m_bsp->lightmapTexIds[face]);
 	}
 
-	glBegin(GL_TRIANGLE_FAN);
-	for (int i = 0; i < m_bsp->faces[face].edgeCount; i++) {
-
-		if (m_settings->textures)
-			glMultiTexCoord2f(GL_TEXTURE0_ARB, m_bsp->faceTexCoords[face].texCoords[i].s, m_bsp->faceTexCoords[face].texCoords[i].t);
-		if (m_settings->lightmaps && bLightmapAvail)
-			glMultiTexCoord2f(GL_TEXTURE1_ARB, m_bsp->faceTexCoords[face].lightmapCoords[i].s, m_bsp->faceTexCoords[face].lightmapCoords[i].t);
-
-		auto normal = m_bsp->planes[m_bsp->faces[face].planeIndex].normal;
-		if (m_bsp->faces[face].planeSide)
-			normal = -normal;
-		glNormal3f(normal.x, normal.y, normal.z);
-
-		int edge = m_bsp->surfEdges[m_bsp->faces[face].firstEdgeIndex + i];
-		if (edge > 0) {
-			const auto& v = m_bsp->vertices[m_bsp->edges[edge].vertexIndex[0]];
-			glVertex3f(v.x, v.y, v.z);
-		} else {
-			edge *= -1;
-			const auto& v = m_bsp->vertices[m_bsp->edges[edge].vertexIndex[1]];
-			glVertex3f(v.x, v.y, v.z);
-		}
-	}
-	glEnd();
+	glDrawArrays(GL_TRIANGLE_FAN, vertexOffsets[face], m_bsp->faces[face].edgeCount);
 }
 
 void BspRenderable::renderLeaf(int leaf) {
@@ -437,5 +428,61 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 	case bsp30::RENDER_MODE_SOLID:
 		glDisable(GL_ALPHA_TEST);
 		break;
+	}
+}
+
+void BspRenderable::buildBuffers() {
+	{
+		// static and brush geometry
+		std::vector<VertexWithLM> vertices;
+
+		for (const auto& face : m_bsp->faces) {
+			const auto faceIndex = &face - &m_bsp->faces.front();
+			for (int i = 0; i < face.edgeCount; i++) {
+				auto& v = vertices.emplace_back();
+
+				const auto& coords = m_bsp->faceTexCoords[faceIndex];
+				v.texCoord = coords.texCoords[i];
+				v.lightmapCoord = coords.lightmapCoords.empty() ? glm::vec2{ 0.0 } : coords.lightmapCoords[i];
+
+				v.normal = m_bsp->planes[face.planeIndex].normal;
+				if (face.planeSide)
+					v.normal = -v.normal;
+
+				int edge = m_bsp->surfEdges[face.firstEdgeIndex + i];
+				if (edge > 0)
+					v.position = m_bsp->vertices[m_bsp->edges[edge].vertexIndex[0]];
+				else
+					v.position = m_bsp->vertices[m_bsp->edges[-edge].vertexIndex[1]];
+			}
+			vertexOffsets.push_back(face.edgeCount);
+		}
+
+		std::exclusive_scan(begin(vertexOffsets), end(vertexOffsets), begin(vertexOffsets), 0);
+
+		glGenBuffers(1, &m_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VertexWithLM), vertices.data(), GL_STATIC_DRAW);
+	}
+
+	{
+		// decals
+		std::vector<Vertex> vertices;
+
+		for (const auto& decal : m_bsp->decals) {
+			for (auto i = 0; i < 4; i++) {
+				auto& v = vertices.emplace_back();
+				v.position = decal.vec[i];
+				v.normal = decal.normal;
+				if (i == 0) v.texCoord = glm::vec2(0, 0);
+				if (i == 1) v.texCoord = glm::vec2(1, 0);
+				if (i == 2) v.texCoord = glm::vec2(1, 1);
+				if (i == 3) v.texCoord = glm::vec2(0, 1);
+			}
+		}
+
+		glGenBuffers(1, &m_decalVbo);
+		glBindBuffer(GL_ARRAY_BUFFER, m_decalVbo);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
 	}
 }

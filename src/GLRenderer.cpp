@@ -188,7 +188,8 @@ void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int heig
 }
 
 void GLRenderer::renderCoords() {
-	glLineWidth(3.0f);
+	glLoadMatrixf(glm::value_ptr(m_settings.matrix));
+
 	glBegin(GL_LINES);
 	glColor3f(1.0f, 0.0f, 0.0f); //red X+
 	glVertex3i(4000, 0, 0);
@@ -201,16 +202,17 @@ void GLRenderer::renderCoords() {
 	glVertex3i(0, 0, 0);
 	glEnd();
 
-	glLineWidth(1.0f);
 	glBegin(GL_LINES);
-	glColor3f(0.0f, 0.4f, 0.0f); //green Y-
-	glVertex3i(0, 0, 0);
-	glVertex3i(0, -4000, 0);
 	glColor3f(0.4f, 0.0f, 0.0f); //red X-
 	glVertex3i(0, 0, 0);
 	glVertex3i(-4000, 0, 0);
+	glColor3f(0.0f, 0.4f, 0.0f); //green Y-
+	glVertex3i(0, 0, 0);
+	glVertex3i(0, -4000, 0);
 	glColor3f(0.0f, 0.0f, 0.4f); //blue Z-
 	glVertex3i(0, 0, 0);
 	glVertex3i(0, 0, -4000);
 	glEnd();
+
+	glLoadIdentity();
 }

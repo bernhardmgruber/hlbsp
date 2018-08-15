@@ -1,3 +1,6 @@
+#version 130
+#extension GL_ARB_explicit_attrib_location : require
+
 uniform bool unit1Enabled;
 uniform bool unit2Enabled;
 
@@ -6,9 +9,16 @@ uniform bool nightvision;
 
 uniform mat4 matrix;
 
-varying vec4 diffuse, ambientGlobal, ambient;
-varying vec3 normal, lightDir, halfVector;
-varying float dist;
+out vec4 diffuse, ambientGlobal, ambient;
+out vec3 normal, lightDir, halfVector;
+out float dist;
+out vec2 texCoord;
+out vec2 lightmapCoord;
+
+layout(location = 0) in vec3 inPosition;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inTexCoord;
+layout(location = 3) in vec2 inLightmapCoord;
 
 void main()
 {
@@ -18,11 +28,11 @@ void main()
 		vec3 aux;
 
 		/* first transform the normal into eye space and normalize the result */
-		normal = normalize(gl_NormalMatrix * gl_Normal);
+		normal = normalize(gl_NormalMatrix * inNormal);
 
 		/* now normalize the light's direction. Note that according to the
 		OpenGL specification, the light is stored in eye space.*/
-		ecPos = gl_ModelViewMatrix * gl_Vertex;
+		ecPos = gl_ModelViewMatrix * vec4(inPosition, 1.0);
 		aux = vec3(gl_LightSource[0].position-ecPos);
 		lightDir = normalize(aux);
 
@@ -38,10 +48,10 @@ void main()
 		ambientGlobal = gl_LightModel.ambient * gl_FrontMaterial.ambient;
 	}
 
-	gl_Position = matrix * gl_Vertex;
+	gl_Position = matrix * vec4(inPosition, 1.0);
 
 	if(unit1Enabled)
-		gl_TexCoord[0] = gl_MultiTexCoord0;
+		texCoord = inTexCoord;
 	if(unit2Enabled)
-		gl_TexCoord[1] = gl_MultiTexCoord1;
+		lightmapCoord = inLightmapCoord;
 }

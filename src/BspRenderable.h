@@ -33,7 +33,20 @@ private:
 	void renderBSP(int iNode, int iCurrentLeaf, vec3 vPos); // Recursively walks through the BSP tree and draws it
 	void renderBrushEntity(int iEntity, vec3 vPos);         // Renders a brush entity by rendering each face of the associated model by the given index
 
+	void buildBuffers();
+
 private:
+	struct Vertex {
+		glm::vec3 position;
+		glm::vec3 normal;
+		glm::vec2 texCoord;
+		glm::vec2 lightmapCoord;
+	};
+
+	struct VertexWithLM : Vertex {
+		glm::vec2 lightmapCoord;
+	};
+
 	const Bsp* m_bsp;
 	const Camera* m_camera;
 
@@ -41,4 +54,7 @@ private:
 
 	std::optional<GLuint> m_skyBoxDL;
 	GLuint m_shaderProgram;
+	std::vector<unsigned int> vertexOffsets;
+	GLuint m_vbo;
+	GLuint m_decalVbo;
 };

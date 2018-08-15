@@ -7,6 +7,12 @@ uniform bool nightvision;
 uniform sampler2D tex1;
 uniform sampler2D tex2;
 
+in vec4 diffuse,ambientGlobal, ambient;
+in vec3 normal,lightDir,halfVector;
+in float dist;
+in vec2 texCoord;
+in vec2 lightmapCoord;
+
 void Nightvision();
 void ComplexFlashlight();
 void Flashlight();
@@ -19,9 +25,9 @@ void main()
 	vec4 texel2 = vec4(1.0);
 
 	if(unit1Enabled)
-		texel1 = texture2D(tex1, gl_TexCoord[0].st);
+		texel1 = texture2D(tex1, texCoord);
 	if(unit2Enabled)
-		texel2 = texture2D(tex2, gl_TexCoord[1].st);
+		texel2 = texture2D(tex2, lightmapCoord);
 
 	//gl_FragColor = mix(texel1, texel2, 0.5);
 	gl_FragColor = vec4(texel1.rgb * texel2.rgb, texel1.a);
@@ -35,10 +41,6 @@ void main()
 	// Brightness
 	gl_FragColor = gl_FragColor * 2.0;
 }
-
-varying vec4 diffuse,ambientGlobal, ambient;
-varying vec3 normal,lightDir,halfVector;
-varying float dist;
 
 void Flashlight()
 {
@@ -97,14 +99,14 @@ void ComplexFlashlight()
 void Nightvision()
 {
 	vec4 cColor1 = gl_FragColor / 2.0;
-	cColor1 += texture2D(tex1, gl_TexCoord[0].st + 0.01);
-	cColor1 += texture2D(tex1, gl_TexCoord[0].st + 0.02);
-	cColor1 += texture2D(tex1, gl_TexCoord[0].st + 0.03);
+	cColor1 += texture2D(tex1, texCoord.st + 0.01);
+	cColor1 += texture2D(tex1, texCoord.st + 0.02);
+	cColor1 += texture2D(tex1, texCoord.st + 0.03);
 
 	vec4 cColor2 = gl_FragColor / 2.0;
-	cColor2 += texture2D(tex2, gl_TexCoord[1].st + 0.01);
-	cColor2 += texture2D(tex2, gl_TexCoord[1].st + 0.02);
-	cColor2 += texture2D(tex2, gl_TexCoord[1].st + 0.03);
+	cColor2 += texture2D(tex2, lightmapCoord.st + 0.01);
+	cColor2 += texture2D(tex2, lightmapCoord.st + 0.02);
+	cColor2 += texture2D(tex2, lightmapCoord.st + 0.03);
 
 	vec4 cColor = cColor1 * cColor2;
 

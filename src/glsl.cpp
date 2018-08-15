@@ -11,18 +11,29 @@ void glslShaderSourceFile(GLuint object, const std::experimental::filesystem::pa
 	std::clog << "Read shader from file " << filename << "\n";
 }
 
-void glslPrintProgramInfoLog(GLuint object) {
-	GLint infologLength = 0;
-	glGetProgramiv(object, GL_INFO_LOG_LENGTH, &infologLength);
+namespace {
+	template <typename GetIVFunc, typename GetLogFunc>
+	void glslPrintInfoLog(GLuint object, GetIVFunc getIV, GetLogFunc getLog) {
+		GLint infologLength = 0;
+		getIV(object, GL_INFO_LOG_LENGTH, &infologLength);
 
-	if (infologLength > 0) {
-		std::string infoLog;
-		infoLog.resize(infologLength);
-		GLint charsWritten = 0;
-		glGetProgramInfoLog(object, infologLength, &charsWritten, infoLog.data());
-		if (infoLog[0] != 0 && infoLog != "")
-			std::clog << infoLog << "\n";
-		else
-			std::clog << "(no program info log)\n";
+		if (infologLength > 0) {
+			std::string infoLog;
+			infoLog.resize(infologLength);
+			GLint charsWritten = 0;
+			getLog(object, infologLength, &charsWritten, infoLog.data());
+			if (infoLog[0] != 0 && infoLog != "")
+				std::clog << infoLog << "\n";
+			else
+				std::clog << "(no info log)\n";
+		}
 	}
+}
+
+void glslPrintShaderInfoLog(GLuint object) {
+	glslPrintInfoLog(object, glGetShaderiv, glGetShaderInfoLog);
+}
+
+void glslPrintProgramInfoLog(GLuint object) {
+	glslPrintInfoLog(object, glGetProgramiv, glGetProgramInfoLog);
 }
