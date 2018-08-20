@@ -8,7 +8,6 @@
 
 #include "Bsp.h"
 #include "Camera.h"
-#include "glsl.h"
 
 BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 	: m_bsp(&bsp), m_camera(&camera) {
