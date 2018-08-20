@@ -10,8 +10,8 @@
 #include <X11/Xutil.h>
 #endif
 
-GLuint createFont(const char* name, int height) {
-	GLuint uBase = glGenLists(96); // Storage For 96 Characters
+Font::Font(const std::string& name, int height) {
+	m_id = glGenLists(96); // Storage For 96 Characters
 
 #ifdef __WIN32__
 	HFONT hFont = CreateFont(-height, // Height Of Font
@@ -27,17 +27,15 @@ GLuint createFont(const char* name, int height) {
 		CLIP_DEFAULT_PRECIS,          // Clipping Precision
 		ANTIALIASED_QUALITY,          // Output Quality
 		FF_DONTCARE | DEFAULT_PITCH,  // Family And Pitch
-		name);                        // Font Name
+		name.c_str());                // Font Name
 
-	if (hFont == nullptr) {
-		printf("Could not load font %s\n", name);
-		return uBase;
-	}
+	if (hFont == nullptr)
+		throw std::runtime_error("Could not load font " + name);
 
 	HDC hDC = GetDC(nullptr);
 
 	HFONT hOldFont = (HFONT)SelectObject(hDC, hFont); // Selects The Font We Want
-	wglUseFontBitmaps(hDC, 32, 96, uBase);            // Builds 96 Characters Starting At Character 32
+	wglUseFontBitmaps(hDC, 32, 96, m_id);            // Builds 96 Characters Starting At Character 32
 
 	SelectObject(hDC, hOldFont); // restore font
 	DeleteObject(hFont);         // Delete The Font
@@ -49,28 +47,39 @@ GLuint createFont(const char* name, int height) {
 
 	XFontStruct* fontInfo = XLoadQueryFont(pDpl, szFont);
 
-	if (fontInfo == nullptr) {
-		printf("Could not load font %s\n", name);
-		return uBase;
-	}
+	if (fontInfo == nullptr)
+		throw std::runtime_error("Could not load font " + name);
 
-	glXUseXFont(fontInfo->fid, 32, 96, uBase);
+	glXUseXFont(fontInfo->fid, 32, 96, m_id);
 
 	XFreeFont(pDpl, fontInfo);
 #endif
-
-	return uBase;
 }
 
-void deleteFont(GLuint font) {
-	glDeleteLists(font, 96); // Delete All 96 Characters
+Font::Font(Font&& other) {
+	swap(other);
 }
 
-void glPuts(int x, int y, GLuint font, const std::string& text) {
+Font& Font::operator=(Font&& other) {
+	swap(other);
+	return *this;
+}
+
+Font::~Font() {
+	if (m_id != 0)
+		glDeleteLists(m_id, 96);
+}
+
+void glPuts(int x, int y, const Font& font, const std::string& text) {
 	glRasterPos2i(x, y);
 
 	glPushAttrib(GL_LIST_BIT);
-	glListBase(font - 32);
+	glListBase(font.m_id - 32);
 	glCallLists(text.size(), GL_UNSIGNED_BYTE, text.data());
 	glPopAttrib();
+}
+
+void Font::swap(Font& other) {
+	using std::swap;
+	swap(m_id, other.m_id);
 }

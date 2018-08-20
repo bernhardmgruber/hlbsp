@@ -5,7 +5,20 @@
 
 #include <string>
 
-GLuint createFont(const char* name, int height);
-void deleteFont(GLuint font);
+class Font {
+public:
+	Font() = default;
+	Font(const std::string& name, int height);
+	Font(const Font&) = delete;
+	Font& operator=(const Font&) = delete;
+	Font(Font&& other);
+	Font& operator=(Font&& other);
+	~Font();
 
-void glPuts(int nX, int nY, GLuint font, const std::string& text);
+	friend void glPuts(int nX, int nY, const Font& font, const std::string& text);
+
+private:
+	void swap(Font& other);
+
+	GLuint m_id = 0;
+};

@@ -7,7 +7,6 @@
 #include "Hud.h"
 #include "IO.h"
 #include "IPSS.h"
-#include "font.h"
 #include "mathlib.h"
 
 namespace {
@@ -123,9 +122,9 @@ GLRenderer::GLRenderer() {
 	// Load fonts
 	std::clog << "Creating font ...\n";
 #ifdef _WIN32
-	m_font = createFont("System", FONT_HUD_HEIGHT);
+	m_font = Font("System", FONT_HUD_HEIGHT);
 #else
-	m_font = createFont("helvetica", FONT_HUD_HEIGHT);
+	m_font = Font("helvetica", FONT_HUD_HEIGHT);
 #endif
 
 	// shader
