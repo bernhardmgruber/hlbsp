@@ -2,9 +2,11 @@
 
 #include <GL/glew.h>
 #include <GL/gl.h>
+#include <boost/dynamic_bitset.hpp>
 
 #include <experimental/filesystem>
 #include <string_view>
+#include <optional>
 
 #include "bspdef.h"
 #include "entity.h"
@@ -59,7 +61,7 @@ private:
 	std::vector<Wad> wadFiles;
 	std::vector<Wad> decalWads;
 	std::vector<Decal> decals;
-	std::vector<std::vector<bool>> visLists; // Stores the vis lists for all faces
+	std::vector<boost::dynamic_bitset<std::uint8_t>> visLists; // Stores the vis lists for all faces
 
 	std::vector<GLuint> lightmapTexIds;   // Stores a lookup table where faces use their index to find the index of their lightmap texture
 	std::vector<GLuint> textureIds;       // Stores a lookup table where faces use their index to find the index of their texture
@@ -78,9 +80,9 @@ private:
 	void ParseEntities(const std::string& entitiesString); // Parses the entity lump of the bsp file into single entity classes
 
 	void CountVisLeafs(int iNode, int& count);                                                           // Counts the number of visLeaves recursively
-	auto uncompressPVS(int iLeaf, const std::vector<std::uint8_t>& pVisList) const -> std::vector<bool>; // Get the PVS for a given leaf and return it in the form of a pointer to a bool array
+	auto decompressVIS(int leaf, const std::vector<std::uint8_t>& compressedVis) const -> boost::dynamic_bitset<std::uint8_t>; // Get the PVS for a given leaf and return it in the form of a pointer to a bool array
 
-	int findLeaf(vec3 pos, int node = 0) const; // Recursivly walks through the BSP tree to find the leaf where the camera is in
+	auto findLeaf(vec3 pos, int node = 0) const -> std::optional<int>; // Recursivly walks through the BSP tree to find the leaf where the camera is in
 
 	friend class BspRenderable;
 };

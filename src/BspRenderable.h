@@ -4,6 +4,7 @@
 #include <GL/GL.h>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
+#include <boost/dynamic_bitset.hpp>
 
 #include <optional>
 
@@ -13,6 +14,7 @@
 
 class Bsp;
 class Camera;
+class Entity;
 
 class BspRenderable : public IRenderable {
 public:
@@ -25,15 +27,16 @@ private:
 	void loadSkyTextures();
 
 	void renderSkybox();
-	void renderStaticGeometry(vec3 vPos);
-	void renderBrushEntities(vec3 vPos);
+	void renderStaticGeometry(vec3 pos);
+	void renderBrushEntities(vec3 pos);
 	void renderDecals();
 	void renderLeafOutlines();
 	void renderLeafOutlines(const bsp30::Leaf& leaf);
 	void renderFace(int iFace);                             // Renders a face (polygon) by the given index
 	void renderLeaf(int iLeaf);                             // Renders a leaf of the BSP tree by rendering each face of the leaf by the given index
-	void renderBSP(int iNode, int iCurrentLeaf, vec3 vPos); // Recursively walks through the BSP tree and draws it
-	void renderBrushEntity(int iEntity, vec3 vPos);         // Renders a brush entity by rendering each face of the associated model by the given index
+	void renderBSP(int node, vec3 pos);
+	void renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, vec3 pos); // Recursively walks through the BSP tree and draws it
+	void renderBrushEntity(const Entity& ent, vec3 pos);   // Renders a brush entity by rendering each face of the associated model by the given index
 
 	void buildBuffers();
 

@@ -194,22 +194,18 @@ void Bsp::LoadDecals() {
 			int x, y, z;
 			sscanf(pszOrigin->c_str(), "%d %d %d", &x, &y, &z);
 
-			vec3 vOrigin;
-			vOrigin.x = x;
-			vOrigin.y = y;
-			vOrigin.z = z;
+			const vec3 origin{ x, y, z };
 
-			// Find leaf
-			const int iLeaf = findLeaf(vOrigin);
-			if (iLeaf == -1) {
+			const auto leaf = findLeaf(origin);
+			if (!leaf) {
 				std::clog << "ERROR finding decal leaf\n";
 				continue;
 			}
 
 			// Loop through each face in this leaf
-			for (int j = 0; j < leaves[iLeaf].markSurfaceCount; j++) {
+			for (int j = 0; j < leaves[*leaf].markSurfaceCount; j++) {
 				// Find face
-				int iFace = markSurfaces[leaves[iLeaf].firstMarkSurface + j];
+				int iFace = markSurfaces[leaves[*leaf].firstMarkSurface + j];
 
 				// Find normal
 				vec3 normal = planes[faces[iFace].planeIndex].normal;
@@ -223,7 +219,7 @@ void Bsp::LoadDecals() {
 					vertex = vertices[edges[-iEdge].vertexIndex[1]];
 
 				// Check if decal origin is in this face
-				if (PointInPlane(vOrigin, normal, glm::dot(normal, vertex))) {
+				if (PointInPlane(origin, normal, glm::dot(normal, vertex))) {
 					// TEXTURE
 					GLuint texID = 0;
 					int width = 0;
@@ -287,10 +283,10 @@ void Bsp::LoadDecals() {
 					decals[i].normal = normal;
 					decals[i].nTex = texID;
 
-					decals[i].vec[0] = vOrigin - t * h2 - s * w2;
-					decals[i].vec[1] = vOrigin - t * h2 + s * w2;
-					decals[i].vec[2] = vOrigin + t * h2 + s * w2;
-					decals[i].vec[3] = vOrigin + t * h2 - s * w2;
+					decals[i].vec[0] = origin - t * h2 - s * w2;
+					decals[i].vec[1] = origin - t * h2 + s * w2;
+					decals[i].vec[2] = origin + t * h2 + s * w2;
+					decals[i].vec[3] = origin + t * h2 - s * w2;
 
 					break;
 				}
@@ -458,8 +454,7 @@ void Bsp::ParseEntities(const std::string& entitiesString) {
 
 void Bsp::CountVisLeafs(int iNode, int& count) {
 	if (iNode < 0) {
-		// decision node
-		if (iNode == -1)
+		if (iNode == -1) // leaf 0
 			return;
 
 		if (leaves[~iNode].content == bsp30::CONTENTS_SOLID)
@@ -473,33 +468,39 @@ void Bsp::CountVisLeafs(int iNode, int& count) {
 	CountVisLeafs(nodes[iNode].childIndex[1], count);
 }
 
-auto Bsp::uncompressPVS(int iLeaf, const std::vector<std::uint8_t>& pVisList) const -> std::vector<bool> {
-	std::vector<bool> pbPVS(leaves.size() - 1, false);
+auto Bsp::decompressVIS(int leaf, const std::vector<std::uint8_t>& compressedVis) const -> boost::dynamic_bitset<std::uint8_t> {
+	boost::dynamic_bitset<std::uint8_t> pvs;
+	pvs.reserve(leaves.size() - 1);
 
-	const auto* pCurVisList = &pVisList[leaves[iLeaf].visOffset]; // Pointer to the begin of the current vis list
+	const auto* read = &compressedVis[leaves[leaf].visOffset];
+	const auto* end = compressedVis.data() + (leaves[leaf + 1].visOffset == -1 ? header.lump[bsp30::LUMP_VISIBILITY].length : leaves[leaf + 1].visOffset);
 
-	std::size_t writePos = 0; // Pointer that moves through the destination bool array (pbPVS)
-
-	for (unsigned int iCurByte = 0; writePos < visLists.size(); iCurByte++) {
-		// Check for a run of 0s
-		if (pCurVisList[iCurByte] == 0) {
-			// Advance past this run of 0s
-			iCurByte++;
-			// Move the write pointer the number of compressed 0s
-			writePos += 8 * pCurVisList[iCurByte];
-		} else {
-			// Iterate through this byte with bit shifting till the one of the bit has moved beyond the 8th digit (bit == 0)
-			for (unsigned char bit = 1; bit != 0; writePos++, bit <<= 1)
-				// Test a bit of the compressed PVS with the bit mask
-				if (((pCurVisList[iCurByte] & bit) != 0) && writePos < leaves.size())
-					pbPVS[writePos] = true;
+	const auto row = (visLists.size() + 7) / 8;
+	while (pvs.size() / 8 < row) {
+		if (*read)
+			pvs.append(*read);
+		else {
+			// run of 0s, number of 0s is stored in next byte
+			read++;
+			for (auto i = 0; i < *read; i++) {
+				pvs.append(0x00);
+				if (pvs.size() / 8 >= row)
+					break;
+			}
 		}
+
+		read++;
 	}
 
-	return pbPVS;
+	std::clog << "PVS for leaf " << leaf << "\n";
+	std::clog << "read: " << (void*)read << "\n";
+	std::clog << "end:  " << (void*)end << "\n";
+	std::clog << "diff: " << (end - read) << "\n";
+
+	return pvs;
 }
 
-int Bsp::findLeaf(vec3 pos, int node) const {
+auto Bsp::findLeaf(vec3 pos, int node) const -> std::optional<int> {
 	// Run once for each child
 	for (const auto& childIndex : nodes[node].childIndex) {
 		// If the index is positive  it is an index into the nodes array
@@ -515,7 +516,7 @@ int Bsp::findLeaf(vec3 pos, int node) const {
 		}
 	}
 
-	return -1;
+	return {};
 }
 
 Bsp::Bsp(const fs::path& filename, bool& g_bTextures, bool& g_bLightmaps)
@@ -644,10 +645,10 @@ Bsp::Bsp(const fs::path& filename, bool& g_bTextures, bool& g_bLightmaps)
 
 	if (header.lump[bsp30::LumpType::LUMP_VISIBILITY].length > 0) {
 		// Allocate memory for the compressed vis lists
-		std::vector<std::uint8_t> pVisList(header.lump[bsp30::LumpType::LUMP_VISIBILITY].length);
+		std::vector<std::uint8_t> compressedVis(header.lump[bsp30::LumpType::LUMP_VISIBILITY].length);
 
 		file.seekg(header.lump[bsp30::LumpType::LUMP_VISIBILITY].offset);
-		readVector(file, pVisList);
+		readVector(file, compressedVis);
 
 		std::clog << "Decompressing VIS ...\n";
 
@@ -658,7 +659,7 @@ Bsp::Bsp(const fs::path& filename, bool& g_bTextures, bool& g_bLightmaps)
 
 		for (int i = 0; i < count; i++) {
 			if (leaves[i + 1].visOffset >= 0)
-				visLists[i] = uncompressPVS(i + 1, pVisList);
+				visLists[i] = decompressVIS(i + 1, compressedVis);
 		}
 	} else
 		std::clog << "No VIS found\n";

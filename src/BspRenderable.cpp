@@ -137,17 +137,16 @@ void BspRenderable::renderSkybox() {
 	glDepthMask(GL_TRUE);
 }
 
-void BspRenderable::renderStaticGeometry(vec3 vPos) {
+void BspRenderable::renderStaticGeometry(vec3 pos) {
 	for (auto&& b : facesDrawn)
 		b = false;
 
-	const int iLeaf = m_bsp->findLeaf(vPos); //Get the leaf where the camera is in
-	renderBSP(0, iLeaf, vPos);
+	renderBSP(0, pos);
 }
 
-void BspRenderable::renderBrushEntities(vec3 vPos) {
-	for (int i = 0; i < m_bsp->brushEntities.size(); i++) // TODO(bernh): implement PVS for pEntities
-		renderBrushEntity(i, vPos);
+void BspRenderable::renderBrushEntities(vec3 pos) {
+	for (const auto i : m_bsp->brushEntities)
+		renderBrushEntity(m_bsp->entities[i], pos);
 }
 
 void BspRenderable::renderDecals() {
@@ -245,38 +244,41 @@ void BspRenderable::renderLeaf(int leaf) {
 		renderFace(m_bsp->markSurfaces[m_bsp->leaves[leaf].firstMarkSurface + i]);
 }
 
-void BspRenderable::renderBSP(int iNode, int iCurrentLeaf, vec3 vPos) {
-	if (iNode < 0) {
-		if (iNode == -1)
+void BspRenderable::renderBSP(int node, vec3 pos) {
+	const auto leaf = m_bsp->findLeaf(pos);
+	renderBSP(node, !leaf || m_bsp->visLists.empty() ? boost::dynamic_bitset<std::uint8_t>{} : m_bsp->visLists[*leaf - 1], pos);
+}
+
+void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, vec3 pos) {
+	if (node < 0) {
+		if (node == -1)
 			return;
 
-		if (iCurrentLeaf > 0)
-			if (!m_bsp->visLists.empty() && !m_bsp->visLists[iCurrentLeaf - 1].empty() && !m_bsp->visLists[iCurrentLeaf - 1][~iNode - 1])
-				return;
+		const int leaf = ~node;
+		if (!visList.empty() && !visList[leaf - 1])
+			return;
 
-		renderLeaf(~iNode);
+		renderLeaf(leaf);
 
 		return;
 	}
 
 	const auto dist = [&] {
-		switch (m_bsp->planes[m_bsp->nodes[iNode].planeIndex].type) {
-			case bsp30::PLANE_X: return vPos.x - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
-			case bsp30::PLANE_Y: return vPos.y - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
-			case bsp30::PLANE_Z: return vPos.z - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
-			default: return glm::dot(m_bsp->planes[m_bsp->nodes[iNode].planeIndex].normal, vPos) - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
+		switch (m_bsp->planes[m_bsp->nodes[node].planeIndex].type) {
+			case bsp30::PLANE_X: return pos.x - m_bsp->planes[m_bsp->nodes[node].planeIndex].dist;
+			case bsp30::PLANE_Y: return pos.y - m_bsp->planes[m_bsp->nodes[node].planeIndex].dist;
+			case bsp30::PLANE_Z: return pos.z - m_bsp->planes[m_bsp->nodes[node].planeIndex].dist;
+			default: return glm::dot(m_bsp->planes[m_bsp->nodes[node].planeIndex].normal, pos) - m_bsp->planes[m_bsp->nodes[node].planeIndex].dist;
 		}
 	}();
 
 	const auto child1 = dist > 0 ? 1 : 0;
 	const auto child2 = dist > 0 ? 0 : 1;
-	renderBSP(m_bsp->nodes[iNode].childIndex[child1], iCurrentLeaf, vPos);
-	renderBSP(m_bsp->nodes[iNode].childIndex[child2], iCurrentLeaf, vPos);
+	renderBSP(m_bsp->nodes[node].childIndex[child1], visList, pos);
+	renderBSP(m_bsp->nodes[node].childIndex[child2], visList, pos);
 }
 
-void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
-	const auto& ent = m_bsp->entities[m_bsp->brushEntities[iEntity]];
-
+void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
 	// Model
 	int iModel = std::stoi(ent.findProperty("model")->substr(1));
 
@@ -318,7 +320,7 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 			break;
 	}
 
-	renderBSP(m_bsp->models[iModel].headNodesIndex[0], -1, vPos);
+	renderBSP(m_bsp->models[iModel].headNodesIndex[0], boost::dynamic_bitset<uint8_t>{}, pos); // for some odd reason, VIS does not work for entities ...
 
 	switch (nRenderMode) {
 		case bsp30::RENDER_MODE_NORMAL:
