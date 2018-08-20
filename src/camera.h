@@ -21,10 +21,12 @@ public:
 	auto position() const -> vec3;
 	void setPosition(vec3 v);
 
-	auto viewAngles() const -> vec2;
+	auto pitch() const -> float;
+	auto yaw() const -> float;
 	auto viewVector() const -> vec3;
 
-	void setViewAngles(vec2 v);
+	void setPitch(float pitch);
+	void setYaw(float pitch);
 
 	auto moveSensitivity() const -> float;
 	void setMoveSens(float newMoveSens);

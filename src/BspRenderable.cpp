@@ -124,11 +124,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 }
 
 void BspRenderable::renderSkybox() {
-	auto matrix = m_settings->projection
-		* glm::eulerAngleX(degToRad(-m_settings->pitch - 90.0f))
-		* glm::eulerAngleZ(degToRad(-m_settings->yaw + 90.0f))
-		* glm::eulerAngleZ(degToRad(-90.0f))
-		* glm::eulerAngleX(degToRad(+90.0f));
+	auto matrix = m_settings->projection * glm::eulerAngleXZX(degToRad(-m_settings->pitch - 90.0f), degToRad(-m_settings->yaw), degToRad(+90.0f));
 
 	m_skyboxProgram.use();
 	glUniform1i(m_skyboxProgram.uniformLocation("cubeSampler"), 0);
@@ -137,11 +133,9 @@ void BspRenderable::renderSkybox() {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, *m_skyboxTex);
 
-	//glDepthMask(GL_FALSE);
+	glDepthMask(GL_FALSE);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
-	//glDepthMask(GL_TRUE);
-
-	glUseProgram(0);
+	glDepthMask(GL_TRUE);
 }
 
 void BspRenderable::renderStaticGeometry(vec3 vPos) {

@@ -154,7 +154,7 @@ void GLRenderer::render() {
 		renderable->render(m_settings);
 }
 
-void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int height, glm::vec3 cameraPos, glm::vec2 cameraAngles, glm::vec3 cameraView, double fps) {
+void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int height, glm::vec3 cameraPos, float pitch, float yaw, glm::vec3 cameraView, double fps) {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
@@ -172,7 +172,7 @@ void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int heig
 	glPuts(FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT), m_font,
 		IPSS() << std::fixed << std::setprecision(1) << "Cam pos: " << cameraPos.x << "x " << cameraPos.y << "y " << cameraPos.z << "z");
 	glPuts(FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT), m_font,
-		IPSS() << std::fixed << std::setprecision(1) << "Cam view: " << cameraAngles.x << "°pitch " << cameraAngles.y << "°yaw (vec: " << cameraView.x << "x " << cameraView.y << "y " << cameraView.z << "z)");
+		IPSS() << std::fixed << std::setprecision(1) << "Cam view: " << pitch << "°pitch " << yaw << "°yaw (vec: " << cameraView.x << "x " << cameraView.y << "y " << cameraView.z << "z)");
 
 	// console
 	nCurrentY = FONT_HUD_SPACE;

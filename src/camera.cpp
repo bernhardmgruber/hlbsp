@@ -11,11 +11,12 @@ void Camera::setPosition(vec3 v) {
 	m_position = v;
 }
 
-auto Camera::viewAngles() const -> vec2 {
-	vec2 vec;
-	vec.x = m_pitch;
-	vec.y = m_yaw;
-	return vec;
+auto Camera::pitch() const -> float {
+	return m_pitch;
+}
+
+auto Camera::yaw() const -> float {
+	return m_yaw;
 }
 
 auto Camera::viewVector() const -> vec3 {
@@ -33,9 +34,12 @@ auto Camera::viewVector() const -> vec3 {
 	return v;
 }
 
-void Camera::setViewAngles(vec2 v) {
-	m_pitch = v.x;
-	m_yaw   = v.y;
+void Camera::setPitch(float pitch) {
+	m_pitch = pitch;
+}
+
+void Camera::setYaw(float yaw) {
+	m_yaw = yaw;
 }
 
 auto Camera::moveSensitivity() const -> float {
@@ -85,9 +89,7 @@ void Camera::update(double t, float xDelta, float yDelta, uint8_t directions) {
 
 auto Camera::viewMatrix() const -> glm::mat4 {
 	// in BSP v30 the z axis points up and we start looking parallel to x axis
-	glm::mat4 mat{ 1 };
-
-	mat = glm::eulerAngleXZ(degToRad(-m_pitch - 90.0f), degToRad(-m_yaw + 90.0f));
+	glm::mat4 mat = glm::eulerAngleXZ(degToRad(-m_pitch - 90.0f), degToRad(-m_yaw + 90.0f));
 	mat = glm::translate(mat, -m_position); // move
 	return mat;
 }

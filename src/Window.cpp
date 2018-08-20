@@ -30,10 +30,8 @@ Window::Window()
 		}
 
 		if (auto angle = info_player_start->findProperty("angle")) {
-			std::istringstream iss(*angle);
-			float              yaw;
-			iss >> yaw;
-			camera.setViewAngles({0.0f, yaw});
+			camera.setPitch(0);
+			camera.setYaw(std::stof(*angle));
 		}
 	}
 }
@@ -68,8 +66,8 @@ void Window::update() {
 }
 
 void Window::draw() {
-	m_settings.pitch = camera.viewAngles()[0];
-	m_settings.yaw = camera.viewAngles()[1];
+	m_settings.pitch = camera.pitch();
+	m_settings.yaw = camera.yaw();
 	m_renderer.beginFrame(m_settings, camera.viewMatrix());
 	m_renderer.render();
 
@@ -77,7 +75,7 @@ void Window::draw() {
 		m_renderer.renderCoords();
 
 	if (m_settings.renderHUD)
-		m_renderer.renderHud(hud, m_width, m_height, camera.position(), camera.viewAngles(), camera.viewVector(), timer.TPS);
+		m_renderer.renderHud(hud, m_width, m_height, camera.position(), camera.pitch(), camera.yaw(), camera.viewVector(), timer.TPS);
 }
 
 void Window::onResize(int width, int height) {

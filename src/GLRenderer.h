@@ -23,7 +23,7 @@ public:
 	void beginFrame(RenderSettings settings, glm::mat4 viewMatrix);
 
 	void render();
-	void renderHud(const Hud& hud, unsigned int width, unsigned int height, glm::vec3 cameraPos, glm::vec2 cameraAngles, glm::vec3 cameraView, double fps);
+	void renderHud(const Hud& hud, unsigned int width, unsigned int height, glm::vec3 cameraPos, float pitch, float yaw, glm::vec3 cameraView, double fps);
 	void renderCoords();
 
 private:
