@@ -15,19 +15,19 @@ GLuint createFont(const char* name, int height) {
 
 #ifdef __WIN32__
 	HFONT hFont = CreateFont(-height, // Height Of Font
-		0,                                 // Width Of Font
-		0,                                 // Angle Of Escapement
-		0,                                 // Orientation Angle
-		FW_MEDIUM,                         // Font Weight
-		FALSE,                             // Italic
-		FALSE,                             // Underline
-		FALSE,                             // Strikeout
-		ANSI_CHARSET,                      // Character Set Identifier
-		OUT_TT_PRECIS,                     // Output Precision
-		CLIP_DEFAULT_PRECIS,               // Clipping Precision
-		ANTIALIASED_QUALITY,               // Output Quality
-		FF_DONTCARE | DEFAULT_PITCH,       // Family And Pitch
-		name);                      // Font Name
+		0,                            // Width Of Font
+		0,                            // Angle Of Escapement
+		0,                            // Orientation Angle
+		FW_MEDIUM,                    // Font Weight
+		FALSE,                        // Italic
+		FALSE,                        // Underline
+		FALSE,                        // Strikeout
+		ANSI_CHARSET,                 // Character Set Identifier
+		OUT_TT_PRECIS,                // Output Precision
+		CLIP_DEFAULT_PRECIS,          // Clipping Precision
+		ANTIALIASED_QUALITY,          // Output Quality
+		FF_DONTCARE | DEFAULT_PITCH,  // Family And Pitch
+		name);                        // Font Name
 
 	if (hFont == nullptr) {
 		printf("Could not load font %s\n", name);

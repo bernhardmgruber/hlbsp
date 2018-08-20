@@ -103,25 +103,25 @@ namespace bsp30 {
 	/// The file header begins with an 32bit integer containing the file version of the BSP file (the magic number). This should be 30 for a valid BSP file used by the Half-Life Engine.
 	/// Subseqently, there is an array of entries for the so-called lumps. A lump is more or less a section of the file containing a specific type of data. The lump entries in the file header address these lumps, accessed by the 15 predefined indexes.
 	struct Header {
-		int32_t version;           ///< Version number, must be 30 for a valid HL BSP file
+		int32_t version;         ///< Version number, must be 30 for a valid HL BSP file
 		Lump lump[HEADER_LUMPS]; ///< Stores the directory of lumps.
 	};
 
 	///  @brief Describes a node of the BSP Tree
 	struct Node {
-		uint32_t planeIndex;             // Index into planes lump
-		int16_t  childIndex[2];       // If > 0, then indices into Nodes otherwise bitwise inverse indices into Leafs
-		int16_t  lower[3], upper[3]; // Defines bounding box
+		uint32_t planeIndex;           // Index into planes lump
+		int16_t childIndex[2];         // If > 0, then indices into Nodes otherwise bitwise inverse indices into Leafs
+		int16_t lower[3], upper[3];    // Defines bounding box
 		uint16_t firstFace, faceCount; // Index and count into BSPFACES array
 	};
 
 	// Leafs lump contains leaf structures
 	struct Leaf {
-		int32_t  content;                        // Contents enumeration, see #defines
-		int32_t  visOffset;                       // Offset into the compressed visibility lump
-		int16_t  lower[3], upper[3];               // Defines bounding box
+		int32_t content;                             // Contents enumeration, see #defines
+		int32_t visOffset;                           // Offset into the compressed visibility lump
+		int16_t lower[3], upper[3];                  // Defines bounding box
 		uint16_t firstMarkSurface, markSurfaceCount; // Index and count into MarkSurface array
-		uint8_t  ambientLevels[4];                // Ambient sound levels
+		uint8_t ambientLevels[4];                    // Ambient sound levels
 	};
 
 	// Leaves index into marksurfaces, which index into faces
@@ -129,8 +129,8 @@ namespace bsp30 {
 
 	// Planes lump contains plane structures
 	struct Plane {
-		vec3    normal; // The planes normal vector
-		float   dist{}; // Plane equation is: normal * X = dist
+		vec3 normal;    // The planes normal vector
+		float dist{};   // Plane equation is: normal * X = dist
 		int32_t type{}; // Plane type, see #defines
 	};
 
@@ -144,12 +144,12 @@ namespace bsp30 {
 
 	// Faces are equal to the polygons that make up the world
 	struct Face {
-		uint16_t planeIndex;       // Index of the plane the face is parallel to
-		uint16_t planeSide;   // Set if different normals orientation
-		uint32_t firstEdgeIndex;   // Index of the first edge (in the surfedge array)
-		uint16_t edgeCount;       // Number of consecutive surfedges
-		uint16_t textureInfo; // Index of the texture info structure
-		uint8_t  styles[4];   // Specify lighting styles
+		uint16_t planeIndex;     // Index of the plane the face is parallel to
+		uint16_t planeSide;      // Set if different normals orientation
+		uint32_t firstEdgeIndex; // Index of the first edge (in the surfedge array)
+		uint16_t edgeCount;      // Number of consecutive surfedges
+		uint16_t textureInfo;    // Index of the texture info structure
+		uint8_t styles[4];       // Specify lighting styles
 		//       styles[0]             // type of lighting, for the face
 		//       styles[1]             // from 0xFF (dark) to 0 (bright)
 		//       styles[2], styles[3] // two additional light models
@@ -173,31 +173,31 @@ namespace bsp30 {
 	constexpr auto MAXTEXTURENAME = 16;
 	constexpr auto MIPLEVELS = 4;
 	struct MipTex {
-		char     name[MAXTEXTURENAME]; // Name of texture, for reference from external WAD file
-		uint32_t width, height;        // Extends of the texture
-		uint32_t offsets[MIPLEVELS];   // Offsets to MIPLEVELS texture mipmaps, if 0 texture data is stored in an external WAD file
+		char name[MAXTEXTURENAME];   // Name of texture, for reference from external WAD file
+		uint32_t width, height;      // Extends of the texture
+		uint32_t offsets[MIPLEVELS]; // Offsets to MIPLEVELS texture mipmaps, if 0 texture data is stored in an external WAD file
 	};
 
 	// Texinfo lump contains texinfo structures
 	struct TextureInfo {
-		vec3     s;         // 1st row of texture matrix
-		float    sShift{};  // Texture shift in s direction
-		vec3     t;         // 2nd row of texture matrix - multiply 1st and 2nd by vertex to get texture coordinates
-		float    tShift{};  // Texture shift in t direction
+		vec3 s;                 // 1st row of texture matrix
+		float sShift{};         // Texture shift in s direction
+		vec3 t;                 // 2nd row of texture matrix - multiply 1st and 2nd by vertex to get texture coordinates
+		float tShift{};         // Texture shift in t direction
 		uint32_t miptexIndex{}; // Index into textures array
-		uint32_t flags{};  // Texture flags, seems to always be 0
+		uint32_t flags{};       // Texture flags, seems to always be 0
 	};
 
 	struct Model {
-		vec3    lower, upper;      // Defines bounding box
-		vec3    vOrigin;                     // Coordinates to move the coordinate system before drawing the model
+		vec3 lower, upper;                       // Defines bounding box
+		vec3 vOrigin;                            // Coordinates to move the coordinate system before drawing the model
 		int32_t headNodesIndex[MAX_MAP_HULLS]{}; // Index into nodes array
-		int32_t visLeaves{};                 // No idea
-		int32_t firstFace{}, faceCount{};      // Index and count into face array
+		int32_t visLeaves{};                     // No idea
+		int32_t firstFace{}, faceCount{};        // Index and count into face array
 	};
 
 	struct ClipNode {
-		int32_t planeIndex;       // Index into planes
+		int32_t planeIndex;    // Index into planes
 		int16_t childIndex[2]; // negative numbers are contents behind and in front of the plane
 	};
 }

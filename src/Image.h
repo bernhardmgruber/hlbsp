@@ -15,7 +15,7 @@ public:
 	void Save(const fs::path& path);
 
 	std::vector<std::uint8_t> data;
-	unsigned int              channels = 0;
-	unsigned int              width    = 0;
-	unsigned int              height   = 0;
+	unsigned int channels = 0;
+	unsigned int width = 0;
+	unsigned int height = 0;
 };

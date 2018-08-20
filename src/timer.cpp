@@ -19,15 +19,15 @@ void Timer::Tick() {
 
 	lastTime = now;
 
-	static std::size_t nFrameCounter      = 0;
-	static time_point  dLastTimeFPSUpdate = {};
+	static std::size_t nFrameCounter = 0;
+	static time_point dLastTimeFPSUpdate = {};
 
 	nFrameCounter++;
 
 	const auto timeSinceLastFPSUpdate = std::chrono::duration<double>(now - dLastTimeFPSUpdate).count();
 	if (timeSinceLastFPSUpdate > TPS_UPDATE_INTERVAL) {
-		TPS                = nFrameCounter / timeSinceLastFPSUpdate;
+		TPS = nFrameCounter / timeSinceLastFPSUpdate;
 		dLastTimeFPSUpdate = now;
-		nFrameCounter      = 0;
+		nFrameCounter = 0;
 	}
 }

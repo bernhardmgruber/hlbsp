@@ -1,9 +1,9 @@
 #pragma once
 
+#include "Bsp.h"
 #include "GLRenderer.h"
 #include "GlfwWindow.h"
 #include "camera.h"
-#include "Bsp.h"
 #include "hud.h"
 #include "timer.h"
 
@@ -23,14 +23,14 @@ private:
 	virtual void onKey(int key, int scancode, int action, int mods) override;
 	virtual void onChar(unsigned int codepoint) override;
 
-	Bsp    bsp;
-	Hud    hud;
-	Timer  timer;
+	Bsp bsp;
+	Hud hud;
+	Timer timer;
 	Camera camera;
 
 	RenderSettings m_settings;
 	GLRenderer m_renderer;
 
-	bool       m_captureMouse = false;
+	bool m_captureMouse = false;
 	glm::dvec2 m_mouseDownPos;
 };

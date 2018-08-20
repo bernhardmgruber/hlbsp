@@ -33,9 +33,9 @@ namespace {
 		std::vector<uint8_t> newData(nPOT * nPOT * pImg->channels);
 		gluScaleImage(pImg->channels == 4 ? GL_RGBA : GL_RGB, pImg->width, pImg->height, GL_UNSIGNED_BYTE, pImg->data.data(), nPOT, nPOT, GL_UNSIGNED_BYTE, newData.data());
 
-		pImg->width  = nPOT;
+		pImg->width = nPOT;
 		pImg->height = nPOT;
-		pImg->data   = std::move(newData);
+		pImg->data = std::move(newData);
 	}
 }
 
@@ -44,8 +44,8 @@ void Bsp::LoadWadFiles(std::string wadStr) {
 		if (c == '\\')
 			c = '/';
 
-	int         nWadCount = 0;
-	std::size_t pos       = 0;
+	int nWadCount = 0;
+	std::size_t pos = 0;
 	while (true) {
 		pos++;
 		const auto next = wadStr.find(';', pos);
@@ -100,7 +100,7 @@ void Bsp::LoadTextures(std::ifstream& file) {
 			}
 		} else {
 			// internal texture
-			const auto           dataSize = sizeof(uint8_t) * (mipTextures[i].offsets[3] + (mipTextures[i].height / 8) * (mipTextures[i].width / 8) + 2 + 768);
+			const auto dataSize = sizeof(uint8_t) * (mipTextures[i].offsets[3] + (mipTextures[i].height / 8) * (mipTextures[i].width / 8) + 2 + 768);
 			std::vector<uint8_t> imgData(dataSize);
 
 			file.seekg(header.lump[bsp30::LumpType::LUMP_TEXTURES].offset + mipTextureOffsets[i]);
@@ -179,9 +179,9 @@ void Bsp::LoadDecals() {
 	int nLoadedTex = 0;
 	struct LoadedTex {
 		std::string name;
-		GLuint      texID{};
-		int         width{};
-		int         height{};
+		GLuint texID{};
+		int width{};
+		int height{};
 	};
 	std::vector<LoadedTex> aLoadedTex(infodecals.size());
 
@@ -215,7 +215,7 @@ void Bsp::LoadDecals() {
 				vec3 normal = planes[faces[iFace].planeIndex].normal;
 
 				// Find a vertex on the face
-				vec3      vertex;
+				vec3 vertex;
 				const int iEdge = surfEdges[faces[iFace].firstEdgeIndex]; // This gives the index into the edge lump
 				if (iEdge > 0)
 					vertex = vertices[edges[iEdge].vertexIndex[0]];
@@ -225,9 +225,9 @@ void Bsp::LoadDecals() {
 				// Check if decal origin is in this face
 				if (PointInPlane(vOrigin, normal, glm::dot(normal, vertex))) {
 					// TEXTURE
-					GLuint texID  = 0;
-					int    width  = 0;
-					int    height = 0;
+					GLuint texID = 0;
+					int width = 0;
+					int height = 0;
 
 					auto texName = infodecals[i]->findProperty("texture");
 					if (texName == nullptr) {
@@ -239,8 +239,8 @@ void Bsp::LoadDecals() {
 					for (int k = 0; k < nLoadedTex; k++) {
 						if (*texName == aLoadedTex[k].name) {
 							// Found already loaded texture
-							texID  = aLoadedTex[k].texID;
-							width  = aLoadedTex[k].width;
+							texID = aLoadedTex[k].texID;
+							width = aLoadedTex[k].width;
 							height = aLoadedTex[k].height;
 							break;
 						}
@@ -267,13 +267,13 @@ void Bsp::LoadDecals() {
 						}
 
 						// Decal size
-						width  = pMipTex->Img[0].width;
+						width = pMipTex->Img[0].width;
 						height = pMipTex->Img[0].height;
 
 						// Add to loaded textures
-						aLoadedTex[nLoadedTex].name   = *texName;
-						aLoadedTex[nLoadedTex].texID  = texID;
-						aLoadedTex[nLoadedTex].width  = width;
+						aLoadedTex[nLoadedTex].name = *texName;
+						aLoadedTex[nLoadedTex].texID = texID;
+						aLoadedTex[nLoadedTex].width = width;
 						aLoadedTex[nLoadedTex].height = height;
 						nLoadedTex++;
 					}
@@ -285,7 +285,7 @@ void Bsp::LoadDecals() {
 					const auto& t = textureInfos[faces[iFace].textureInfo].t;
 
 					decals[i].normal = normal;
-					decals[i].nTex    = texID;
+					decals[i].nTex = texID;
 
 					decals[i].vec[0] = vOrigin - t * h2 - s * w2;
 					decals[i].vec[1] = vOrigin - t * h2 + s * w2;
@@ -302,8 +302,8 @@ void Bsp::LoadDecals() {
 }
 
 void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
-	std::int64_t loadedBytes     = 0;
-	std::size_t  loadedLightmaps = 0;
+	std::int64_t loadedBytes = 0;
+	std::size_t loadedLightmaps = 0;
 
 	for (int i = 0; i < faces.size(); i++) {
 		if (faces[i].styles[0] == 0 && static_cast<signed>(faces[i].lightmapOffset) >= -1) {
@@ -318,7 +318,7 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 
 			const auto& texInfo = textureInfos[faces[i].textureInfo];
 			for (int j = 0; j < faces[i].edgeCount; j++) {
-				int        iEdge = surfEdges[faces[i].firstEdgeIndex + j];
+				int iEdge = surfEdges[faces[i].firstEdgeIndex + j];
 				const auto vertex = [&] {
 					if (iEdge >= 0)
 						return vertices[edges[iEdge].vertexIndex[0]];
@@ -344,7 +344,7 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 			auto fTexMaxU = ceil(fMaxU / 16.0f);
 			auto fTexMaxV = ceil(fMaxV / 16.0f);
 
-			int nWidth  = static_cast<int>(fTexMaxU - fTexMinU) + 1;
+			int nWidth = static_cast<int>(fTexMaxU - fTexMinU) + 1;
 			int nHeight = static_cast<int>(fTexMaxV - fTexMinV) + 1;
 
 			/* *********** end QRAD ********* */
@@ -353,11 +353,11 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 
 			float fMidPolyU = (fMinU + fMaxU) / 2.0;
 			float fMidPolyV = (fMinV + fMaxV) / 2.0;
-			float fMidTexU  = static_cast<float>(nWidth) / 2.0;
-			float fMidTexV  = static_cast<float>(nHeight) / 2.0;
+			float fMidTexU = static_cast<float>(nWidth) / 2.0;
+			float fMidTexV = static_cast<float>(nHeight) / 2.0;
 
 			for (int j = 0; j < faces[i].edgeCount; ++j) {
-				int        iEdge = surfEdges[faces[i].firstEdgeIndex + j];
+				int iEdge = surfEdges[faces[i].firstEdgeIndex + j];
 				const auto vertex = [&] {
 					if (iEdge >= 0)
 						return vertices[edges[iEdge].vertexIndex[0]];
@@ -431,9 +431,9 @@ void Bsp::ParseEntities(const std::string& entitiesString) {
 		if (pos == std::string::npos)
 			break;
 
-		auto  end = entitiesString.find('}', pos);
-		auto& e   = entities.emplace_back(entitiesString.substr(pos + 1, end - pos - 1));
-		pos       = end + 1;
+		auto end = entitiesString.find('}', pos);
+		auto& e = entities.emplace_back(entitiesString.substr(pos + 1, end - pos - 1));
+		pos = end + 1;
 
 		if (IsBrushEntity(e)) {
 			brushEntities.push_back(entities.size() - 1);
@@ -714,7 +714,7 @@ auto Bsp::loadSkyBox() const -> std::optional<std::array<Image, 6>> {
 	GLuint nSkyTex[6];
 	glGenTextures(6, nSkyTex);
 
-	char size[6][3] = { "ft", "bk", "up", "dn", "rt", "lf" };
+	char size[6][3] = {"ft", "bk", "up", "dn", "rt", "lf"};
 	std::array<Image, 6> result;
 	for (auto i = 0; i < 6; i++)
 		result[i] = Image(SKY_DIR / (*skyname + size[i] + ".tga"));

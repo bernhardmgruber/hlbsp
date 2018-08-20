@@ -20,10 +20,8 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec2 inLightmapCoord;
 
-void main()
-{
-	if (flashlight)
-	{
+void main() {
+	if (flashlight) {
 		vec4 ecPos;
 		vec3 aux;
 
@@ -33,7 +31,7 @@ void main()
 		/* now normalize the light's direction. Note that according to the
 		OpenGL specification, the light is stored in eye space.*/
 		ecPos = gl_ModelViewMatrix * vec4(inPosition, 1.0);
-		aux = vec3(gl_LightSource[0].position-ecPos);
+		aux = vec3(gl_LightSource[0].position - ecPos);
 		lightDir = normalize(aux);
 
 		/* compute the distance to the light source to a varying variable*/
@@ -50,8 +48,8 @@ void main()
 
 	gl_Position = matrix * vec4(inPosition, 1.0);
 
-	if(unit1Enabled)
+	if (unit1Enabled)
 		texCoord = inTexCoord;
-	if(unit2Enabled)
+	if (unit2Enabled)
 		lightmapCoord = inLightmapCoord;
 }

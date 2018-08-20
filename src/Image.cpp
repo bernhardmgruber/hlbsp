@@ -9,13 +9,13 @@ Image::Image(unsigned int width, unsigned int height, unsigned int channels)
 	: width(width), height(height), channels(channels), data(width * height * channels) {}
 
 Image::Image(const fs::path& path) {
-	int  x, y, n;
+	int x, y, n;
 	auto d = stbi_load(path.string().c_str(), &x, &y, &n, 0);
 	if (!d)
 		throw std::ios::failure("Failed to load image file: " + path.string());
 
-	width    = x;
-	height   = y;
+	width = x;
+	height = y;
 	channels = n;
 	data.assign(d, d + x * y * n);
 

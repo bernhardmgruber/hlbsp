@@ -2,14 +2,14 @@
 
 #include <GL/glew.h>
 #include <GL/GL.h>
-#include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 
 #include <optional>
 
-#include "opengl/Program.h"
-#include "bspdef.h"
 #include "IRenderable.h"
+#include "bspdef.h"
+#include "opengl/Program.h"
 
 class Bsp;
 class Camera;

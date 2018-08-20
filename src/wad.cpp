@@ -31,7 +31,7 @@ namespace {
 					pTex.data[index * 4 + 2] = 0;
 					pTex.data[index * 4 + 3] = 0;
 
-					int          count          = 0;
+					int count = 0;
 					unsigned int RGBColorSum[3] = {0, 0, 0};
 
 					//left above pixel
@@ -227,18 +227,18 @@ auto Wad::GetTexture(const char* name) -> std::vector<uint8_t> {
 void Wad::CreateMipTexture(const std::vector<uint8_t>& rawTexture, MipmapTexture& mipTex) {
 	const auto* rawMipTex = (bsp30::MipTex*)rawTexture.data();
 
-	auto        width     = rawMipTex->width;
-	auto        height    = rawMipTex->height;
-	const auto  palOffset = rawMipTex->offsets[3] + (width / 8) * (height / 8) + 2;
-	const auto* palette   = rawTexture.data() + palOffset;
+	auto width = rawMipTex->width;
+	auto height = rawMipTex->height;
+	const auto palOffset = rawMipTex->offsets[3] + (width / 8) * (height / 8) + 2;
+	const auto* palette = rawTexture.data() + palOffset;
 
 	for (int level = 0; level < bsp30::MIPLEVELS; level++) {
 		const auto* pixel = &(rawTexture[rawMipTex->offsets[level]]);
 
-		auto& img    = mipTex.Img[level];
+		auto& img = mipTex.Img[level];
 		img.channels = 4;
-		img.width    = width;
-		img.height   = height;
+		img.width = width;
+		img.height = height;
 		img.data.resize(width * height * 4);
 
 		for (int i = 0; i < height * width; i++) {
@@ -260,19 +260,19 @@ void Wad::CreateMipTexture(const std::vector<uint8_t>& rawTexture, MipmapTexture
 void Wad::CreateDecalTexture(const std::vector<uint8_t>& rawTexture, MipmapTexture& mipTex) {
 	const auto* rawMipTex = (bsp30::MipTex*)rawTexture.data();
 
-	auto        width     = rawMipTex->width;
-	auto        height    = rawMipTex->height;
-	const auto  palOffset = rawMipTex->offsets[3] + (width / 8) * (height / 8) + 2;
-	const auto* palette   = rawTexture.data() + palOffset;
-	const auto* color     = palette + 255 * 3;
+	auto width = rawMipTex->width;
+	auto height = rawMipTex->height;
+	const auto palOffset = rawMipTex->offsets[3] + (width / 8) * (height / 8) + 2;
+	const auto* palette = rawTexture.data() + palOffset;
+	const auto* color = palette + 255 * 3;
 
 	for (int level = 0; level < bsp30::MIPLEVELS; level++) {
 		const auto* pixel = &(rawTexture[rawMipTex->offsets[level]]);
 
-		auto& img    = mipTex.Img[level];
+		auto& img = mipTex.Img[level];
 		img.channels = 4;
-		img.width    = width;
-		img.height   = height;
+		img.width = width;
+		img.height = height;
 		img.data.resize(width * height * 4);
 
 		for (int i = 0; i < height * width; i++) {

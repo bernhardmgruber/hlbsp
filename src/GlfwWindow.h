@@ -16,17 +16,17 @@ protected:
 	void toggleFullscreen();
 	void toggleStereo();
 
-	virtual void onResize(int width, int height)                      = 0;
+	virtual void onResize(int width, int height) = 0;
 	virtual void onMouseButton(int button, int action, int modifiers) = 0;
-	virtual void onMouseMove(double dx, double dy)                    = 0;
-	virtual void onMouseWheel(double xOffset, double yOffset)         = 0;
-	virtual void onKey(int key, int scancode, int action, int mods)   = 0;
-	virtual void onChar(unsigned int codepoint)                       = 0;
+	virtual void onMouseMove(double dx, double dy) = 0;
+	virtual void onMouseWheel(double xOffset, double yOffset) = 0;
+	virtual void onKey(int key, int scancode, int action, int mods) = 0;
+	virtual void onChar(unsigned int codepoint) = 0;
 
 	bool m_fullscreen = false;
-	bool m_stereo     = false;
-	int  m_width      = 1024;
-	int  m_height     = 768;
+	bool m_stereo = false;
+	int m_width = 1024;
+	int m_height = 768;
 
 private:
 	static void onError(int error, const char* description);

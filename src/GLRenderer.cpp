@@ -4,16 +4,16 @@
 
 #include <iostream>
 
-#include "IPSS.h"
-#include "IO.h"
 #include "Hud.h"
+#include "IO.h"
+#include "IPSS.h"
 #include "font.h"
 #include "mathlib.h"
 
 namespace {
-	constexpr auto  FONT_HUD_HEIGHT = 12;
-	constexpr auto  FONT_HUD_SPACE = 5;
-	constexpr float FONT_HUD_COLOR[] = { 1.0f, 0.0f, 0.0f };
+	constexpr auto FONT_HUD_HEIGHT = 12;
+	constexpr auto FONT_HUD_SPACE = 5;
+	constexpr float FONT_HUD_COLOR[] = {1.0f, 0.0f, 0.0f};
 
 	constexpr auto CONSOLE_WIDTH = 400;
 	constexpr auto CONSOLE_HEIGHT = 300;
@@ -21,34 +21,34 @@ namespace {
 	void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
 		const char* sourceStr = [&] {
 			switch (source) {
-			case GL_DEBUG_SOURCE_API_ARB:             return "API";
-			case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: return "shader compiler";
-			case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB:   return "window system";
-			case GL_DEBUG_SOURCE_THIRD_PARTY_ARB:     return "third party";
-			case GL_DEBUG_SOURCE_APPLICATION_ARB:     return "application";
-			case GL_DEBUG_SOURCE_OTHER_ARB:           return "other";
-			default:                                  return "unknown";
+				case GL_DEBUG_SOURCE_API_ARB: return "API";
+				case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: return "shader compiler";
+				case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB: return "window system";
+				case GL_DEBUG_SOURCE_THIRD_PARTY_ARB: return "third party";
+				case GL_DEBUG_SOURCE_APPLICATION_ARB: return "application";
+				case GL_DEBUG_SOURCE_OTHER_ARB: return "other";
+				default: return "unknown";
 			}
 		}();
 
 		const char* typeStr = [&] {
 			switch (type) {
-				case GL_DEBUG_TYPE_ERROR_ARB:               return "error";
+				case GL_DEBUG_TYPE_ERROR_ARB: return "error";
 				case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: return "deprecated behavior";
-				case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB : return "undefined behavior";
-				case GL_DEBUG_TYPE_PERFORMANCE_ARB:         return "performance";
-				case GL_DEBUG_TYPE_PORTABILITY_ARB:         return "portability";
-				case GL_DEBUG_TYPE_OTHER_ARB:               return "other";
-				default:                                    return "unknown";
+				case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB: return "undefined behavior";
+				case GL_DEBUG_TYPE_PERFORMANCE_ARB: return "performance";
+				case GL_DEBUG_TYPE_PORTABILITY_ARB: return "portability";
+				case GL_DEBUG_TYPE_OTHER_ARB: return "other";
+				default: return "unknown";
 			}
 		}();
 
 		const char* severityStr = [&] {
 			switch (severity) {
-				case GL_DEBUG_SEVERITY_HIGH_ARB:   return "high";
+				case GL_DEBUG_SEVERITY_HIGH_ARB: return "high";
 				case GL_DEBUG_SEVERITY_MEDIUM_ARB: return "medium";
-				case GL_DEBUG_SEVERITY_LOW_ARB:    return "low";
-				default:                           return "unknown";
+				case GL_DEBUG_SEVERITY_LOW_ARB: return "low";
+				default: return "unknown";
 			}
 		}();
 
@@ -109,10 +109,10 @@ GLRenderer::GLRenderer() {
 
 	glEnable(GL_LIGHT0);
 
-	GLfloat lightPos[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	GLfloat lightPos[] = {0.0f, 0.0f, 0.0f, 1.0f};
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 
-	GLfloat spotDir[] = { 0.0f, 0.0f, -1.0f };
+	GLfloat spotDir[] = {0.0f, 0.0f, -1.0f};
 	glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spotDir);
 	glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 25.0f);
 	glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 1.0f);
@@ -129,13 +129,11 @@ GLRenderer::GLRenderer() {
 #endif
 }
 
-void GLRenderer::addRenderable(std::unique_ptr<IRenderable> renderable)
-{
+void GLRenderer::addRenderable(std::unique_ptr<IRenderable> renderable) {
 	m_renderables.emplace_back(std::move(renderable));
 }
 
-void GLRenderer::resizeViewport(int width, int height)
-{
+void GLRenderer::resizeViewport(int width, int height) {
 	glViewport(0, 0, width, height);
 	m_projectionMatrix = glm::perspective(degToRad(60.0f), static_cast<GLfloat>(width) / static_cast<GLfloat>(height), 1.0f, 4000.0f);
 }

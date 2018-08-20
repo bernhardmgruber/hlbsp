@@ -2,20 +2,18 @@
 
 #include <iostream>
 
-#include "Image.h"
 #include "BspRenderable.h"
+#include "Image.h"
 
 namespace {
-	const fs::path BSP_DIR       = "../../data/maps";
+	const fs::path BSP_DIR = "../../data/maps";
 	const fs::path BSP_FILE_NAME = "cs_assault.bsp";
 
 	constexpr auto WINDOW_CAPTION = "HL BSP";
 }
 
 Window::Window()
-	: GlfwWindow(WINDOW_CAPTION)
-	, bsp(BSP_DIR / BSP_FILE_NAME , m_settings.textures, m_settings.lightmaps) {
-
+	: GlfwWindow(WINDOW_CAPTION), bsp(BSP_DIR / BSP_FILE_NAME, m_settings.textures, m_settings.lightmaps) {
 	m_renderer.addRenderable(std::make_unique<BspRenderable>(bsp, camera));
 
 	onResize(m_width, m_height);
@@ -24,7 +22,7 @@ Window::Window()
 	if (const auto info_player_start = bsp.FindEntity("info_player_start")) {
 		if (auto origin = info_player_start->findProperty("origin")) {
 			std::istringstream iss(*origin);
-			vec3               o;
+			vec3 o;
 			iss >> o.x >> o.y >> o.z;
 			camera.setPosition(o);
 		}

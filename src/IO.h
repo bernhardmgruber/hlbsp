@@ -33,7 +33,7 @@ auto readVector(std::istream& is, std::size_t count) {
 }
 
 inline auto readTextFile(const fs::path& filename) {
-	std::string   content;
+	std::string content;
 	std::ifstream file(filename);
 	if (!file)
 		throw std::ios::failure("Failed to open file " + filename.string() + " for reading");

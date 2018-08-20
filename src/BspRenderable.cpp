@@ -6,22 +6,20 @@
 #include <iostream>
 #include <numeric>
 
-#include "glsl.h"
 #include "Bsp.h"
 #include "Camera.h"
+#include "glsl.h"
 
 BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
-	: m_bsp(&bsp)
-	, m_camera(&camera) {
-
+	: m_bsp(&bsp), m_camera(&camera) {
 	std::clog << "Loading bsp shaders ...\n";
 	m_shaderProgram = gl::Program{
-		gl::Shader(GL_VERTEX_SHADER,   std::experimental::filesystem::path{"../../src/shader/main.vert"}),
+		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/main.vert"}),
 		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/main.frag"}),
 	};
 
 	m_skyboxProgram = gl::Program{
-		gl::Shader(GL_VERTEX_SHADER,   std::experimental::filesystem::path{"../../src/shader/skybox.vert"}),
+		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/skybox.vert"}),
 		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/skybox.frag"}),
 	};
 
@@ -46,7 +44,7 @@ void BspRenderable::loadSkyTextures() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	for(auto i = 0; i < 6; i++)
+	for (auto i = 0; i < 6; i++)
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, (*images)[i].width, (*images)[i].height, 0, (*images)[i].channels == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (*images)[i].data.data());
 }
 
@@ -64,7 +62,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 	glUniform1i(m_shaderProgram.uniformLocation("tex2"), 1);
 	glUniform1i(m_shaderProgram.uniformLocation("nightvision"), static_cast<GLint>(settings.nightvision));
 	glUniform1i(m_shaderProgram.uniformLocation("flashlight"), static_cast<GLint>(settings.flashlight));
-	
+
 	const auto& cameraPos = m_camera->position();
 
 	const auto matrix = settings.projection * settings.view;
@@ -169,8 +167,7 @@ void BspRenderable::renderDecals() {
 }
 
 
-void BspRenderable::renderLeafOutlines()
-{
+void BspRenderable::renderLeafOutlines() {
 	glLineWidth(1.0f);
 	glLineStipple(1, 0xF0F0);
 	glEnable(GL_LINE_STIPPLE);
@@ -263,10 +260,10 @@ void BspRenderable::renderBSP(int iNode, int iCurrentLeaf, vec3 vPos) {
 
 	const auto dist = [&] {
 		switch (m_bsp->planes[m_bsp->nodes[iNode].planeIndex].type) {
-		case bsp30::PLANE_X: return vPos.x - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
-		case bsp30::PLANE_Y: return vPos.y - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
-		case bsp30::PLANE_Z: return vPos.z - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
-		default:             return glm::dot(m_bsp->planes[m_bsp->nodes[iNode].planeIndex].normal, vPos) - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
+			case bsp30::PLANE_X: return vPos.x - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
+			case bsp30::PLANE_Y: return vPos.y - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
+			case bsp30::PLANE_Z: return vPos.z - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
+			default: return glm::dot(m_bsp->planes[m_bsp->nodes[iNode].planeIndex].normal, vPos) - m_bsp->planes[m_bsp->nodes[iNode].planeIndex].dist;
 		}
 	}();
 
@@ -300,49 +297,49 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
 
 	switch (nRenderMode) {
-	case bsp30::RENDER_MODE_NORMAL:
-		break;
-	case bsp30::RENDER_MODE_TEXTURE:
-		glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		glDepthMask(0u);
+		case bsp30::RENDER_MODE_NORMAL:
+			break;
+		case bsp30::RENDER_MODE_TEXTURE:
+			glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			glDepthMask(0u);
 
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		break;
-	case bsp30::RENDER_MODE_SOLID:
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.25);
-		break;
-	case bsp30::RENDER_MODE_ADDITIVE:
-		glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE);
-		glDepthMask(0u);
+			glActiveTexture(GL_TEXTURE0_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			break;
+		case bsp30::RENDER_MODE_SOLID:
+			glEnable(GL_ALPHA_TEST);
+			glAlphaFunc(GL_GREATER, 0.25);
+			break;
+		case bsp30::RENDER_MODE_ADDITIVE:
+			glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_ONE, GL_ONE);
+			glDepthMask(0u);
 
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		break;
+			glActiveTexture(GL_TEXTURE0_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			break;
 	}
 
 	renderBSP(m_bsp->models[iModel].headNodesIndex[0], -1, vPos);
 
 	switch (nRenderMode) {
-	case bsp30::RENDER_MODE_NORMAL:
-		break;
-	case bsp30::RENDER_MODE_TEXTURE:
-	case bsp30::RENDER_MODE_ADDITIVE:
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		glDisable(GL_BLEND);
-		glDepthMask(1u);
+		case bsp30::RENDER_MODE_NORMAL:
+			break;
+		case bsp30::RENDER_MODE_TEXTURE:
+		case bsp30::RENDER_MODE_ADDITIVE:
+			glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+			glDisable(GL_BLEND);
+			glDepthMask(1u);
 
-		glActiveTexture(GL_TEXTURE0_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		break;
-	case bsp30::RENDER_MODE_SOLID:
-		glDisable(GL_ALPHA_TEST);
-		break;
+			glActiveTexture(GL_TEXTURE0_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+			break;
+		case bsp30::RENDER_MODE_SOLID:
+			glDisable(GL_ALPHA_TEST);
+			break;
 	}
 }
 
@@ -358,7 +355,7 @@ void BspRenderable::buildBuffers() {
 
 				const auto& coords = m_bsp->faceTexCoords[faceIndex];
 				v.texCoord = coords.texCoords[i];
-				v.lightmapCoord = coords.lightmapCoords.empty() ? glm::vec2{ 0.0 } : coords.lightmapCoords[i];
+				v.lightmapCoord = coords.lightmapCoords.empty() ? glm::vec2{0.0} : coords.lightmapCoords[i];
 
 				v.normal = m_bsp->planes[face.planeIndex].normal;
 				if (face.planeSide)

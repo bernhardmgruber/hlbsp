@@ -22,7 +22,8 @@ namespace gl {
 		if (status != GL_TRUE)
 			throw std::runtime_error("Failed to compile shader:\n" + buildLog);
 		else
-			std::clog << "Shader compile log:\n" << buildLog << "\n";
+			std::clog << "Shader compile log:\n"
+					  << buildLog << "\n";
 	}
 
 	Shader::Shader(GLenum shaderType, const std::experimental::filesystem::path& file)

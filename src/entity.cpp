@@ -6,8 +6,8 @@ Entity::Entity(const std::string& propertiesString) {
 		auto readQuotedString = [&] {
 			pos++;
 			auto end = propertiesString.find('"', pos);
-			auto s   = propertiesString.substr(pos, end - pos);
-			pos      = end + 1;
+			auto s = propertiesString.substr(pos, end - pos);
+			pos = end + 1;
 			return s;
 		};
 
@@ -15,8 +15,8 @@ Entity::Entity(const std::string& propertiesString) {
 		if (pos == std::string::npos)
 			break;
 
-		auto name  = readQuotedString();
-		pos        = propertiesString.find('"', pos);
+		auto name = readQuotedString();
+		pos = propertiesString.find('"', pos);
 		auto value = readQuotedString();
 		properties.emplace(std::move(name), std::move(value));
 	}

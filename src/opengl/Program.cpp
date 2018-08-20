@@ -22,7 +22,8 @@ namespace gl {
 		if (status != GL_TRUE)
 			throw std::runtime_error("Failed to link program:\n" + buildLog);
 		else
-			std::clog << "Program link log:\n" << buildLog << "\n";
+			std::clog << "Program link log:\n"
+					  << buildLog << "\n";
 	}
 
 	Program::Program(Program&& other) {

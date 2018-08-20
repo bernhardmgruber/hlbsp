@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 namespace {
-	std::mutex                                   g_guisMutex;
+	std::mutex g_guisMutex;
 	std::unordered_map<GLFWwindow*, GlfwWindow*> g_guis;
 
 	auto gui(GLFWwindow* w) -> GlfwWindow* {
@@ -66,10 +66,10 @@ auto GlfwWindow::shouldClose() const -> bool {
 void GlfwWindow::toggleFullscreen() {
 	// determine new monitor and window resolution
 	GLFWmonitor* monitor = nullptr;
-	int          newWidth, newHeight;
+	int newWidth, newHeight;
 	if (m_fullscreen) {
 		// revert to window resolution
-		newWidth  = m_windowedWidth;
+		newWidth = m_windowedWidth;
 		newHeight = m_windowedHeight;
 	} else {
 		int x, y;
@@ -77,31 +77,31 @@ void GlfwWindow::toggleFullscreen() {
 
 		const GLFWvidmode* mode;
 		std::tie(monitor, mode) = [&] {
-			int  count;
+			int count;
 			auto monitors = glfwGetMonitors(&count);
 			if (count < 1)
 				throw std::runtime_error{"Failed to query monitors"};
 
 			// find monitor with biggest overlap with current window
-			auto               maxArea       = 0;
-			const GLFWvidmode* resultMode    = nullptr;
-			GLFWmonitor*       resultMonitor = nullptr;
+			auto maxArea = 0;
+			const GLFWvidmode* resultMode = nullptr;
+			GLFWmonitor* resultMonitor = nullptr;
 
 			for (auto i = 0; i < count; i++) {
 				const auto& mon = monitors[i];
-				int         mx, my;
+				int mx, my;
 				glfwGetMonitorPos(mon, &mx, &my);
 				const auto mode = glfwGetVideoMode(mon);
 				if (!mode)
 					throw std::runtime_error{"Failed to query monitor video mode"};
-				const auto x1   = std::max(mx, x);
-				const auto x2   = std::min(mx + mode->width, x + m_width);
-				const auto y1   = std::max(my, y);
-				const auto y2   = std::min(my + mode->height, y + m_height);
+				const auto x1 = std::max(mx, x);
+				const auto x2 = std::min(mx + mode->width, x + m_width);
+				const auto y1 = std::max(my, y);
+				const auto y2 = std::min(my + mode->height, y + m_height);
 				const auto area = (x2 - x1) * (y2 - y1);
 				if (area > maxArea) {
-					maxArea       = area;
-					resultMode    = mode;
+					maxArea = area;
+					resultMode = mode;
 					resultMonitor = mon;
 				}
 			}
@@ -111,13 +111,13 @@ void GlfwWindow::toggleFullscreen() {
 		}();
 
 		// store original window resolution and position
-		m_windowedWidth  = m_width;
+		m_windowedWidth = m_width;
 		m_windowedHeight = m_height;
-		m_windowedX      = x;
-		m_windowedY      = y;
+		m_windowedX = x;
+		m_windowedY = y;
 
 		// apply monitor resolution
-		newWidth  = mode->width;
+		newWidth = mode->width;
 		newHeight = mode->height;
 	}
 
@@ -128,7 +128,7 @@ void GlfwWindow::toggleFullscreen() {
 	m_window = newWindow;
 
 	// we set m_width and m_height after the windows have been created and closed as these actions trigger resize events which may corrupt m_width and m_height
-	m_width  = newWidth;
+	m_width = newWidth;
 	m_height = newHeight;
 
 	onWindowCreated();
@@ -153,7 +153,7 @@ void GlfwWindow::toggleStereo() {
 	glfwSetWindowPos(newWindow, m_windowedX, m_windowedY);
 	glfwDestroyWindow(m_window);
 
-	m_width  = w;
+	m_width = w;
 	m_height = h;
 
 	m_stereo = !m_stereo;

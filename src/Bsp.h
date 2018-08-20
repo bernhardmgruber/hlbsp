@@ -19,8 +19,8 @@ struct FaceTexCoords {
 
 struct Decal {
 	GLuint nTex{};
-	vec3   normal;
-	vec3   vec[4];
+	vec3 normal;
+	vec3 vec[4];
 };
 
 class Bsp {
@@ -35,42 +35,42 @@ public:
 	auto loadSkyBox() const -> std::optional<std::array<Image, 6>>;
 
 private:
-	bsp30::Header                     header{};     // Stores the header
-	std::vector<bsp30::Vertex>        vertices;     // Stores the vertices
-	std::vector<bsp30::Edge>          edges;        // Stores the edges
-	std::vector<bsp30::SurfEdge>      surfEdges;    // Stores the surface edges
-	std::vector<bsp30::Node>          nodes;        // Stores the nodes
-	std::vector<bsp30::Leaf>          leaves;       // Stores the leafs
-	std::vector<bsp30::MarkSurface>   markSurfaces; // Stores the marksurfaces
-	std::vector<bsp30::Plane>         planes;       // Stores the planes
-	std::vector<bsp30::Face>          faces;        // Stores the faces
-	std::vector<bsp30::ClipNode>      clipNodes;
-	std::vector<bsp30::Model>         models;            // Stores the models
-	bsp30::TextureHeader              textureHeader{};   // Stores the texture header
-	std::vector<bsp30::MipTex>        mipTextures;       // Stores the miptextures
-	std::vector<bsp30::MipTexOffset>  mipTextureOffsets; // Stores the miptexture offsets
-	std::vector<bsp30::TextureInfo>   textureInfos;      // Stores the texture infos
+	bsp30::Header header{};                       // Stores the header
+	std::vector<bsp30::Vertex> vertices;          // Stores the vertices
+	std::vector<bsp30::Edge> edges;               // Stores the edges
+	std::vector<bsp30::SurfEdge> surfEdges;       // Stores the surface edges
+	std::vector<bsp30::Node> nodes;               // Stores the nodes
+	std::vector<bsp30::Leaf> leaves;              // Stores the leafs
+	std::vector<bsp30::MarkSurface> markSurfaces; // Stores the marksurfaces
+	std::vector<bsp30::Plane> planes;             // Stores the planes
+	std::vector<bsp30::Face> faces;               // Stores the faces
+	std::vector<bsp30::ClipNode> clipNodes;
+	std::vector<bsp30::Model> models;                   // Stores the models
+	bsp30::TextureHeader textureHeader{};               // Stores the texture header
+	std::vector<bsp30::MipTex> mipTextures;             // Stores the miptextures
+	std::vector<bsp30::MipTexOffset> mipTextureOffsets; // Stores the miptexture offsets
+	std::vector<bsp30::TextureInfo> textureInfos;       // Stores the texture infos
 
-	std::vector<FaceTexCoords> faceTexCoords;     // Stores precalculated texture and lightmap coordinates for every vertex
+	std::vector<FaceTexCoords> faceTexCoords; // Stores precalculated texture and lightmap coordinates for every vertex
 
-	std::vector<Entity>            entities;
-	std::vector<unsigned int>      brushEntities;   // Indices of brush entities in entities
-	std::vector<unsigned int>      specialEntities; // IndicUnloadWadFileses of special entities in entities
-	std::vector<Wad>               wadFiles;
-	std::vector<Wad>               decalWads;
-	std::vector<Decal>             decals;
+	std::vector<Entity> entities;
+	std::vector<unsigned int> brushEntities;   // Indices of brush entities in entities
+	std::vector<unsigned int> specialEntities; // IndicUnloadWadFileses of special entities in entities
+	std::vector<Wad> wadFiles;
+	std::vector<Wad> decalWads;
+	std::vector<Decal> decals;
 	std::vector<std::vector<bool>> visLists; // Stores the vis lists for all faces
 
-	std::vector<GLuint>   lightmapTexIds; // Stores a lookup table where faces use their index to find the index of their lightmap texture
-	std::vector<GLuint>   textureIds;     // Stores a lookup table where faces use their index to find the index of their texture
-	mutable std::vector<bool>     facesDrawn;     // Boolarray which avoids drawing faces twice by marking each drawn face's index in the array
+	std::vector<GLuint> lightmapTexIds;   // Stores a lookup table where faces use their index to find the index of their lightmap texture
+	std::vector<GLuint> textureIds;       // Stores a lookup table where faces use their index to find the index of their texture
+	mutable std::vector<bool> facesDrawn; // Boolarray which avoids drawing faces twice by marking each drawn face's index in the array
 
 	bool& g_bTextures;
 	bool& g_bLightmaps;
 
-	void LoadWadFiles(std::string wadStr);                                                     // Loads and prepares the wad files for further texture loading
-	void UnloadWadFiles();                                                                     // Unloads all wad files and frees allocated memory
-	void LoadTextures(std::ifstream& file);                                                    // Loads the textures either from the wad file or directly from the bsp file
+	void LoadWadFiles(std::string wadStr);                                      // Loads and prepares the wad files for further texture loading
+	void UnloadWadFiles();                                                      // Unloads all wad files and frees allocated memory
+	void LoadTextures(std::ifstream& file);                                     // Loads the textures either from the wad file or directly from the bsp file
 	auto LoadTextureFromWads(const char* name) -> std::optional<MipmapTexture>; // Finds and loads a texture from a wad file by the given name
 	auto LoadDecalTexture(const char* name) -> std::optional<MipmapTexture>;
 	void LoadDecals();
@@ -78,7 +78,7 @@ private:
 
 	void ParseEntities(const std::string& entitiesString); // Parses the entity lump of the bsp file into single entity classes
 
-	void CountVisLeafs(int iNode, int& count);                         // Counts the number of visLeaves recursively
+	void CountVisLeafs(int iNode, int& count);                                                           // Counts the number of visLeaves recursively
 	auto uncompressPVS(int iLeaf, const std::vector<std::uint8_t>& pVisList) const -> std::vector<bool>; // Get the PVS for a given leaf and return it in the form of a pointer to a bool array
 
 	int findLeaf(vec3 pos, int node = 0) const; // Recursivly walks through the BSP tree to find the leaf where the camera is in

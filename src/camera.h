@@ -7,12 +7,12 @@ namespace {
 	constexpr auto CAMERA_LOOK_SENS = 0.15f;
 
 	enum Directions {
-		Forward  = 1,
+		Forward = 1,
 		Backward = 2,
-		Left     = 4,
-		Right    = 8,
-		Up       = 16,
-		Down     = 32
+		Left = 4,
+		Right = 8,
+		Up = 16,
+		Down = 32
 	};
 }
 
@@ -39,7 +39,7 @@ private:
 	vec3 m_position;
 
 	float m_pitch = 0; // up down rotation
-	float m_yaw   = 0; // side to side rotation
+	float m_yaw = 0;   // side to side rotation
 
 	float m_moveSensitivity = CAMERA_MOVE_SENS;
 	float m_lookSensitivity = CAMERA_LOOK_SENS;

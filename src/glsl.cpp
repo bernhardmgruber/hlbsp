@@ -12,7 +12,7 @@ void glslShaderSourceFile(GLuint object, const std::experimental::filesystem::pa
 }
 
 namespace {
-	template <typename GetIVFunc, typename GetLogFunc>
+	template<typename GetIVFunc, typename GetLogFunc>
 	void glslPrintInfoLog(GLuint object, GetIVFunc getIV, GetLogFunc getLog) {
 		GLint infologLength = 0;
 		getIV(object, GL_INFO_LOG_LENGTH, &infologLength);
