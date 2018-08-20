@@ -25,6 +25,8 @@ BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 
 	buildBuffers();
 	loadSkyTextures();
+
+	facesDrawn.resize(bsp.faces.size());
 }
 
 BspRenderable::~BspRenderable() {
@@ -61,7 +63,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 	glUniform1i(m_shaderProgram.uniformLocation("tex1"), 0);
 	glUniform1i(m_shaderProgram.uniformLocation("tex2"), 1);
 	glUniform1i(m_shaderProgram.uniformLocation("nightvision"), static_cast<GLint>(settings.nightvision));
-	glUniform1i(m_shaderProgram.uniformLocation("flashlight"), static_cast<GLint>(settings.flashlight));
+	//glUniform1i(m_shaderProgram.uniformLocation("flashlight"), static_cast<GLint>(settings.flashlight));
 
 	const auto& cameraPos = m_camera->position();
 
@@ -137,7 +139,7 @@ void BspRenderable::renderSkybox() {
 }
 
 void BspRenderable::renderStaticGeometry(vec3 vPos) {
-	for (auto&& b : m_bsp->facesDrawn)
+	for (auto&& b : facesDrawn)
 		b = false;
 
 	const int iLeaf = m_bsp->findLeaf(vPos); //Get the leaf where the camera is in
@@ -155,7 +157,7 @@ void BspRenderable::renderDecals() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glActiveTexture(GL_TEXTURE0_ARB);
+	glActiveTexture(GL_TEXTURE0);
 
 	for (auto i = 0; i < m_bsp->decals.size(); i++) {
 		glBindTexture(GL_TEXTURE_2D, m_bsp->decals[i].nTex);
@@ -216,23 +218,23 @@ void BspRenderable::renderLeafOutlines(const bsp30::Leaf& leaf) {
 
 
 void BspRenderable::renderFace(int face) {
-	if (m_bsp->facesDrawn[face])
+	if (facesDrawn[face])
 		return;
-	m_bsp->facesDrawn[face] = true;
+	facesDrawn[face] = true;
 
 	if (m_bsp->faces[face].styles[0] == 0xFF)
 		return;
 
 	// if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
-	const bool bLightmapAvail = static_cast<signed>(m_bsp->faces[face].lightmapOffset) != -1 && m_bsp->header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
+	const bool lightmapAvailable = static_cast<signed>(m_bsp->faces[face].lightmapOffset) != -1 && m_bsp->header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
 
 	if (m_settings->textures) {
-		glActiveTexture(GL_TEXTURE0_ARB);
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_bsp->textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex]);
 	}
 
-	if (m_settings->lightmaps && bLightmapAvail) {
-		glActiveTexture(GL_TEXTURE1_ARB);
+	if (m_settings->lightmaps && lightmapAvailable) {
+		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, m_bsp->lightmapTexIds[face]);
 	}
 
@@ -280,11 +282,11 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 	int iModel = std::stoi(ent.findProperty("model")->substr(1));
 
 	// Alpha value
-	unsigned char nAlpha;
-	if (const auto renderamt = ent.findProperty("renderamt"))
-		nAlpha = std::stoi(*renderamt);
-	else
-		nAlpha = 255;
+	const auto alpha = [&] {
+		if (const auto renderamt = ent.findProperty("renderamt"))
+			return std::stoi(*renderamt) / 255.0f;
+		return 1.0f;
+	}();
 
 	// Rendermode
 	unsigned char nRenderMode;
@@ -300,26 +302,20 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 		case bsp30::RENDER_MODE_NORMAL:
 			break;
 		case bsp30::RENDER_MODE_TEXTURE:
-			glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
+			glColor4f(1.0f, 1.0f, 1.0f, alpha);
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-			glDepthMask(0u);
-
-			glActiveTexture(GL_TEXTURE0_ARB);
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glDepthMask(GL_FALSE);
 			break;
 		case bsp30::RENDER_MODE_SOLID:
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.25);
 			break;
 		case bsp30::RENDER_MODE_ADDITIVE:
-			glColor4f(1.0f, 1.0f, 1.0f, static_cast<float>(nAlpha) / 255.0f);
+			glColor4f(1.0f, 1.0f, 1.0f, alpha);
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_ONE, GL_ONE);
-			glDepthMask(0u);
-
-			glActiveTexture(GL_TEXTURE0_ARB);
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glDepthMask(GL_FALSE);
 			break;
 	}
 
@@ -330,12 +326,8 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 			break;
 		case bsp30::RENDER_MODE_TEXTURE:
 		case bsp30::RENDER_MODE_ADDITIVE:
-			glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 			glDisable(GL_BLEND);
-			glDepthMask(1u);
-
-			glActiveTexture(GL_TEXTURE0_ARB);
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+			glDepthMask(GL_TRUE);
 			break;
 		case bsp30::RENDER_MODE_SOLID:
 			glDisable(GL_ALPHA_TEST);

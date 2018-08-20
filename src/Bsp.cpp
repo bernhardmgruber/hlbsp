@@ -665,10 +665,6 @@ Bsp::Bsp(const fs::path& filename, bool& g_bTextures, bool& g_bLightmaps)
 
 	file.close();
 
-	// misc
-	std::clog << "Miscellaneous ...\n";
-	facesDrawn.resize(faces.size());
-
 	std::clog << "FINISHED LOADING BSP\n";
 }
 

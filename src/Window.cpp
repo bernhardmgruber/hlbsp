@@ -93,7 +93,7 @@ void Window::onMouseButton(int button, int action, int modifiers) {
 			case GLFW_MOUSE_BUTTON_RIGHT:
 				m_captureMouse = true;
 				glfwGetCursorPos(handle(), &m_mouseDownPos.x, &m_mouseDownPos.y);
-				//glfwSetInputMode(handle(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+				glfwSetInputMode(handle(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 				break;
 		}
 	}
@@ -102,7 +102,7 @@ void Window::onMouseButton(int button, int action, int modifiers) {
 		switch (button) {
 			case GLFW_MOUSE_BUTTON_RIGHT:
 				m_captureMouse = false;
-				//glfwSetInputMode(handle(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+				glfwSetInputMode(handle(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 				break;
 		}
 	}

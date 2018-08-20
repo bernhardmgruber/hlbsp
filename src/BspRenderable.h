@@ -60,4 +60,6 @@ private:
 	std::vector<unsigned int> vertexOffsets;
 	GLuint m_vbo = 0;
 	GLuint m_decalVbo = 0;
+
+	mutable std::vector<bool> facesDrawn;
 };

@@ -203,7 +203,7 @@ void GlfwWindow::onWindowCreated() {
 	glfwMakeContextCurrent(m_window);
 
 	// configure GLFW context
-	glfwSwapInterval(1); // vsync
+	glfwSwapInterval(0); // vsync
 
 	glfwSetWindowSizeCallback(m_window, onResize);
 	glfwSetMouseButtonCallback(m_window, onMouseButton);

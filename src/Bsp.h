@@ -63,7 +63,6 @@ private:
 
 	std::vector<GLuint> lightmapTexIds;   // Stores a lookup table where faces use their index to find the index of their lightmap texture
 	std::vector<GLuint> textureIds;       // Stores a lookup table where faces use their index to find the index of their texture
-	mutable std::vector<bool> facesDrawn; // Boolarray which avoids drawing faces twice by marking each drawn face's index in the array
 
 	bool& g_bTextures;
 	bool& g_bLightmaps;
