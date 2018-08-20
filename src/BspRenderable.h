@@ -7,6 +7,7 @@
 
 #include <optional>
 
+#include "opengl/Program.h"
 #include "bspdef.h"
 #include "IRenderable.h"
 
@@ -23,6 +24,7 @@ public:
 private:
 	void loadSkyTextures();
 
+	void renderSkybox();
 	void renderStaticGeometry(vec3 vPos);
 	void renderBrushEntities(vec3 vPos);
 	void renderDecals();
@@ -52,9 +54,10 @@ private:
 
 	const RenderSettings* m_settings = nullptr;
 
-	std::optional<GLuint> m_skyBoxDL;
-	GLuint m_shaderProgram;
+	std::optional<GLuint> m_skyboxTex;
+	gl::Program m_skyboxProgram;
+	gl::Program m_shaderProgram;
 	std::vector<unsigned int> vertexOffsets;
-	GLuint m_vbo;
-	GLuint m_decalVbo;
+	GLuint m_vbo = 0;
+	GLuint m_decalVbo = 0;
 };

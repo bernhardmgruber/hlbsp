@@ -18,7 +18,10 @@ struct RenderSettings {
 	bool nightvision = false;
 	bool flashlight = false;
 
-	glm::mat4 matrix;
+	glm::mat4 projection;
+	float pitch;
+	float yaw;
+	glm::mat4 view;
 };
 
 class IRenderable {

@@ -137,12 +137,13 @@ void GLRenderer::addRenderable(std::unique_ptr<IRenderable> renderable)
 void GLRenderer::resizeViewport(int width, int height)
 {
 	glViewport(0, 0, width, height);
-	m_projectionMatrix = glm::perspective(degToRad(60.0f), static_cast<GLfloat>(width) / static_cast<GLfloat>(height), 8.0f, 4000.0f);
+	m_projectionMatrix = glm::perspective(degToRad(60.0f), static_cast<GLfloat>(width) / static_cast<GLfloat>(height), 1.0f, 4000.0f);
 }
 
 void GLRenderer::beginFrame(RenderSettings settings, glm::mat4 viewMatrix) {
 	m_settings = settings;
-	m_settings.matrix = m_projectionMatrix * viewMatrix;
+	m_settings.view = viewMatrix;
+	m_settings.projection = m_projectionMatrix;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
@@ -188,7 +189,7 @@ void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int heig
 }
 
 void GLRenderer::renderCoords() {
-	glLoadMatrixf(glm::value_ptr(m_settings.matrix));
+	glLoadMatrixf(glm::value_ptr(m_settings.projection * m_settings.view));
 
 	glBegin(GL_LINES);
 	glColor3f(1.0f, 0.0f, 0.0f); //red X+

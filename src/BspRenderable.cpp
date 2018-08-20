@@ -1,5 +1,8 @@
 #include "BspRenderable.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
+
 #include <iostream>
 #include <numeric>
 
@@ -12,167 +15,64 @@ BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 	, m_camera(&camera) {
 
 	std::clog << "Loading bsp shaders ...\n";
-	GLuint vsMain = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fsMain = glCreateShader(GL_FRAGMENT_SHADER);
+	m_shaderProgram = gl::Program{
+		gl::Shader(GL_VERTEX_SHADER,   std::experimental::filesystem::path{"../../src/shader/main.vert"}),
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/main.frag"}),
+	};
 
-	glslShaderSourceFile(vsMain, "../../src/shader/main.vert");
-	glslShaderSourceFile(fsMain, "../../src/shader/main.frag");
-
-	glCompileShader(vsMain);
-	glslPrintShaderInfoLog(vsMain);
-	glCompileShader(fsMain);
-	glslPrintShaderInfoLog(fsMain);
-
-	m_shaderProgram = glCreateProgram();
-	glAttachShader(m_shaderProgram, vsMain);
-	glAttachShader(m_shaderProgram, fsMain);
-	glLinkProgram(m_shaderProgram);
-	glslPrintProgramInfoLog(m_shaderProgram);
+	m_skyboxProgram = gl::Program{
+		gl::Shader(GL_VERTEX_SHADER,   std::experimental::filesystem::path{"../../src/shader/skybox.vert"}),
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/skybox.frag"}),
+	};
 
 	buildBuffers();
+	loadSkyTextures();
 }
 
 BspRenderable::~BspRenderable() {
-	if (m_skyBoxDL)
-		glDeleteLists(*m_skyBoxDL, 1);
+	if (m_skyboxTex)
+		glDeleteTextures(0, &*m_skyboxTex);
 }
 
 void BspRenderable::loadSkyTextures() {
-	std::clog << "Loading sky textures ...\n";
-
 	const auto images = m_bsp->loadSkyBox();
 	if (!images)
 		return;
 
-	GLuint nSkyTex[6];
-	glGenTextures(6, nSkyTex);
-	for (auto i = 0; i < 6; i++) {
-		glBindTexture(GL_TEXTURE_2D, nSkyTex[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (*images)[i].width, (*images)[i].height, 0, (*images)[i].channels == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (*images)[i].data.data());
-	}
-
-	//Create Displaylist
-	m_skyBoxDL = glGenLists(1);
-	glNewList(*m_skyBoxDL, GL_COMPILE);
-
-	//http://enter.diehlsworld.de/ogl/skyboxartikel/skybox.htm
-	glDepthMask(0); // prevent writing depth coords
-
-	float fAHalf = 100; //half length of the edge of the cube
-
-						//front
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[0]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(fAHalf, -fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(-fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
-	glEnd();
-
-	//back
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[1]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-fAHalf, fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(fAHalf, fAHalf, -fAHalf);
-	glEnd();
-
-	//right
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[2]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(fAHalf, fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(fAHalf, -fAHalf, -fAHalf);
-	glEnd();
-
-	//left
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[3]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(-fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-fAHalf, fAHalf, -fAHalf);
-	glEnd();
-
-	//up
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[4]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-fAHalf, fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(-fAHalf, -fAHalf, fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(fAHalf, -fAHalf, fAHalf);
-	glEnd();
-
-	//down
-	glBindTexture(GL_TEXTURE_2D, nSkyTex[5]);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-fAHalf, fAHalf, -fAHalf);
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(fAHalf, fAHalf, -fAHalf);
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(fAHalf, -fAHalf, -fAHalf);
-	glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-fAHalf, -fAHalf, -fAHalf);
-	glEnd();
-
-	glDepthMask(1);
-
-	glEndList();
+	glGenTextures(1, &m_skyboxTex.emplace());
+	glBindTexture(GL_TEXTURE_CUBE_MAP, *m_skyboxTex);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	for(auto i = 0; i < 6; i++)
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, (*images)[i].width, (*images)[i].height, 0, (*images)[i].channels == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (*images)[i].data.data());
 }
 
 void BspRenderable::render(const RenderSettings& settings) {
 	m_settings = &settings;
 
-	// Enable Shader
-	glUseProgram(m_shaderProgram);
+	// render sky box
+	if (m_skyboxTex && settings.renderSkybox)
+		renderSkybox();
 
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "tex1"), 0);
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "tex2"), 1);
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "nightvision"), static_cast<GLint>(settings.nightvision));
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "flashlight"), static_cast<GLint>(settings.flashlight));
+	// Enable Shader
+	m_shaderProgram.use();
+
+	glUniform1i(m_shaderProgram.uniformLocation("tex1"), 0);
+	glUniform1i(m_shaderProgram.uniformLocation("tex2"), 1);
+	glUniform1i(m_shaderProgram.uniformLocation("nightvision"), static_cast<GLint>(settings.nightvision));
+	glUniform1i(m_shaderProgram.uniformLocation("flashlight"), static_cast<GLint>(settings.flashlight));
 	
 	const auto& cameraPos = m_camera->position();
 
-	// render sky box
-	if (m_skyBoxDL && settings.renderSkybox) {
-		const auto matrix = glm::translate(m_settings->matrix, cameraPos);
-		glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 1);
-		glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(matrix));
-		glCallList(*m_skyBoxDL);
-	}
-
-	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
+	const auto matrix = settings.projection * settings.view;
+	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
 
 	// turn on needed texture units
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), static_cast<GLint>(settings.textures));
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), static_cast<GLint>(settings.lightmaps));
+	glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), static_cast<GLint>(settings.textures));
+	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), static_cast<GLint>(settings.lightmaps));
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -194,8 +94,8 @@ void BspRenderable::render(const RenderSettings& settings) {
 
 	glDisableVertexAttribArray(3);
 
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit2Enabled"), 0);
-	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(settings.matrix));
+	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), 0);
+	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_decalVbo);
 	glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
@@ -212,7 +112,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 
 
 	// Turn off first unit, if it was enabled
-	glUniform1i(glGetUniformLocation(m_shaderProgram, "unit1Enabled"), 0);
+	glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), 0);
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -221,6 +121,27 @@ void BspRenderable::render(const RenderSettings& settings) {
 	// Leaf outlines
 	if (settings.renderLeafOutlines)
 		renderLeafOutlines();
+}
+
+void BspRenderable::renderSkybox() {
+	auto matrix = m_settings->projection
+		* glm::eulerAngleX(degToRad(-m_settings->pitch - 90.0f))
+		* glm::eulerAngleZ(degToRad(-m_settings->yaw + 90.0f))
+		* glm::eulerAngleZ(degToRad(-90.0f))
+		* glm::eulerAngleX(degToRad(+90.0f));
+
+	m_skyboxProgram.use();
+	glUniform1i(m_skyboxProgram.uniformLocation("cubeSampler"), 0);
+	glUniformMatrix4fv(m_skyboxProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, *m_skyboxTex);
+
+	//glDepthMask(GL_FALSE);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glDepthMask(GL_TRUE);
+
+	glUseProgram(0);
 }
 
 void BspRenderable::renderStaticGeometry(vec3 vPos) {
@@ -381,8 +302,8 @@ void BspRenderable::renderBrushEntity(int iEntity, vec3 vPos) {
 	else
 		nRenderMode = bsp30::RENDER_MODE_NORMAL;
 
-	const auto matrix = glm::translate(m_settings->matrix, m_bsp->models[iModel].vOrigin);
-	glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "matrix"), 1, false, glm::value_ptr(matrix));
+	const auto matrix = glm::translate(m_settings->projection * m_settings->view, m_bsp->models[iModel].vOrigin);
+	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
 
 	switch (nRenderMode) {
 	case bsp30::RENDER_MODE_NORMAL:

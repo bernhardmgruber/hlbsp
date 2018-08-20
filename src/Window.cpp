@@ -68,6 +68,8 @@ void Window::update() {
 }
 
 void Window::draw() {
+	m_settings.pitch = camera.viewAngles()[0];
+	m_settings.yaw = camera.viewAngles()[1];
 	m_renderer.beginFrame(m_settings, camera.viewMatrix());
 	m_renderer.render();
 

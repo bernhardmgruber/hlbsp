@@ -704,8 +704,6 @@ std::vector<Entity*> Bsp::FindEntities(std::string_view name) {
 }
 
 auto Bsp::loadSkyBox() const -> std::optional<std::array<Image, 6>> {
-	std::clog << "Loading sky textures ...\n";
-
 	const auto worldspawn = FindEntity("worldspawn");
 	if (worldspawn == nullptr)
 		return {};
@@ -716,7 +714,7 @@ auto Bsp::loadSkyBox() const -> std::optional<std::array<Image, 6>> {
 	GLuint nSkyTex[6];
 	glGenTextures(6, nSkyTex);
 
-	char size[6][3] = { "ft", "bk", "rt", "lf", "up", "dn" };
+	char size[6][3] = { "ft", "bk", "up", "dn", "rt", "lf" };
 	std::array<Image, 6> result;
 	for (auto i = 0; i < 6; i++)
 		result[i] = Image(SKY_DIR / (*skyname + size[i] + ".tga"));
