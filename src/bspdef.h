@@ -190,7 +190,7 @@ namespace bsp30 {
 
 	struct Model {
 		vec3 lower, upper;                       // Defines bounding box
-		vec3 vOrigin;                            // Coordinates to move the coordinate system before drawing the model
+		vec3 origin;                            // Coordinates to move the coordinate system before drawing the model
 		int32_t headNodesIndex[MAX_MAP_HULLS]{}; // Index into nodes array
 		int32_t visLeaves{};                     // No idea
 		int32_t firstFace{}, faceCount{};        // Index and count into face array

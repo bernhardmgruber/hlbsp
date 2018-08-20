@@ -437,7 +437,7 @@ void Bsp::ParseEntities(const std::string& entitiesString) {
 			// if entity has property "origin" apply to model struct for rendering
 			if (auto szOrigin = e.findProperty("origin")) {
 				int iModel = std::atoi(&e.findProperty("model")->c_str()[1]);
-				sscanf(szOrigin->c_str(), "%f %f %f", &models[iModel].vOrigin.x, &models[iModel].vOrigin.y, &models[iModel].vOrigin.z);
+				sscanf(szOrigin->c_str(), "%f %f %f", &models[iModel].origin.x, &models[iModel].origin.y, &models[iModel].origin.z);
 			}
 		} else
 			specialEntities.push_back(entities.size() - 1);
@@ -473,7 +473,7 @@ auto Bsp::decompressVIS(int leaf, const std::vector<std::uint8_t>& compressedVis
 	pvs.reserve(leaves.size() - 1);
 
 	const auto* read = &compressedVis[leaves[leaf].visOffset];
-	const auto* end = compressedVis.data() + (leaves[leaf + 1].visOffset == -1 ? header.lump[bsp30::LUMP_VISIBILITY].length : leaves[leaf + 1].visOffset);
+	//const auto* end = compressedVis.data() + (leaves[leaf + 1].visOffset == -1 ? header.lump[bsp30::LUMP_VISIBILITY].length : leaves[leaf + 1].visOffset);
 
 	const auto row = (visLists.size() + 7) / 8;
 	while (pvs.size() / 8 < row) {
@@ -492,10 +492,10 @@ auto Bsp::decompressVIS(int leaf, const std::vector<std::uint8_t>& compressedVis
 		read++;
 	}
 
-	std::clog << "PVS for leaf " << leaf << "\n";
-	std::clog << "read: " << (void*)read << "\n";
-	std::clog << "end:  " << (void*)end << "\n";
-	std::clog << "diff: " << (end - read) << "\n";
+	//std::clog << "PVS for leaf " << leaf << "\n";
+	//std::clog << "read: " << (void*)read << "\n";
+	//std::clog << "end:  " << (void*)end << "\n";
+	//std::clog << "diff: " << (end - read) << "\n";
 
 	return pvs;
 }

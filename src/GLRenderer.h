@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "IRenderable.h"
+#include "opengl/Program.h"
 
 class Hud;
 
@@ -31,6 +32,7 @@ private:
 
 	std::vector<std::unique_ptr<IRenderable>> m_renderables;
 
+	gl::Program m_coordsProgram;
 	GLuint m_font;
 	glm::mat4 m_projectionMatrix;
 };

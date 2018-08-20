@@ -56,22 +56,18 @@ void BspRenderable::render(const RenderSettings& settings) {
 	if (m_skyboxTex && settings.renderSkybox)
 		renderSkybox();
 
-	// Enable Shader
 	m_shaderProgram.use();
-
 	glUniform1i(m_shaderProgram.uniformLocation("tex1"), 0);
 	glUniform1i(m_shaderProgram.uniformLocation("tex2"), 1);
 	glUniform1i(m_shaderProgram.uniformLocation("nightvision"), static_cast<GLint>(settings.nightvision));
 	//glUniform1i(m_shaderProgram.uniformLocation("flashlight"), static_cast<GLint>(settings.flashlight));
+	glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), static_cast<GLint>(settings.textures));
+	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), static_cast<GLint>(settings.lightmaps));
 
 	const auto& cameraPos = m_camera->position();
 
 	const auto matrix = settings.projection * settings.view;
 	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
-
-	// turn on needed texture units
-	glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), static_cast<GLint>(settings.textures));
-	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), static_cast<GLint>(settings.lightmaps));
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -109,17 +105,15 @@ void BspRenderable::render(const RenderSettings& settings) {
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 
-
-	// Turn off first unit, if it was enabled
-	glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), 0);
-
 	glDisable(GL_DEPTH_TEST);
 
 	glUseProgram(0);
 
 	// Leaf outlines
-	if (settings.renderLeafOutlines)
+	if (settings.renderLeafOutlines) {
+		glLoadMatrixf(glm::value_ptr(matrix));
 		renderLeafOutlines();
+	}
 }
 
 void BspRenderable::renderSkybox() {
@@ -279,27 +273,25 @@ void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t
 }
 
 void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
-	// Model
-	int iModel = std::stoi(ent.findProperty("model")->substr(1));
+	const int model = std::stoi(ent.findProperty("model")->substr(1));
 
-	// Alpha value
 	const auto alpha = [&] {
 		if (const auto renderamt = ent.findProperty("renderamt"))
 			return std::stoi(*renderamt) / 255.0f;
 		return 1.0f;
 	}();
 
-	// Rendermode
-	unsigned char nRenderMode;
-	if (const auto pszRenderMode = ent.findProperty("rendermode"))
-		nRenderMode = std::stoi(*pszRenderMode);
-	else
-		nRenderMode = bsp30::RENDER_MODE_NORMAL;
+	const auto renderMode = [&] {
+		if (const auto pszRenderMode = ent.findProperty("rendermode"))
+			return static_cast<bsp30::RenderMode>(std::stoi(*pszRenderMode));
+		else
+			return bsp30::RENDER_MODE_NORMAL;
+	}();
 
-	const auto matrix = glm::translate(m_settings->projection * m_settings->view, m_bsp->models[iModel].vOrigin);
+	const auto matrix = glm::translate(m_settings->projection * m_settings->view, m_bsp->models[model].origin);
 	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
 
-	switch (nRenderMode) {
+	switch (renderMode) {
 		case bsp30::RENDER_MODE_NORMAL:
 			break;
 		case bsp30::RENDER_MODE_TEXTURE:
@@ -320,9 +312,9 @@ void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
 			break;
 	}
 
-	renderBSP(m_bsp->models[iModel].headNodesIndex[0], boost::dynamic_bitset<uint8_t>{}, pos); // for some odd reason, VIS does not work for entities ...
+	renderBSP(m_bsp->models[model].headNodesIndex[0], boost::dynamic_bitset<uint8_t>{}, pos); // for some odd reason, VIS does not work for entities ...
 
-	switch (nRenderMode) {
+	switch (renderMode) {
 		case bsp30::RENDER_MODE_NORMAL:
 			break;
 		case bsp30::RENDER_MODE_TEXTURE:

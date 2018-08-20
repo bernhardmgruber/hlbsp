@@ -127,6 +127,12 @@ GLRenderer::GLRenderer() {
 #else
 	m_font = createFont("helvetica", FONT_HUD_HEIGHT);
 #endif
+
+	// shader
+	m_coordsProgram = gl::Program{
+		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.vert"}),
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.frag"})
+	};
 }
 
 void GLRenderer::addRenderable(std::unique_ptr<IRenderable> renderable) {
@@ -187,31 +193,8 @@ void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int heig
 }
 
 void GLRenderer::renderCoords() {
-	glLoadMatrixf(glm::value_ptr(m_settings.projection * m_settings.view));
-
-	glBegin(GL_LINES);
-	glColor3f(1.0f, 0.0f, 0.0f); //red X+
-	glVertex3i(4000, 0, 0);
-	glVertex3i(0, 0, 0);
-	glColor3f(0.0f, 1.0f, 0.0f); //green Y+
-	glVertex3i(0, 4000, 0);
-	glVertex3i(0, 0, 0);
-	glColor3f(0.0f, 0.0f, 1.0f); //blue Z+
-	glVertex3i(0, 0, 4000);
-	glVertex3i(0, 0, 0);
-	glEnd();
-
-	glBegin(GL_LINES);
-	glColor3f(0.4f, 0.0f, 0.0f); //red X-
-	glVertex3i(0, 0, 0);
-	glVertex3i(-4000, 0, 0);
-	glColor3f(0.0f, 0.4f, 0.0f); //green Y-
-	glVertex3i(0, 0, 0);
-	glVertex3i(0, -4000, 0);
-	glColor3f(0.0f, 0.0f, 0.4f); //blue Z-
-	glVertex3i(0, 0, 0);
-	glVertex3i(0, 0, -4000);
-	glEnd();
-
-	glLoadIdentity();
+	m_coordsProgram.use();
+	glUniformMatrix4fv(m_coordsProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(m_settings.projection * m_settings.view));
+	glDrawArrays(GL_LINES, 0, 12);
+	glUseProgram(0);
 }

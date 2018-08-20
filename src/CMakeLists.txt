@@ -1,7 +1,6 @@
 project(hlbsp)
 
-file(GLOB_RECURSE source_files *.cpp *.h *.hpp)
-list(APPEND source_files "${CMAKE_CURRENT_LIST_DIR}/shader/main.frag" "${CMAKE_CURRENT_LIST_DIR}/shader/main.vert")
+file(GLOB_RECURSE source_files *.cpp *.h *.hpp *.vert *.frag)
 add_executable(${PROJECT_NAME} ${source_files})
 source_group("" FILES ${source_files})
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${source_files})
