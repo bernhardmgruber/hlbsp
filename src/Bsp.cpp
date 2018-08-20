@@ -281,7 +281,7 @@ void Bsp::LoadDecals() {
 					const auto& t = textureInfos[faces[iFace].textureInfo].t;
 
 					decals[i].normal = normal;
-					decals[i].nTex = texID;
+					decals[i].tex = texID;
 
 					decals[i].vec[0] = origin - t * h2 - s * w2;
 					decals[i].vec[1] = origin - t * h2 + s * w2;

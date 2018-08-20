@@ -20,7 +20,7 @@ struct FaceTexCoords {
 };
 
 struct Decal {
-	GLuint nTex{};
+	GLuint tex{};
 	vec3 normal;
 	vec3 vec[4];
 };

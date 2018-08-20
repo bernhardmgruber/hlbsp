@@ -152,7 +152,7 @@ void BspRenderable::renderDecals() {
 	glActiveTexture(GL_TEXTURE0);
 
 	for (auto i = 0; i < m_bsp->decals.size(); i++) {
-		glBindTexture(GL_TEXTURE_2D, m_bsp->decals[i].nTex);
+		glBindTexture(GL_TEXTURE_2D, m_bsp->decals[i].tex);
 		glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
 	}
 
