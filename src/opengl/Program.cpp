@@ -5,6 +5,29 @@
 #include "../IO.h"
 
 namespace gl {
+	namespace {
+		template <typename GetFunc, typename GetLocationFunc>
+		auto loadAttribUniformMap(GLuint program, GLenum countFlag, GetFunc getFunc, GetLocationFunc getLocationFunc) {
+			std::unordered_map<std::string, GLint> map;
+
+			GLint count;
+			glGetProgramiv(program, countFlag, &count);
+			for (auto i = 0; i < count; i++) {
+				GLint length;
+				GLsizei size;
+				GLenum type;
+				std::string name(255, '\0');
+				getFunc(program, i, name.size(), &length, &size, &type, name.data());
+
+				name.resize(length);
+				if (const auto loc = getLocationFunc(program, name.c_str()); loc != -1)
+					map.emplace(std::move(name), loc);
+			}
+
+			return map;
+		}
+	}
+
 	Program::Program(std::initializer_list<Shader> shaders) {
 		m_id = glCreateProgram();
 		for (const auto& shader : shaders)
@@ -22,8 +45,10 @@ namespace gl {
 		if (status != GL_TRUE)
 			throw std::runtime_error("Failed to link program:\n" + buildLog);
 		else
-			std::clog << "Program link log:\n"
-					  << buildLog << "\n";
+			std::clog << "Program link log:\n" << buildLog << "\n";
+
+		m_attributes = loadAttribUniformMap(m_id, GL_ACTIVE_ATTRIBUTES, glGetActiveAttrib, glGetAttribLocation);
+		m_uniforms = loadAttribUniformMap(m_id, GL_ACTIVE_UNIFORMS, glGetActiveUniform, glGetUniformLocation);
 	}
 
 	Program::Program(Program&& other) {
@@ -48,22 +73,18 @@ namespace gl {
 		glUseProgram(m_id);
 	}
 
-	auto Program::uniformLocation(std::string_view name) const -> GLint {
-		const auto loc = glGetUniformLocation(m_id, name.data());
-		if (loc == -1)
-			throw std::runtime_error(std::string("could not find location of uniform ") + name.data());
-		return loc;
+	auto Program::uniformLocation(const std::string& name) const -> GLint {
+		return m_uniforms.at(name);
 	}
 
-	auto Program::attributeLocation(std::string_view name) const -> GLint {
-		const auto loc = glGetAttribLocation(m_id, name.data());
-		if (loc == -1)
-			throw std::runtime_error(std::string("could not find location of attribute ") + name.data());
-		return loc;
+	auto Program::attributeLocation(const std::string& name) const -> GLint {
+		return m_attributes.at(name);
 	}
 
 	void Program::swap(Program& other) {
 		using std::swap;
 		swap(m_id, other.m_id);
+		swap(m_attributes, other.m_attributes);
+		swap(m_uniforms, other.m_uniforms);
 	}
 }

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <initializer_list>
-#include <string_view>
+#include <string>
+#include <unordered_map>
 
 #include "Shader.h"
 
@@ -19,12 +20,14 @@ namespace gl {
 		auto id() const -> GLuint;
 		void use() const;
 
-		auto uniformLocation(std::string_view name) const -> GLint;
-		auto attributeLocation(std::string_view name) const -> GLint;
+		auto uniformLocation(const std::string& name) const -> GLint;
+		auto attributeLocation(const std::string& name) const -> GLint;
 
 	private:
 		void swap(Program& other);
 
 		GLuint m_id = 0;
+		std::unordered_map<std::string, GLint> m_attributes;
+		std::unordered_map<std::string, GLint> m_uniforms;
 	};
 }
