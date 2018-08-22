@@ -102,22 +102,22 @@ GLRenderer::GLRenderer() {
 		throw std::runtime_error("GLSL shaders are not supported. Please upgrade your video driver.");
 	std::clog << " OK\n";
 
-	//
-	// configure lighting for flashlight
-	//
+	////
+	//// configure lighting for flashlight
+	////
 
-	glEnable(GL_LIGHT0);
+	//glEnable(GL_LIGHT0);
 
-	GLfloat lightPos[] = {0.0f, 0.0f, 0.0f, 1.0f};
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+	//GLfloat lightPos[] = {0.0f, 0.0f, 0.0f, 1.0f};
+	//glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 
-	GLfloat spotDir[] = {0.0f, 0.0f, -1.0f};
-	glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spotDir);
-	glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 25.0f);
-	glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 1.0f);
-	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.01f);
-	glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.01f);
-	glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0001f);
+	//GLfloat spotDir[] = {0.0f, 0.0f, -1.0f};
+	//glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spotDir);
+	//glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 25.0f);
+	//glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 1.0f);
+	//glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.01f);
+	//glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.01f);
+	//glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0001f);
 
 	// Load fonts
 	std::clog << "Creating font ...\n";
