@@ -1,85 +1,144 @@
 #include "font.h"
 
-#include <SDL2/SDL.h>
+#include <algorithm>
+#include <iostream>
 
-#ifdef __WIN32__
-#include <windows.h>
-#else
-#include <GL/glx.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#endif
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
-Font::Font(const std::string& name, int height) {
-	m_id = glGenLists(96); // Storage For 96 Characters
+// cf. https://learnopengl.com/In-Practice/Text-Rendering and https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_Text_Rendering_02
 
-#ifdef __WIN32__
-	HFONT hFont = CreateFont(-height, // Height Of Font
-		0,                            // Width Of Font
-		0,                            // Angle Of Escapement
-		0,                            // Orientation Angle
-		FW_MEDIUM,                    // Font Weight
-		FALSE,                        // Italic
-		FALSE,                        // Underline
-		FALSE,                        // Strikeout
-		ANSI_CHARSET,                 // Character Set Identifier
-		OUT_TT_PRECIS,                // Output Precision
-		CLIP_DEFAULT_PRECIS,          // Clipping Precision
-		ANTIALIASED_QUALITY,          // Output Quality
-		FF_DONTCARE | DEFAULT_PITCH,  // Family And Pitch
-		name.c_str());                // Font Name
+Font::Font(const std::experimental::filesystem::path& path, int height) {
 
-	if (hFont == nullptr)
-		throw std::runtime_error("Could not load font " + name);
+	FT_Library ft;
+	if (auto error = FT_Init_FreeType(&ft))
+		throw std::runtime_error("Faile to init FreeType library: " + std::to_string(error));
 
-	HDC hDC = GetDC(nullptr);
+	auto fn = std::experimental::filesystem::absolute(path).string();
+	for (char& c : fn)
+		if (c == '\\')
+			c = '/';
 
-	HFONT hOldFont = (HFONT)SelectObject(hDC, hFont); // Selects The Font We Want
-	wglUseFontBitmaps(hDC, 32, 96, m_id);            // Builds 96 Characters Starting At Character 32
+	FT_Face face;
+	if (auto error = FT_New_Face(ft, fn.c_str(), 0, &face))
+		throw std::runtime_error("Faile to load font: " + path.string() + ": " + std::to_string(error));
 
-	SelectObject(hDC, hOldFont); // restore font
-	DeleteObject(hFont);         // Delete The Font
-#else
-	Display* pDpl = XOpenDisplay(nullptr);
+	FT_Set_Pixel_Sizes(face, 0, height);
 
-	char szFont[256];
-	sprintf(szFont, "-*-%s-medium-r-*-*-%d-*-*-*-*-*-*-*", name, height);
+	FT_GlyphSlot g = face->glyph;
 
-	XFontStruct* fontInfo = XLoadQueryFont(pDpl, szFont);
+	glm::uvec2 atlasSize = { 0, 0 };
+	for (auto i = 32; i < 256; i++) {
+		if (FT_Load_Char(face, i, FT_LOAD_RENDER)) {
+			std::clog << "Failed to load glyth for character " << static_cast<char>(i) << "\n";
+			continue;
+		}
 
-	if (fontInfo == nullptr)
-		throw std::runtime_error("Could not load font " + name);
+		atlasSize.x += g->bitmap.width;
+		atlasSize.y = std::max(atlasSize.y, g->bitmap.rows);
+	}
 
-	glXUseXFont(fontInfo->fid, 32, 96, m_id);
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &m_id);
+	glBindTexture(GL_TEXTURE_2D, m_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	XFreeFont(pDpl, fontInfo);
-#endif
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlasSize.x, atlasSize.y, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+
+	int x = 0;
+	for (auto i = 32; i < 256; i++) {
+		if (FT_Load_Char(face, i, FT_LOAD_RENDER))
+			continue;
+
+		auto& c = m_glyphs.emplace_back();
+		c.advance.x = g->advance.x >> 6;
+		c.advance.y = g->advance.y >> 6;
+		c.size.x = g->bitmap.width;
+		c.size.y = g->bitmap.rows;
+		c.bearing.x = g->bitmap_left;
+		c.bearing.y = g->bitmap_top;
+		c.texX = static_cast<float>(x) / atlasSize.x;
+
+		glTexSubImage2D(GL_TEXTURE_2D, 0, x, 0, g->bitmap.width, g->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, g->bitmap.buffer);
+
+		x += g->bitmap.width;
+	}
+
+	m_atlasSize = atlasSize;
+
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
 }
 
-Font::Font(Font&& other) {
+Font::Font(Font&& other) noexcept {
 	swap(other);
 }
 
-Font& Font::operator=(Font&& other) {
+Font& Font::operator=(Font&& other) noexcept {
 	swap(other);
 	return *this;
 }
 
 Font::~Font() {
 	if (m_id != 0)
-		glDeleteLists(m_id, 96);
+		glDeleteTextures(1, &m_id);
 }
 
-void glPuts(int x, int y, const Font& font, const std::string& text) {
-	glRasterPos2i(x, y);
+void glPuts(int x, int y, const Font& font, const std::string& text, float sx, float sy) {
+	struct Vertex {
+		float x;
+		float y;
+		float s;
+		float t;
+	};
+	std::vector<Vertex> vertices;
+	vertices.reserve(6 * text.size());
 
-	glPushAttrib(GL_LIST_BIT);
-	glListBase(font.m_id - 32);
-	glCallLists(text.size(), GL_UNSIGNED_BYTE, text.data());
-	glPopAttrib();
+	for (const auto& c : text) {
+		const auto& g = font.m_glyphs[std::clamp(static_cast<unsigned char>(c) - 32, 0, 255 - 32)];
+		float x2 = x + g.bearing.x * sx;
+		float y2 = y + g.bearing.y * sy;
+		float w = g.size.x * sx;
+		float h = g.size.y * sy;
+
+		// advance the cursor to the start of the next character
+		x += g.advance.x * sx;
+		y += g.advance.y * sy;
+
+		// skip m_glyphs that have no pixels
+		if (!w || !h)
+			continue;
+
+		vertices.push_back({ x2    , y2    , g.texX,                                 0                             });
+		vertices.push_back({ x2 + w, y2    , g.texX + g.size.x / font.m_atlasSize.x, 0                             });
+		vertices.push_back({ x2    , y2 - h, g.texX,                                 g.size.y / font.m_atlasSize.y });
+		vertices.push_back({ x2    , y2 - h, g.texX,                                 g.size.y / font.m_atlasSize.y });
+		vertices.push_back({ x2 + w, y2    , g.texX + g.size.x / font.m_atlasSize.x, 0                             });
+		vertices.push_back({ x2 + w, y2 - h, g.texX + g.size.x / font.m_atlasSize.x, g.size.y / font.m_atlasSize.y });
+	}
+
+	GLuint buf;
+	glGenBuffers(1, &buf);
+	glBindBuffer(GL_ARRAY_BUFFER, buf);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STREAM_DRAW);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(0, 2, GL_FLOAT, false, sizeof(Vertex), nullptr);
+	glVertexAttribPointer(1, 2, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<const void*>(2 * sizeof(float)));
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, font.m_id);
+	glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+	glDeleteBuffers(1, &buf);
 }
 
 void Font::swap(Font& other) {
 	using std::swap;
 	swap(m_id, other.m_id);
+	swap(m_atlasSize, other.m_atlasSize);
+	swap(m_glyphs, other.m_glyphs);
 }

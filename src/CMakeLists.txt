@@ -8,6 +8,7 @@ source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${source_files})
 if(MSVC)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		GLEW::GLEW
+		Freetype::Freetype
 		glfw
 		opengl32
 		glu32
@@ -19,6 +20,7 @@ if(MSVC)
 else()
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		GLEW::GLEW
+		Freetype::Freetype
 		glfw
 		GL
 		GLU

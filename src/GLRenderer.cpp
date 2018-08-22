@@ -121,16 +121,17 @@ GLRenderer::GLRenderer() {
 
 	// Load fonts
 	std::clog << "Creating font ...\n";
-#ifdef _WIN32
-	m_font = Font("System", FONT_HUD_HEIGHT);
-#else
-	m_font = Font("helvetica", FONT_HUD_HEIGHT);
-#endif
+	m_font = Font("../../data/fonts/helvetica.ttf", FONT_HUD_HEIGHT);
 
 	// shader
 	m_coordsProgram = gl::Program{
 		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.vert"}),
 		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.frag"})
+	};
+
+	m_fontProgram = gl::Program{
+		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/font.vert"}),
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/font.frag"})
 	};
 }
 
@@ -158,18 +159,18 @@ void GLRenderer::render() {
 }
 
 void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int height, glm::vec3 cameraPos, float pitch, float yaw, glm::vec3 cameraView, double fps) {
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
+	const auto matrix = glm::ortho<float>(0, width, 0, height, -1.0f, 1.0f);
 
-	glOrtho(0, width, 0, height, -1.0f, 1.0f);
+	m_fontProgram.use();
+	glUniformMatrix4fv(m_fontProgram.uniformLocation("projection"), 1, false, glm::value_ptr(matrix));
+	glUniform1i(m_fontProgram.uniformLocation("tex"), 0);
+	glUniform3fv(m_fontProgram.uniformLocation("textColor"), 1, FONT_HUD_COLOR);
 
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	int nCurrentY = height;
 
-	glColor3fv(FONT_HUD_COLOR);
 	glPuts(FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT), m_font,
 		IPSS() << std::fixed << std::setprecision(1) << "FPS: " << fps);
 	glPuts(FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT), m_font,
@@ -186,14 +187,11 @@ void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int heig
 		nCurrentY += FONT_HUD_HEIGHT + FONT_HUD_SPACE;
 	}
 
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
+	glDisable(GL_BLEND);
 }
 
 void GLRenderer::renderCoords() {
 	m_coordsProgram.use();
 	glUniformMatrix4fv(m_coordsProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(m_settings.projection * m_settings.view));
 	glDrawArrays(GL_LINES, 0, 12);
-	glUseProgram(0);
 }
