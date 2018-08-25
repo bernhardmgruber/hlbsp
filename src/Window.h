@@ -23,10 +23,10 @@ private:
 	virtual void onKey(int key, int scancode, int action, int mods) override;
 	virtual void onChar(unsigned int codepoint) override;
 
-	Bsp bsp;
-	Hud hud;
 	Timer timer;
 	Camera camera;
+	Hud hud;
+	Bsp bsp;
 
 	RenderSettings m_settings;
 	GLRenderer m_renderer;

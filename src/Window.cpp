@@ -14,9 +14,9 @@ namespace {
 }
 
 Window::Window()
-	: GlfwWindow(WINDOW_CAPTION), bsp(BSP_DIR / BSP_FILE_NAME, m_settings.textures, m_settings.lightmaps) {
+	: GlfwWindow(WINDOW_CAPTION), bsp(BSP_DIR / BSP_FILE_NAME, m_settings.textures, m_settings.lightmaps), hud(camera, timer) {
 	m_renderer.addRenderable(std::make_unique<BspRenderable>(bsp, camera));
-	m_renderer.addRenderable(std::make_unique<HudRenderable>(hud, camera, timer));
+	m_renderer.addRenderable(std::make_unique<HudRenderable>(hud, camera));
 
 	onResize(m_width, m_height);
 
