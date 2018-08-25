@@ -70,11 +70,7 @@ void Window::draw() {
 	m_settings.pitch = camera.pitch;
 	m_settings.yaw = camera.yaw;
 
-	m_renderer.beginFrame(m_settings);
-	m_renderer.render();
-
-	if (m_settings.renderCoords)
-		m_renderer.renderCoords();
+	m_renderer.render(m_settings);
 }
 
 void Window::onResize(int width, int height) {

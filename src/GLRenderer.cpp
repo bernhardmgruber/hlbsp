@@ -118,20 +118,19 @@ void GLRenderer::resizeViewport(int width, int height) {
 	glViewport(0, 0, width, height);
 }
 
-void GLRenderer::beginFrame(RenderSettings settings) {
+void GLRenderer::render(RenderSettings settings) {
 	m_settings = settings;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-}
 
-void GLRenderer::render() {
 	for (auto& renderable : m_renderables)
 		renderable->render(m_settings);
+
+	if (m_settings.renderCoords) {
+		m_emptyVao.bind();
+		m_coordsProgram.use();
+		glUniformMatrix4fv(m_coordsProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(m_settings.projection * m_settings.view));
+		glDrawArrays(GL_LINES, 0, 12);
+	}
 }
 
-void GLRenderer::renderCoords() {
-	m_emptyVao.bind();
-	m_coordsProgram.use();
-	glUniformMatrix4fv(m_coordsProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(m_settings.projection * m_settings.view));
-	glDrawArrays(GL_LINES, 0, 12);
-}

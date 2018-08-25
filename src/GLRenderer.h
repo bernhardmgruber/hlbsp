@@ -19,10 +19,7 @@ public:
 
 	void resizeViewport(int width, int height);
 
-	void beginFrame(RenderSettings settings);
-
-	void render();
-	void renderCoords();
+	void render(RenderSettings settings);
 
 private:
 	struct Glew {
