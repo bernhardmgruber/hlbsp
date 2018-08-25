@@ -123,7 +123,7 @@ void BspRenderable::renderStaticGeometry(vec3 pos) {
 	std::vector<FaceRenderInfo> fri;
 	const auto leaf = m_bsp->findLeaf(pos);
 	renderBSP(0, !leaf || m_bsp->visLists.empty() ? boost::dynamic_bitset<std::uint8_t>{} : m_bsp->visLists[*leaf - 1], pos, fri);
-	renderFri(fri);
+	renderFri(std::move(fri));
 }
 
 void BspRenderable::renderBrushEntities(vec3 pos) {
@@ -296,7 +296,7 @@ void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
 
 	std::vector<FaceRenderInfo> fri;
 	renderBSP(m_bsp->models[model].headNodesIndex[0], boost::dynamic_bitset<uint8_t>{}, pos, fri); // for some odd reason, VIS does not work for entities ...
-	renderFri(fri);
+	renderFri(std::move(fri));
 
 	switch (renderMode) {
 		case bsp30::RENDER_MODE_NORMAL:
@@ -312,7 +312,13 @@ void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
 	}
 }
 
-void BspRenderable::renderFri(const std::vector<FaceRenderInfo>& fri) {
+void BspRenderable::renderFri(std::vector<FaceRenderInfo> fri) {
+	// TODO: sort takes too much CPU time, FPS dropped by 20%
+	//// sort by texture id to avoid some rebinds
+	//std::sort(begin(fri), end(fri), [](const FaceRenderInfo& a, const FaceRenderInfo& b) {
+	//	return a.texId < b.texId;
+	//});
+
 	for (const auto& i : fri) {
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, i.texId);
