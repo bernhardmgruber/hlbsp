@@ -120,7 +120,10 @@ void BspRenderable::renderStaticGeometry(vec3 pos) {
 	for (auto&& b : facesDrawn)
 		b = false;
 
-	renderBSP(0, pos);
+	std::vector<FaceRenderInfo> fri;
+	const auto leaf = m_bsp->findLeaf(pos);
+	renderBSP(0, !leaf || m_bsp->visLists.empty() ? boost::dynamic_bitset<std::uint8_t>{} : m_bsp->visLists[*leaf - 1], pos, fri);
+	renderFri(fri);
 }
 
 void BspRenderable::renderBrushEntities(vec3 pos) {
@@ -194,9 +197,7 @@ void BspRenderable::renderLeafOutlines(const bsp30::Leaf& leaf) {
 	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
 	glEnd();
 }
-
-
-void BspRenderable::renderFace(int face) {
+void BspRenderable::renderFace(int face, std::vector<FaceRenderInfo>& fri) {
 	if (facesDrawn[face])
 		return;
 	facesDrawn[face] = true;
@@ -207,30 +208,27 @@ void BspRenderable::renderFace(int face) {
 	// if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
 	const bool lightmapAvailable = static_cast<signed>(m_bsp->faces[face].lightmapOffset) != -1 && m_bsp->header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
 
-	if (m_settings->textures) {
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_bsp->textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex]);
-	}
+	auto& i = fri.emplace_back();
+	if (m_settings->textures)
+		i.texId = m_bsp->textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex];
+	else
+		i.texId = 0;
 
-	if (m_settings->lightmaps && lightmapAvailable) {
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_bsp->lightmapTexIds[face]);
-	}
+	if (m_settings->lightmaps && lightmapAvailable)
+		i.lmId = m_bsp->lightmapTexIds[face];
+	else
+		i.lmId = 0;
 
-	glDrawArrays(GL_TRIANGLE_FAN, vertexOffsets[face], m_bsp->faces[face].edgeCount);
+	i.offset = vertexOffsets[face];
+	i.count = m_bsp->faces[face].edgeCount;
 }
 
-void BspRenderable::renderLeaf(int leaf) {
+void BspRenderable::renderLeaf(int leaf, std::vector<FaceRenderInfo>& fri) {
 	for (int i = 0; i < m_bsp->leaves[leaf].markSurfaceCount; i++)
-		renderFace(m_bsp->markSurfaces[m_bsp->leaves[leaf].firstMarkSurface + i]);
+		renderFace(m_bsp->markSurfaces[m_bsp->leaves[leaf].firstMarkSurface + i], fri);
 }
 
-void BspRenderable::renderBSP(int node, vec3 pos) {
-	const auto leaf = m_bsp->findLeaf(pos);
-	renderBSP(node, !leaf || m_bsp->visLists.empty() ? boost::dynamic_bitset<std::uint8_t>{} : m_bsp->visLists[*leaf - 1], pos);
-}
-
-void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, vec3 pos) {
+void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, vec3 pos, std::vector<FaceRenderInfo>& fri) {
 	if (node < 0) {
 		if (node == -1)
 			return;
@@ -239,7 +237,7 @@ void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t
 		if (!visList.empty() && !visList[leaf - 1])
 			return;
 
-		renderLeaf(leaf);
+		renderLeaf(leaf, fri);
 
 		return;
 	}
@@ -255,8 +253,8 @@ void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t
 
 	const auto child1 = dist > 0 ? 1 : 0;
 	const auto child2 = dist > 0 ? 0 : 1;
-	renderBSP(m_bsp->nodes[node].childIndex[child1], visList, pos);
-	renderBSP(m_bsp->nodes[node].childIndex[child2], visList, pos);
+	renderBSP(m_bsp->nodes[node].childIndex[child1], visList, pos, fri);
+	renderBSP(m_bsp->nodes[node].childIndex[child2], visList, pos, fri);
 }
 
 void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
@@ -296,7 +294,9 @@ void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
 			break;
 	}
 
-	renderBSP(m_bsp->models[model].headNodesIndex[0], boost::dynamic_bitset<uint8_t>{}, pos); // for some odd reason, VIS does not work for entities ...
+	std::vector<FaceRenderInfo> fri;
+	renderBSP(m_bsp->models[model].headNodesIndex[0], boost::dynamic_bitset<uint8_t>{}, pos, fri); // for some odd reason, VIS does not work for entities ...
+	renderFri(fri);
 
 	switch (renderMode) {
 		case bsp30::RENDER_MODE_NORMAL:
@@ -309,6 +309,16 @@ void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
 		case bsp30::RENDER_MODE_SOLID:
 			glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 0);
 			break;
+	}
+}
+
+void BspRenderable::renderFri(const std::vector<FaceRenderInfo>& fri) {
+	for (const auto& i : fri) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, i.texId);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, i.lmId);
+		glDrawArrays(GL_TRIANGLE_FAN, i.offset, i.count);
 	}
 }
 
