@@ -33,7 +33,7 @@ void HudRenderable::render(const RenderSettings& settings) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	for (const auto& text : m_hud.texts())
-		glPuts(text.x, text.y, m_font, text.text);
+		renderText(m_textBuffer, text.x, text.y, m_font, text.text);
 
 	glDisable(GL_BLEND);
 }

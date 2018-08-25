@@ -89,7 +89,7 @@ Font::~Font() {
 		glDeleteTextures(1, &m_id);
 }
 
-void glPuts(int x, int y, const Font& font, const std::string& text, float sx, float sy) {
+void renderText(gl::Buffer& buffer, int x, int y, const Font& font, const std::string& text, float sx, float sy) {
 	struct Vertex {
 		float x;
 		float y;
@@ -122,9 +122,7 @@ void glPuts(int x, int y, const Font& font, const std::string& text, float sx, f
 		vertices.push_back({ x2 + w, y2 - h, g.texX + g.size.x / font.m_atlasSize.x, g.size.y / font.m_atlasSize.y });
 	}
 
-	GLuint buf;
-	glGenBuffers(1, &buf);
-	glBindBuffer(GL_ARRAY_BUFFER, buf);
+	glBindBuffer(GL_ARRAY_BUFFER, buffer.id());
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STREAM_DRAW);
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
@@ -133,7 +131,6 @@ void glPuts(int x, int y, const Font& font, const std::string& text, float sx, f
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, font.m_id);
 	glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-	glDeleteBuffers(1, &buf);
 }
 
 void Font::swap(Font& other) {

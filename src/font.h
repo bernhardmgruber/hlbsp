@@ -1,12 +1,12 @@
 #pragma once
 
-#include <GL/glew.h>
-#include <GL/gl.h>
 #include <glm/vec2.hpp>
 
 #include <string>
 #include <vector>
 #include <experimental/filesystem>
+
+#include "opengl/Buffer.h"
 
 class Font {
 public:
@@ -18,7 +18,7 @@ public:
 	Font& operator=(Font&& other) noexcept;
 	~Font();
 
-	friend void glPuts(int nX, int nY, const Font& font, const std::string& text, float sx = 1, float sy = 1);
+	friend void renderText(gl::Buffer& buffer, int nX, int nY, const Font& font, const std::string& text, float sx = 1, float sy = 1);
 
 private:
 	struct Glyph {
