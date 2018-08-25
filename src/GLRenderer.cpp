@@ -65,28 +65,6 @@ GLRenderer::GLRenderer() {
 
 	glEnable(GL_MULTISAMPLE);
 
-	//
-	// Extensions
-	//
-
-	std::clog << "Checking extensions ...\n";
-
-	std::clog << "GL_ARB_multitexture ...";
-	if (!GLEW_ARB_multitexture)
-		throw std::runtime_error("GL_ARB_multitexture is not supported. Please upgrade your video driver.");
-	std::clog << " OK\n";
-
-	std::clog << "GL_ARB_texture_non_power_of_two ...";
-	if (GLEW_ARB_texture_non_power_of_two)
-		std::clog << " OK (no lightmap scaling needed)\n";
-	else
-		std::clog << " NOT SUPPORTED (lightmaps will be scaled to 16 x 16)\n";
-
-	std::clog << "GLSL Shaders ...";
-	if (!GLEW_ARB_shader_objects || !GLEW_ARB_shading_language_100 || !GL_ARB_vertex_shader || !GL_ARB_fragment_shader)
-		throw std::runtime_error("GLSL shaders are not supported. Please upgrade your video driver.");
-	std::clog << " OK\n";
-
 	////
 	//// configure lighting for flashlight
 	////
