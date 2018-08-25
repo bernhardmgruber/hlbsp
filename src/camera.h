@@ -18,29 +18,19 @@ namespace {
 
 class Camera {
 public:
-	auto position() const -> vec3;
-	void setPosition(vec3 v);
+	vec3 position;
+	float pitch = 0; // up down rotation
+	float yaw = 0;   // side to side rotation
 
-	auto pitch() const -> float;
-	auto yaw() const -> float;
+	int viewportWidth = 0;
+	int viewportHeight = 0;
+	float fovy = 60;
+
+	float moveSensitivity = CAMERA_MOVE_SENS;
+	float lookSensitivity = CAMERA_LOOK_SENS;
+
 	auto viewVector() const -> vec3;
-
-	void setPitch(float pitch);
-	void setYaw(float pitch);
-
-	auto moveSensitivity() const -> float;
-	void setMoveSens(float newMoveSens);
-
-	void update(double t, float xDelta, float yDelta, uint8_t directions);
-
 	auto viewMatrix() const -> glm::mat4;
-
-private:
-	vec3 m_position;
-
-	float m_pitch = 0; // up down rotation
-	float m_yaw = 0;   // side to side rotation
-
-	float m_moveSensitivity = CAMERA_MOVE_SENS;
-	float m_lookSensitivity = CAMERA_LOOK_SENS;
+	auto projectionMatrix() const -> glm::mat4;
+	void update(double t, float xDelta, float yDelta, uint8_t directions);
 };

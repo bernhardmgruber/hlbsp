@@ -1,0 +1,28 @@
+#pragma once
+
+#include "opengl/Buffer.h"
+#include "opengl/Program.h"
+#include "opengl/VAO.h"
+#include "font.h"
+#include "IRenderable.h"
+
+class Hud;
+class Camera;
+class Timer;
+
+class HudRenderable : public IRenderable {
+public:
+	HudRenderable(const Hud& hud, const Camera& camera, const Timer& timer);
+
+	virtual void render(const RenderSettings& settings) override;
+
+private:
+	const Hud& m_hud;
+	const Camera& m_camera;
+	const Timer& m_timer;
+	Font m_font;
+
+	gl::VAO m_fontVao;
+	gl::Program m_fontProgram;
+	gl::Buffer m_textBuffer;
+};

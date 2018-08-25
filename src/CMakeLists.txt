@@ -5,6 +5,10 @@ add_executable(${PROJECT_NAME} ${source_files})
 source_group("" FILES ${source_files})
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${source_files})
 
+target_compile_options(${PROJECT_NAME} PRIVATE
+	-DGLM_ENABLE_EXPERIMENTAL
+)
+
 if(MSVC)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		GLEW::GLEW

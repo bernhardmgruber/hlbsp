@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "BspRenderable.h"
+#include "HudRenderable.h"
 #include "Image.h"
 
 namespace {
@@ -15,6 +16,7 @@ namespace {
 Window::Window()
 	: GlfwWindow(WINDOW_CAPTION), bsp(BSP_DIR / BSP_FILE_NAME, m_settings.textures, m_settings.lightmaps) {
 	m_renderer.addRenderable(std::make_unique<BspRenderable>(bsp, camera));
+	m_renderer.addRenderable(std::make_unique<HudRenderable>(hud, camera, timer));
 
 	onResize(m_width, m_height);
 
@@ -23,13 +25,12 @@ Window::Window()
 		if (auto origin = info_player_start->findProperty("origin")) {
 			std::istringstream iss(*origin);
 			vec3 o;
-			iss >> o.x >> o.y >> o.z;
-			camera.setPosition(o);
+			iss >> camera.position.x >> camera.position.y >> camera.position.z;
 		}
 
 		if (auto angle = info_player_start->findProperty("angle")) {
-			camera.setPitch(0);
-			camera.setYaw(std::stof(*angle));
+			camera.pitch = 0;
+			camera.yaw = std::stof(*angle);
 		}
 	}
 }
@@ -64,25 +65,26 @@ void Window::update() {
 }
 
 void Window::draw() {
-	m_settings.pitch = camera.pitch();
-	m_settings.yaw = camera.yaw();
-	m_renderer.beginFrame(m_settings, camera.viewMatrix());
+	m_settings.projection = camera.projectionMatrix();
+	m_settings.view = camera.viewMatrix();
+	m_settings.pitch = camera.pitch;
+	m_settings.yaw = camera.yaw;
+
+	m_renderer.beginFrame(m_settings);
 	m_renderer.render();
 
 	if (m_settings.renderCoords)
 		m_renderer.renderCoords();
-
-	if (m_settings.renderHUD)
-		m_renderer.renderHud(hud, m_width, m_height, camera.position(), camera.pitch(), camera.yaw(), camera.viewVector(), timer.TPS);
 }
 
 void Window::onResize(int width, int height) {
 	if (height == 0)
 		height = 1;
 
-	m_width = width;
-	m_height = height;
 	std::clog << "Window dimensions changed to " << width << " x " << height << "\n";
+
+	camera.viewportWidth = width;
+	camera.viewportHeight = height;
 
 	m_renderer.resizeViewport(width, height);
 }
@@ -116,10 +118,10 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS) {
 		switch (key) {
 			case GLFW_KEY_TAB:
-				camera.setMoveSens(CAMERA_MOVE_SENS * 3.0f);
+				camera.moveSensitivity = CAMERA_MOVE_SENS * 3.0f;
 				break;
 			case GLFW_KEY_LEFT_SHIFT:
-				camera.setMoveSens(CAMERA_MOVE_SENS / 3.0f);
+				camera.moveSensitivity = CAMERA_MOVE_SENS / 3.0f;
 				break;
 			case GLFW_KEY_F1:
 				if (m_fullscreen)
@@ -253,7 +255,7 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 		switch (key) {
 			case GLFW_KEY_TAB:
 			case GLFW_KEY_LEFT_SHIFT:
-				camera.setMoveSens(CAMERA_MOVE_SENS);
+				camera.moveSensitivity = CAMERA_MOVE_SENS;
 				break;
 		}
 		return;

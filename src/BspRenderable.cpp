@@ -1,6 +1,5 @@
 #include "BspRenderable.h"
 
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
 
 #include <iostream>
@@ -66,7 +65,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 
 	glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 0);
 
-	const auto& cameraPos = m_camera->position();
+	const auto& cameraPos = m_camera->position;
 
 	const auto matrix = settings.projection * settings.view;
 	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));

@@ -5,15 +5,11 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
-#include <memory>
 #include <vector>
 
 #include "IRenderable.h"
 #include "opengl/Program.h"
 #include "opengl/VAO.h"
-#include "font.h"
-
-class Hud;
 
 class GLRenderer {
 public:
@@ -23,10 +19,9 @@ public:
 
 	void resizeViewport(int width, int height);
 
-	void beginFrame(RenderSettings settings, glm::mat4 viewMatrix);
+	void beginFrame(RenderSettings settings);
 
 	void render();
-	void renderHud(const Hud& hud, unsigned int width, unsigned int height, glm::vec3 cameraPos, float pitch, float yaw, glm::vec3 cameraView, double fps);
 	void renderCoords();
 
 private:
@@ -43,7 +38,4 @@ private:
 
 	gl::VAO m_emptyVao;
 	gl::Program m_coordsProgram;
-	gl::Program m_fontProgram;
-	Font m_font;
-	glm::mat4 m_projectionMatrix;
 };

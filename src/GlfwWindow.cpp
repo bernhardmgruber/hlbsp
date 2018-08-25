@@ -168,7 +168,10 @@ void GlfwWindow::onError(int error, const char* description) {
 }
 
 void GlfwWindow::onResize(GLFWwindow* window, int width, int height) {
-	gui(window)->onResize(width, height);
+	auto* g = gui(window);
+	g->m_width = width;
+	g->m_height = height;
+	g->onResize(width, height);
 }
 
 void GlfwWindow::onMouseButton(GLFWwindow* window, int button, int action, int modifiers) {
