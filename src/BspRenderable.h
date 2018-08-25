@@ -10,7 +10,9 @@
 
 #include "IRenderable.h"
 #include "bspdef.h"
+#include "opengl/Buffer.h"
 #include "opengl/Program.h"
+#include "opengl/VAO.h"
 
 class Bsp;
 class Camera;
@@ -57,12 +59,15 @@ private:
 
 	const RenderSettings* m_settings = nullptr;
 
+	gl::VAO m_skyBoxVao;
 	std::optional<GLuint> m_skyboxTex;
 	gl::Program m_skyboxProgram;
 	gl::Program m_shaderProgram;
 	std::vector<unsigned int> vertexOffsets;
-	GLuint m_vbo = 0;
-	GLuint m_decalVbo = 0;
+	gl::VAO m_staticGeometryVao;
+	gl::Buffer m_staticGeometryVbo;
+	gl::VAO m_decalVao;
+	gl::Buffer m_decalVbo;
 
 	mutable std::vector<bool> facesDrawn;
 };

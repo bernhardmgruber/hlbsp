@@ -4,6 +4,7 @@ uniform bool unit1Enabled;
 uniform bool unit2Enabled;
 
 uniform bool nightvision;
+uniform bool alphaTest;
 
 uniform sampler2D tex1;
 uniform sampler2D tex2;
@@ -35,8 +36,12 @@ void main() {
 	vec4 texel1 = vec4(1.0);
 	vec4 texel2 = vec4(1.0);
 
-	if (unit1Enabled)
+	if (unit1Enabled) {
 		texel1 = texture2D(tex1, texCoord);
+		if (alphaTest && texel1.a < 0.25)
+			discard;
+	}
+
 	if (unit2Enabled)
 		texel2 = texture2D(tex2, lightmapCoord);
 

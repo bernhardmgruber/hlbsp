@@ -52,13 +52,13 @@ namespace {
 		}();
 
 		std::cerr << "OpenGL debug callback: [" << severityStr << "|" << sourceStr << "|" << typeStr << "] " << std::string(message, length) << '\n';
+
+		if (type == GL_DEBUG_TYPE_ERROR_ARB)
+			__debugbreak();
 	}
 }
 
 GLRenderer::GLRenderer() {
-	if (glewInit() != GLEW_OK)
-		throw std::runtime_error("glew failed to initialize");
-
 	// error callback
 	if (GLEW_ARB_debug_output) {
 		glDebugMessageCallbackARB(debugCallback, nullptr);
@@ -70,10 +70,6 @@ GLRenderer::GLRenderer() {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClearDepth(1.0f);
 	glDepthFunc(GL_LEQUAL);
-
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
@@ -150,7 +146,6 @@ void GLRenderer::beginFrame(RenderSettings settings, glm::mat4 viewMatrix) {
 	m_settings.projection = m_projectionMatrix;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void GLRenderer::render() {
@@ -161,6 +156,7 @@ void GLRenderer::render() {
 void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int height, glm::vec3 cameraPos, float pitch, float yaw, glm::vec3 cameraView, double fps) {
 	const auto matrix = glm::ortho<float>(0, width, 0, height, -1.0f, 1.0f);
 
+	m_emptyVao.bind();
 	m_fontProgram.use();
 	glUniformMatrix4fv(m_fontProgram.uniformLocation("projection"), 1, false, glm::value_ptr(matrix));
 	glUniform1i(m_fontProgram.uniformLocation("tex"), 0);
@@ -191,6 +187,7 @@ void GLRenderer::renderHud(const Hud& hud, unsigned int width, unsigned int heig
 }
 
 void GLRenderer::renderCoords() {
+	m_emptyVao.bind();
 	m_coordsProgram.use();
 	glUniformMatrix4fv(m_coordsProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(m_settings.projection * m_settings.view));
 	glDrawArrays(GL_LINES, 0, 12);

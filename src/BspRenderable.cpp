@@ -64,6 +64,8 @@ void BspRenderable::render(const RenderSettings& settings) {
 	glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), static_cast<GLint>(settings.textures));
 	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), static_cast<GLint>(settings.lightmaps));
 
+	glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 0);
+
 	const auto& cameraPos = m_camera->position();
 
 	const auto matrix = settings.projection * settings.view;
@@ -71,15 +73,8 @@ void BspRenderable::render(const RenderSettings& settings) {
 
 	glEnable(GL_DEPTH_TEST);
 
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-	glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, position)));
-	glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, normal)));
-	glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, texCoord)));
-	glVertexAttribPointer(3, 2, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, lightmapCoord)));
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);
-	glEnableVertexAttribArray(3);
+	if (settings.renderStaticBSP || settings.renderBrushEntities)
+		m_staticGeometryVao.bind();
 
 	if (settings.renderStaticBSP)
 		renderStaticGeometry(cameraPos);
@@ -87,26 +82,15 @@ void BspRenderable::render(const RenderSettings& settings) {
 	if (settings.renderBrushEntities)
 		renderBrushEntities(cameraPos);
 
-	glDisableVertexAttribArray(3);
-
 	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), 0);
 	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_decalVbo);
-	glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
-	glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, normal)));
-	glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, texCoord)));
 
 	if (settings.renderDecals)
 		renderDecals();
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
-
 	glDisable(GL_DEPTH_TEST);
 
+	glBindVertexArray(0);
 	glUseProgram(0);
 
 	// Leaf outlines
@@ -119,6 +103,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 void BspRenderable::renderSkybox() {
 	auto matrix = m_settings->projection * glm::eulerAngleXZX(degToRad(-m_settings->pitch - 90.0f), degToRad(-m_settings->yaw), degToRad(+90.0f));
 
+	m_skyBoxVao.bind();
 	m_skyboxProgram.use();
 	glUniform1i(m_skyboxProgram.uniformLocation("cubeSampler"), 0);
 	glUniformMatrix4fv(m_skyboxProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
@@ -144,6 +129,8 @@ void BspRenderable::renderBrushEntities(vec3 pos) {
 }
 
 void BspRenderable::renderDecals() {
+	m_decalVao.bind();
+
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(0.0f, -2.0f);
 	glEnable(GL_BLEND);
@@ -295,17 +282,14 @@ void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
 		case bsp30::RENDER_MODE_NORMAL:
 			break;
 		case bsp30::RENDER_MODE_TEXTURE:
-			glColor4f(1.0f, 1.0f, 1.0f, alpha);
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 			glDepthMask(GL_FALSE);
 			break;
 		case bsp30::RENDER_MODE_SOLID:
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.25);
+			glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 1);
 			break;
 		case bsp30::RENDER_MODE_ADDITIVE:
-			glColor4f(1.0f, 1.0f, 1.0f, alpha);
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_ONE, GL_ONE);
 			glDepthMask(GL_FALSE);
@@ -323,7 +307,7 @@ void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
 			glDepthMask(GL_TRUE);
 			break;
 		case bsp30::RENDER_MODE_SOLID:
-			glDisable(GL_ALPHA_TEST);
+			glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 0);
 			break;
 	}
 }
@@ -357,9 +341,17 @@ void BspRenderable::buildBuffers() {
 
 		std::exclusive_scan(begin(vertexOffsets), end(vertexOffsets), begin(vertexOffsets), 0);
 
-		glGenBuffers(1, &m_vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+		m_staticGeometryVao.bind();
+		m_staticGeometryVbo.bind(GL_ARRAY_BUFFER);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VertexWithLM), vertices.data(), GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, position)));
+		glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, normal)));
+		glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, texCoord)));
+		glVertexAttribPointer(3, 2, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, lightmapCoord)));
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		glEnableVertexAttribArray(3);
 	}
 
 	{
@@ -378,8 +370,13 @@ void BspRenderable::buildBuffers() {
 			}
 		}
 
-		glGenBuffers(1, &m_decalVbo);
-		glBindBuffer(GL_ARRAY_BUFFER, m_decalVbo);
+		m_decalVao.bind();
+		m_decalVbo.bind(GL_ARRAY_BUFFER);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
+		glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, normal)));
+		glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, texCoord)));
 	}
+
+	glBindVertexArray(0);
 }
