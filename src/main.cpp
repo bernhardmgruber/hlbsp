@@ -1,9 +1,16 @@
 #include <iostream>
 
 #include "Window.h"
+#include "Bsp.h"
 
-int main() try {
-	Window window;
+int main(const int argc, const char* argv[]) try {
+	if (argc != 2)
+		throw std::runtime_error("Missing map name as command line argument");
+
+	const auto mapFile = argv[1];
+	Bsp bsp(mapFile);
+
+	Window window(bsp);
 
 	while (true) {
 		glfwPollEvents();

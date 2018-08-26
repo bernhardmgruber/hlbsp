@@ -27,7 +27,7 @@ struct Decal {
 
 class Bsp {
 public:
-	explicit Bsp(const fs::path& filename, bool& g_bTextures, bool& g_bLightmaps);
+	explicit Bsp(const fs::path& filename);
 	~Bsp();
 
 	auto FindEntity(std::string_view name) -> Entity*;
@@ -65,9 +65,6 @@ private:
 
 	std::vector<GLuint> lightmapTexIds;   // Stores a lookup table where faces use their index to find the index of their lightmap texture
 	std::vector<GLuint> textureIds;       // Stores a lookup table where faces use their index to find the index of their texture
-
-	bool& g_bTextures;
-	bool& g_bLightmaps;
 
 	void LoadWadFiles(std::string wadStr);                                      // Loads and prepares the wad files for further texture loading
 	void UnloadWadFiles();                                                      // Unloads all wad files and frees allocated memory

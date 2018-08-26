@@ -519,8 +519,7 @@ auto Bsp::findLeaf(vec3 pos, int node) const -> std::optional<int> {
 	return {};
 }
 
-Bsp::Bsp(const fs::path& filename, bool& g_bTextures, bool& g_bLightmaps)
-	: g_bTextures(g_bTextures), g_bLightmaps(g_bLightmaps) {
+Bsp::Bsp(const fs::path& filename) {
 	std::ifstream file(filename, std::ios::binary);
 	if (!file)
 		throw std::ios::failure("Failed to open file " + filename.string() + " for reading");

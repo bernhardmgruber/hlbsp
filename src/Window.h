@@ -1,15 +1,16 @@
 #pragma once
 
-#include "Bsp.h"
 #include "GLRenderer.h"
 #include "GlfwWindow.h"
 #include "camera.h"
 #include "hud.h"
 #include "timer.h"
 
+class Bsp;
+
 class Window : public GlfwWindow {
 public:
-	Window();
+	Window(Bsp& bsp);
 	~Window();
 
 	void update();
@@ -26,7 +27,7 @@ private:
 	Timer timer;
 	Camera camera;
 	Hud hud;
-	Bsp bsp;
+	Bsp& bsp;
 
 	RenderSettings m_settings;
 	GLRenderer m_renderer;

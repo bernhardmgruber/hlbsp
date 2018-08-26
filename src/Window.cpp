@@ -5,16 +5,14 @@
 #include "BspRenderable.h"
 #include "HudRenderable.h"
 #include "Image.h"
+#include "Bsp.h"
 
 namespace {
-	const fs::path BSP_DIR = "../../data/maps";
-	const fs::path BSP_FILE_NAME = "cs_assault.bsp";
-
 	constexpr auto WINDOW_CAPTION = "HL BSP";
 }
 
-Window::Window()
-	: GlfwWindow(WINDOW_CAPTION), bsp(BSP_DIR / BSP_FILE_NAME, m_settings.textures, m_settings.lightmaps), hud(camera, timer) {
+Window::Window(Bsp& bsp)
+	: GlfwWindow(WINDOW_CAPTION), bsp(bsp), hud(camera, timer) {
 	m_renderer.addRenderable(std::make_unique<BspRenderable>(bsp, camera));
 	m_renderer.addRenderable(std::make_unique<HudRenderable>(hud, camera));
 
