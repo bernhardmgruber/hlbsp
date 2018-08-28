@@ -22,7 +22,7 @@ Image::Image(const fs::path& path) {
 	stbi_image_free(d);
 }
 
-void Image::Save(const fs::path& path) {
+void Image::Save(const fs::path& path) const {
 	if (!path.has_extension())
 		throw std::runtime_error("no extension");
 

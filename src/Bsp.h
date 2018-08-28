@@ -35,6 +35,8 @@ public:
 	auto FindEntities(std::string_view name) -> std::vector<Entity*>;
 
 	auto loadSkyBox() const -> std::optional<std::array<Image, 6>>;
+	auto textures() const -> const std::vector<MipmapTexture>&;
+	auto lightmaps() const -> const std::vector<Image>&;
 
 private:
 	bsp30::Header header{};                       // Stores the header
@@ -63,8 +65,8 @@ private:
 	std::vector<Decal> decals;
 	std::vector<boost::dynamic_bitset<std::uint8_t>> visLists; // Stores the vis lists for all faces
 
-	std::vector<GLuint> lightmapTexIds;   // Stores a lookup table where faces use their index to find the index of their lightmap texture
-	std::vector<GLuint> textureIds;       // Stores a lookup table where faces use their index to find the index of their texture
+	std::vector<MipmapTexture> m_textures;
+	std::vector<Image> m_lightmaps;
 
 	void LoadWadFiles(std::string wadStr);                                      // Loads and prepares the wad files for further texture loading
 	void UnloadWadFiles();                                                      // Unloads all wad files and frees allocated memory

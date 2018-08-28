@@ -10,6 +10,7 @@
 
 #include "IRenderable.h"
 #include "bspdef.h"
+#include "opengl/Texture.h"
 #include "opengl/Buffer.h"
 #include "opengl/Program.h"
 #include "opengl/VAO.h"
@@ -33,6 +34,8 @@ private:
 		unsigned int count;
 	};
 
+	void loadTextures();
+	void loadLightmaps();
 	void loadSkyTextures();
 
 	void renderSkybox();
@@ -54,7 +57,6 @@ private:
 		glm::vec3 position;
 		glm::vec3 normal;
 		glm::vec2 texCoord;
-		glm::vec2 lightmapCoord;
 	};
 
 	struct VertexWithLM : Vertex {
@@ -67,12 +69,16 @@ private:
 	const RenderSettings* m_settings = nullptr;
 
 	gl::VAO m_skyBoxVao;
-	std::optional<GLuint> m_skyboxTex;
+	std::optional<gl::Texture> m_skyboxTex;
 	gl::Program m_skyboxProgram;
+
+	std::vector<gl::Texture> m_textureIds;
+	std::vector<gl::Texture> m_lightmapIds;
 	gl::Program m_shaderProgram;
 	std::vector<unsigned int> vertexOffsets;
 	gl::VAO m_staticGeometryVao;
 	gl::Buffer m_staticGeometryVbo;
+
 	gl::VAO m_decalVao;
 	gl::Buffer m_decalVbo;
 

@@ -8,6 +8,18 @@
 #include "Bsp.h"
 #include "Camera.h"
 
+namespace {
+	auto channelsToTextureType(const Image& img) {
+		switch (img.channels) {
+			case 1: return GL_RED;
+			case 2: return GL_RG;
+			case 3: return GL_RGB;
+			case 4: return GL_RGBA;
+			default: assert(false);
+		}
+	}
+}
+
 BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 	: m_bsp(&bsp), m_camera(&camera) {
 	std::clog << "Loading bsp shaders ...\n";
@@ -21,15 +33,45 @@ BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/skybox.frag"}),
 	};
 
-	buildBuffers();
 	loadSkyTextures();
+	loadTextures();
+	loadLightmaps();
+	buildBuffers();
 
 	facesDrawn.resize(bsp.faces.size());
 }
 
-BspRenderable::~BspRenderable() {
-	if (m_skyboxTex)
-		glDeleteTextures(0, &*m_skyboxTex);
+BspRenderable::~BspRenderable() = default;
+
+void BspRenderable::loadTextures() {
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	const auto& mipTexs = m_bsp->textures();
+
+	m_textureIds.reserve(mipTexs.size());
+	int i = 0;
+	for (const auto& mipTex : mipTexs) {
+		m_textureIds.emplace_back().bind(GL_TEXTURE_2D);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, bsp30::MIPLEVELS - 1);
+		for (int j = 0; j < bsp30::MIPLEVELS; j++)
+			glTexImage2D(GL_TEXTURE_2D, j, GL_RGBA, mipTex.Img[j].width, mipTex.Img[j].height, 0, channelsToTextureType(mipTex.Img[j]), GL_UNSIGNED_BYTE, mipTex.Img[j].data.data());
+	}
+}
+
+void BspRenderable::loadLightmaps() {
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	const auto& lightmaps = m_bsp->lightmaps();
+
+	m_lightmapIds.reserve(lightmaps.size());
+	for (const auto& lm : lightmaps) {
+		m_lightmapIds.emplace_back().bind(GL_TEXTURE_2D);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, lm.width, lm.height, 0, GL_RGB, GL_UNSIGNED_BYTE, lm.data.data());
+	}
 }
 
 void BspRenderable::loadSkyTextures() {
@@ -37,8 +79,7 @@ void BspRenderable::loadSkyTextures() {
 	if (!images)
 		return;
 
-	glGenTextures(1, &m_skyboxTex.emplace());
-	glBindTexture(GL_TEXTURE_CUBE_MAP, *m_skyboxTex);
+	m_skyboxTex.emplace().bind(GL_TEXTURE_CUBE_MAP);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -108,7 +149,7 @@ void BspRenderable::renderSkybox() {
 	glUniformMatrix4fv(m_skyboxProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, *m_skyboxTex);
+	m_skyboxTex->bind(GL_TEXTURE_CUBE_MAP);
 
 	glDepthMask(GL_FALSE);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -209,12 +250,12 @@ void BspRenderable::renderFace(int face, std::vector<FaceRenderInfo>& fri) {
 
 	auto& i = fri.emplace_back();
 	if (m_settings->textures)
-		i.texId = m_bsp->textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex];
+		i.texId = m_textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex].id();
 	else
 		i.texId = 0;
 
 	if (m_settings->lightmaps && lightmapAvailable)
-		i.lmId = m_bsp->lightmapTexIds[face];
+		i.lmId = m_lightmapIds[face].id();
 	else
 		i.lmId = 0;
 

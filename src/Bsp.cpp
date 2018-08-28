@@ -17,6 +17,8 @@ namespace {
 
 	// Checks whether or not a texture has power of two extends and scales it if neccessary
 	void AdjustTextureToPowerOfTwo(Image* pImg) {
+		return;
+
 		if (GLEW_ARB_texture_non_power_of_two)
 			return;
 
@@ -83,12 +85,11 @@ void Bsp::LoadTextures(std::ifstream& file) {
 	std::clog << "Loading textures ...\n";
 
 	// generate textures from OpenGL
-	textureIds.resize(textureHeader.mipTextureCount);
-	glGenTextures(textureHeader.mipTextureCount, textureIds.data());
+	m_textures.reserve(textureHeader.mipTextureCount);
 
 	std::size_t errors = 0;
 	for (unsigned int i = 0; i < textureHeader.mipTextureCount; i++) {
-		MipmapTexture mipTexture;
+		MipmapTexture& mipTexture = m_textures.emplace_back();
 
 		if (mipTextures[i].offsets[0] == 0) {
 			// texture is stored externally
@@ -109,15 +110,8 @@ void Bsp::LoadTextures(std::ifstream& file) {
 			Wad::CreateMipTexture(imgData, mipTexture);
 		}
 
-		glBindTexture(GL_TEXTURE_2D, textureIds[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, bsp30::MIPLEVELS - 1);
-
-		for (int j = 0; j < bsp30::MIPLEVELS; j++) {
+		for (int j = 0; j < bsp30::MIPLEVELS; j++)
 			AdjustTextureToPowerOfTwo(&mipTexture.Img[j]);
-			glTexImage2D(GL_TEXTURE_2D, j, GL_RGBA, mipTexture.Img[j].width, mipTexture.Img[j].height, 0, GL_RGBA, GL_UNSIGNED_BYTE, mipTexture.Img[j].data.data());
-		}
 	}
 
 	UnloadWadFiles();
@@ -373,26 +367,14 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 
 			/* ********** end http://www.gamedev.net/community/forums/topic.asp?topic_id=538713 ********** */
 
-			// Find unbound texture slots
-			glGenTextures(1, &lightmapTexIds[i]);
-
-			Image image(nWidth, nHeight, 3);
+			Image& image = m_lightmaps.emplace_back(nWidth, nHeight, 3);
 			memcpy(image.data.data(), &pLightMapData[faces[i].lightmapOffset], nWidth * nHeight * 3 * sizeof(unsigned char));
-
 			AdjustTextureToPowerOfTwo(&image);
-
-			glBindTexture(GL_TEXTURE_2D, lightmapTexIds[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.data.data());
 
 			loadedLightmaps++;
 			loadedBytes += nWidth * nHeight * 3;
 		} else
-			lightmapTexIds[i] = 0;
+			m_lightmaps.emplace_back();
 	}
 
 	std::clog << "Loaded " << loadedLightmaps << " lightmaps, lightmapdatadiff: " << loadedBytes - header.lump[bsp30::LumpType::LUMP_LIGHTING].length << " bytes ";
@@ -621,9 +603,6 @@ Bsp::Bsp(const fs::path& filename) {
 	if (header.lump[bsp30::LumpType::LUMP_LIGHTING].length == 0)
 		std::clog << "No lightmapdata found\n";
 	else {
-		// Allocate the memory for the OpenGL texture unit IDs
-		lightmapTexIds.resize(faces.size());
-
 		std::vector<std::uint8_t> pLightMapData(header.lump[bsp30::LumpType::LUMP_LIGHTING].length);
 		file.seekg(header.lump[bsp30::LumpType::LUMP_LIGHTING].offset);
 		readVector(file, pLightMapData);
@@ -668,15 +647,7 @@ Bsp::Bsp(const fs::path& filename) {
 	std::clog << "FINISHED LOADING BSP\n";
 }
 
-Bsp::~Bsp() {
-	glDeleteTextures(textureIds.size(), textureIds.data());
-
-	//lightmaps
-	for (unsigned int& lightmapTexId : lightmapTexIds) {
-		if (lightmapTexId != 0)
-			glDeleteTextures(1, &lightmapTexId);
-	}
-}
+Bsp::~Bsp() = default;
 
 auto Bsp::FindEntity(std::string_view name) -> Entity* {
 	for (auto& e : entities)
@@ -715,4 +686,12 @@ auto Bsp::loadSkyBox() const -> std::optional<std::array<Image, 6>> {
 	for (auto i = 0; i < 6; i++)
 		result[i] = Image(SKY_DIR / (*skyname + size[i] + ".tga"));
 	return result;
+}
+
+auto Bsp::textures() const -> const std::vector<MipmapTexture>& {
+	return m_textures;
+}
+
+auto Bsp::lightmaps() const -> const std::vector<Image>& {
+	return m_lightmaps;
 }
