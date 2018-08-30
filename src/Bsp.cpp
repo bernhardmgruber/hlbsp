@@ -12,8 +12,6 @@
 namespace {
 	const auto WAD_DIR = fs::path("../../data/wads");
 	const auto SKY_DIR = fs::path("../../data/textures/sky");
-
-	constexpr auto DECAL_WAD_COUNT = 2;
 }
 
 void Bsp::LoadWadFiles(std::string wadStr) {
@@ -123,8 +121,8 @@ auto Bsp::LoadTextureFromWads(const char* name) -> std::optional<MipmapTexture> 
 }
 
 auto Bsp::LoadDecalTexture(const char* name) -> std::optional<MipmapTexture> {
-	for (int i = 0; i < DECAL_WAD_COUNT; i++)
-		if (auto pMipMapTex = decalWads[i].LoadDecalTexture(name))
+	for (auto& decalWad : decalWads)
+		if (auto pMipMapTex = decalWad.LoadDecalTexture(name))
 			return pMipMapTex;
 	return {};
 }
