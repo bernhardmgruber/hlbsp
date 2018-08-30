@@ -150,7 +150,7 @@ void Bsp::LoadDecals() {
 			int x, y, z;
 			std::stringstream(*originStr) >> x >> y >> z;
 
-			const vec3 origin{ x, y, z };
+			const glm::vec3 origin{ x, y, z };
 			const auto leaf = findLeaf(origin);
 			if (!leaf) {
 				std::clog << "ERROR finding decal leaf\n";
@@ -163,10 +163,10 @@ void Bsp::LoadDecals() {
 				const auto& face = faces[markSurfaces[leaves[*leaf].firstMarkSurface + j]];
 
 				// Find normal
-				vec3 normal = planes[face.planeIndex].normal;
+				glm::vec3 normal = planes[face.planeIndex].normal;
 
 				// Find a vertex on the face
-				vec3 vertex;
+				glm::vec3 vertex;
 				const int iEdge = surfEdges[face.firstEdgeIndex]; // This gives the index into the edge lump
 				if (iEdge > 0)
 					vertex = vertices[edges[iEdge].vertexIndex[0]];
@@ -411,7 +411,7 @@ auto Bsp::decompressVIS(int leaf, const std::vector<std::uint8_t>& compressedVis
 	return pvs;
 }
 
-auto Bsp::findLeaf(vec3 pos, int node) const -> std::optional<int> {
+auto Bsp::findLeaf(glm::vec3 pos, int node) const -> std::optional<int> {
 	// Run once for each child
 	for (const auto& childIndex : nodes[node].childIndex) {
 		// If the index is positive  it is an index into the nodes array

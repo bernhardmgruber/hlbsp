@@ -1,15 +1,11 @@
 #pragma once
 
-#include <GL/glew.h>
-#include <GL/GL.h>
-#include <glm/mat4x4.hpp>
-#include <glm/vec3.hpp>
-
 #include <vector>
 
-#include "IRenderable.h"
 #include "opengl/Program.h"
 #include "opengl/VAO.h"
+#include "IRenderable.h"
+#include "mathlib.h"
 
 class GLRenderer {
 public:

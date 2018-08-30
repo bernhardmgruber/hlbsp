@@ -18,7 +18,7 @@ namespace {
 
 class Camera {
 public:
-	vec3 position;
+	glm::vec3 position;
 	float pitch = 0; // up down rotation
 	float yaw = 0;   // side to side rotation
 
@@ -29,7 +29,7 @@ public:
 	float moveSensitivity = CAMERA_MOVE_SENS;
 	float lookSensitivity = CAMERA_LOOK_SENS;
 
-	auto viewVector() const -> vec3;
+	auto viewVector() const -> glm::vec3;
 	auto viewMatrix() const -> glm::mat4;
 	auto projectionMatrix() const -> glm::mat4;
 	void update(double t, float xDelta, float yDelta, uint8_t directions);

@@ -19,8 +19,8 @@ struct FaceTexCoords {
 
 struct Decal {
 	uint32_t texIndex;
-	vec3 normal;
-	vec3 vec[4];
+	glm::vec3 normal;
+	glm::vec3 vec[4];
 };
 
 class Bsp {
@@ -80,7 +80,7 @@ private:
 	void CountVisLeafs(int iNode, int& count);                                                           // Counts the number of visLeaves recursively
 	auto decompressVIS(int leaf, const std::vector<std::uint8_t>& compressedVis) const -> boost::dynamic_bitset<std::uint8_t>; // Get the PVS for a given leaf and return it in the form of a pointer to a bool array
 
-	auto findLeaf(vec3 pos, int node = 0) const -> std::optional<int>; // Recursivly walks through the BSP tree to find the leaf where the camera is in
+	auto findLeaf(glm::vec3 pos, int node = 0) const -> std::optional<int>; // Recursivly walks through the BSP tree to find the leaf where the camera is in
 
 	friend class BspRenderable;
 };

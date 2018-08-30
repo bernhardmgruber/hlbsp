@@ -22,7 +22,7 @@ Window::Window(Bsp& bsp)
 	if (const auto info_player_start = bsp.FindEntity("info_player_start")) {
 		if (auto origin = info_player_start->findProperty("origin")) {
 			std::istringstream iss(*origin);
-			vec3 o;
+			glm::vec3 o;
 			iss >> camera.position.x >> camera.position.y >> camera.position.z;
 		}
 

@@ -156,7 +156,7 @@ void BspRenderable::renderSkybox() {
 	glDepthMask(GL_TRUE);
 }
 
-void BspRenderable::renderStaticGeometry(vec3 pos) {
+void BspRenderable::renderStaticGeometry(glm::vec3 pos) {
 	for (auto&& b : facesDrawn)
 		b = false;
 
@@ -166,7 +166,7 @@ void BspRenderable::renderStaticGeometry(vec3 pos) {
 	renderFri(std::move(fri));
 }
 
-void BspRenderable::renderBrushEntities(vec3 pos) {
+void BspRenderable::renderBrushEntities(glm::vec3 pos) {
 	for (const auto i : m_bsp->brushEntities)
 		renderBrushEntity(m_bsp->entities[i], pos);
 }
@@ -269,7 +269,7 @@ void BspRenderable::renderLeaf(int leaf, std::vector<FaceRenderInfo>& fri) {
 		renderFace(m_bsp->markSurfaces[m_bsp->leaves[leaf].firstMarkSurface + i], fri);
 }
 
-void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, vec3 pos, std::vector<FaceRenderInfo>& fri) {
+void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, glm::vec3 pos, std::vector<FaceRenderInfo>& fri) {
 	if (node < 0) {
 		if (node == -1)
 			return;
@@ -298,7 +298,7 @@ void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t
 	renderBSP(m_bsp->nodes[node].childIndex[child2], visList, pos, fri);
 }
 
-void BspRenderable::renderBrushEntity(const Entity& ent, vec3 pos) {
+void BspRenderable::renderBrushEntity(const Entity& ent, glm::vec3 pos) {
 	const int model = std::stoi(ent.findProperty("model")->substr(1));
 
 	const auto alpha = [&] {

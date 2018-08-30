@@ -2,8 +2,8 @@
 
 #include "mathlib.h"
 
-auto Camera::viewVector() const -> vec3 {
-	vec3 v;
+auto Camera::viewVector() const -> glm::vec3 {
+	glm::vec3 v;
 	v.x = 1;
 	v.y = 0;
 	v.z = 0;
