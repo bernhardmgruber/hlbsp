@@ -1,7 +1,6 @@
 #pragma once
 
 #include <gl/glew.h>
-#include <gl/GL.h>
 
 namespace gl {
 	class VAO {
