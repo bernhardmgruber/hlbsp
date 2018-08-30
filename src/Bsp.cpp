@@ -14,31 +14,6 @@ namespace {
 	const auto SKY_DIR = fs::path("../../data/textures/sky");
 
 	constexpr auto DECAL_WAD_COUNT = 2;
-
-	// Checks whether or not a texture has power of two extends and scales it if neccessary
-	void AdjustTextureToPowerOfTwo(Image* pImg) {
-		return;
-
-		if (GLEW_ARB_texture_non_power_of_two)
-			return;
-
-		if (((pImg->width & (pImg->width - 1)) == 0) && ((pImg->height & (pImg->height - 1)) == 0))
-			return;
-
-		glPixelStorei(GL_PACK_ALIGNMENT, 1);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-		unsigned int nPOT = 1;
-		while (nPOT < pImg->height || nPOT < pImg->width)
-			nPOT *= 2;
-
-		std::vector<uint8_t> newData(nPOT * nPOT * pImg->channels);
-		gluScaleImage(pImg->channels == 4 ? GL_RGBA : GL_RGB, pImg->width, pImg->height, GL_UNSIGNED_BYTE, pImg->data.data(), nPOT, nPOT, GL_UNSIGNED_BYTE, newData.data());
-
-		pImg->width = nPOT;
-		pImg->height = nPOT;
-		pImg->data = std::move(newData);
-	}
 }
 
 void Bsp::LoadWadFiles(std::string wadStr) {
@@ -109,9 +84,6 @@ void Bsp::LoadTextures(std::ifstream& file) {
 
 			Wad::CreateMipTexture(imgData, mipTexture);
 		}
-
-		for (int j = 0; j < bsp30::MIPLEVELS; j++)
-			AdjustTextureToPowerOfTwo(&mipTexture.Img[j]);
 	}
 
 	UnloadWadFiles();
@@ -329,7 +301,6 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 
 			Image& image = m_lightmaps.emplace_back(nWidth, nHeight, 3);
 			memcpy(image.data.data(), &pLightMapData[faces[i].lightmapOffset], nWidth * nHeight * 3 * sizeof(unsigned char));
-			AdjustTextureToPowerOfTwo(&image);
 
 			loadedLightmaps++;
 			loadedBytes += nWidth * nHeight * 3;
