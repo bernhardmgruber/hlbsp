@@ -7,9 +7,9 @@
 #include "IRenderable.h"
 #include "bspdef.h"
 #include "mathlib.h"
-#include "opengl/Texture.h"
 #include "opengl/Buffer.h"
 #include "opengl/Program.h"
+#include "opengl/Texture.h"
 #include "opengl/VAO.h"
 
 class Bsp;
@@ -41,10 +41,10 @@ private:
 	void renderDecals();
 	void renderLeafOutlines();
 	void renderLeafOutlines(const bsp30::Leaf& leaf);
-	void renderFace(int iFace, std::vector<FaceRenderInfo>& fri);                             // Renders a face (polygon) by the given index
-	void renderLeaf(int iLeaf, std::vector<FaceRenderInfo>& fri);                             // Renders a leaf of the BSP tree by rendering each face of the leaf by the given index
+	void renderFace(int iFace, std::vector<FaceRenderInfo>& fri);                                                                  // Renders a face (polygon) by the given index
+	void renderLeaf(int iLeaf, std::vector<FaceRenderInfo>& fri);                                                                  // Renders a leaf of the BSP tree by rendering each face of the leaf by the given index
 	void renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, glm::vec3 pos, std::vector<FaceRenderInfo>& fri); // Recursively walks through the BSP tree and draws it
-	void renderBrushEntity(const Entity& ent, glm::vec3 pos);   // Renders a brush entity by rendering each face of the associated model by the given index
+	void renderBrushEntity(const Entity& ent, glm::vec3 pos);                                                                      // Renders a brush entity by rendering each face of the associated model by the given index
 	void renderFri(std::vector<FaceRenderInfo> fri);
 
 	void buildBuffers();

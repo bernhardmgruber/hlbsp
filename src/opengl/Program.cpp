@@ -6,7 +6,7 @@
 
 namespace gl {
 	namespace {
-		template <typename GetFunc, typename GetLocationFunc>
+		template<typename GetFunc, typename GetLocationFunc>
 		auto loadAttribUniformMap(GLuint program, GLenum countFlag, GetFunc getFunc, GetLocationFunc getLocationFunc) {
 			std::unordered_map<std::string, GLint> map;
 
@@ -45,7 +45,8 @@ namespace gl {
 		if (status != GL_TRUE)
 			throw std::runtime_error("Failed to link program:\n" + buildLog);
 		else
-			std::clog << "Program link log:\n" << buildLog << "\n";
+			std::clog << "Program link log:\n"
+					  << buildLog << "\n";
 
 		m_attributes = loadAttribUniformMap(m_id, GL_ACTIVE_ATTRIBUTES, glGetActiveAttrib, glGetAttribLocation);
 		m_uniforms = loadAttribUniformMap(m_id, GL_ACTIVE_UNIFORMS, glGetActiveUniform, glGetUniformLocation);

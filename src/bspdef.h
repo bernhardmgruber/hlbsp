@@ -129,9 +129,9 @@ namespace bsp30 {
 
 	// Planes lump contains plane structures
 	struct Plane {
-		glm::vec3 normal;    // The planes normal vector
-		float dist{};   // Plane equation is: normal * X = dist
-		int32_t type{}; // Plane type, see #defines
+		glm::vec3 normal; // The planes normal vector
+		float dist{};     // Plane equation is: normal * X = dist
+		int32_t type{};   // Plane type, see #defines
 	};
 
 	// Vertex lump is an array of float triples (glm::vec3)
@@ -180,17 +180,17 @@ namespace bsp30 {
 
 	// Texinfo lump contains texinfo structures
 	struct TextureInfo {
-		glm::vec3 s;                 // 1st row of texture matrix
+		glm::vec3 s;            // 1st row of texture matrix
 		float sShift{};         // Texture shift in s direction
-		glm::vec3 t;                 // 2nd row of texture matrix - multiply 1st and 2nd by vertex to get texture coordinates
+		glm::vec3 t;            // 2nd row of texture matrix - multiply 1st and 2nd by vertex to get texture coordinates
 		float tShift{};         // Texture shift in t direction
 		uint32_t miptexIndex{}; // Index into textures array
 		uint32_t flags{};       // Texture flags, seems to always be 0
 	};
 
 	struct Model {
-		glm::vec3 lower, upper;                       // Defines bounding box
-		glm::vec3 origin;                            // Coordinates to move the coordinate system before drawing the model
+		glm::vec3 lower, upper;                  // Defines bounding box
+		glm::vec3 origin;                        // Coordinates to move the coordinate system before drawing the model
 		int32_t headNodesIndex[MAX_MAP_HULLS]{}; // Index into nodes array
 		int32_t visLeaves{};                     // No idea
 		int32_t firstFace{}, faceCount{};        // Index and count into face array

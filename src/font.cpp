@@ -9,7 +9,6 @@
 // cf. https://learnopengl.com/In-Practice/Text-Rendering and https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_Text_Rendering_02
 
 Font::Font(const std::experimental::filesystem::path& path, int height) {
-
 	FT_Library ft;
 	if (auto error = FT_Init_FreeType(&ft))
 		throw std::runtime_error("Faile to init FreeType library: " + std::to_string(error));
@@ -27,7 +26,7 @@ Font::Font(const std::experimental::filesystem::path& path, int height) {
 
 	FT_GlyphSlot g = face->glyph;
 
-	glm::uvec2 atlasSize = { 0, 0 };
+	glm::uvec2 atlasSize = {0, 0};
 	for (auto i = 32; i < 256; i++) {
 		if (FT_Load_Char(face, i, FT_LOAD_RENDER)) {
 			std::clog << "Failed to load glyth for character " << static_cast<char>(i) << "\n";
@@ -114,12 +113,12 @@ void renderText(gl::Buffer& buffer, int x, int y, const Font& font, const std::s
 		if (!w || !h)
 			continue;
 
-		vertices.push_back({ x2    , y2    , g.texX,                                 0                             });
-		vertices.push_back({ x2 + w, y2    , g.texX + g.size.x / font.m_atlasSize.x, 0                             });
-		vertices.push_back({ x2    , y2 - h, g.texX,                                 g.size.y / font.m_atlasSize.y });
-		vertices.push_back({ x2    , y2 - h, g.texX,                                 g.size.y / font.m_atlasSize.y });
-		vertices.push_back({ x2 + w, y2    , g.texX + g.size.x / font.m_atlasSize.x, 0                             });
-		vertices.push_back({ x2 + w, y2 - h, g.texX + g.size.x / font.m_atlasSize.x, g.size.y / font.m_atlasSize.y });
+		vertices.push_back({x2, y2, g.texX, 0});
+		vertices.push_back({x2 + w, y2, g.texX + g.size.x / font.m_atlasSize.x, 0});
+		vertices.push_back({x2, y2 - h, g.texX, g.size.y / font.m_atlasSize.y});
+		vertices.push_back({x2, y2 - h, g.texX, g.size.y / font.m_atlasSize.y});
+		vertices.push_back({x2 + w, y2, g.texX + g.size.x / font.m_atlasSize.x, 0});
+		vertices.push_back({x2 + w, y2 - h, g.texX + g.size.x / font.m_atlasSize.x, g.size.y / font.m_atlasSize.y});
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, buffer.id());

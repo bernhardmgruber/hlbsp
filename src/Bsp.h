@@ -3,8 +3,8 @@
 #include <boost/dynamic_bitset.hpp>
 
 #include <experimental/filesystem>
-#include <string_view>
 #include <optional>
+#include <string_view>
 
 #include "bspdef.h"
 #include "entity.h"
@@ -77,7 +77,7 @@ private:
 
 	void ParseEntities(const std::string& entitiesString); // Parses the entity lump of the bsp file into single entity classes
 
-	void CountVisLeafs(int iNode, int& count);                                                           // Counts the number of visLeaves recursively
+	void CountVisLeafs(int iNode, int& count);                                                                                 // Counts the number of visLeaves recursively
 	auto decompressVIS(int leaf, const std::vector<std::uint8_t>& compressedVis) const -> boost::dynamic_bitset<std::uint8_t>; // Get the PVS for a given leaf and return it in the form of a pointer to a bool array
 
 	auto findLeaf(glm::vec3 pos, int node = 0) const -> std::optional<int>; // Recursivly walks through the BSP tree to find the leaf where the camera is in

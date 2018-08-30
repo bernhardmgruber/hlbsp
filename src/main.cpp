@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "Window.h"
 #include "Bsp.h"
+#include "Window.h"
 
 int main(const int argc, const char* argv[]) try {
 	if (argc != 2)

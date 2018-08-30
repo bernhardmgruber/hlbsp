@@ -1,10 +1,10 @@
 #pragma once
 
+#include "IRenderable.h"
+#include "font.h"
 #include "opengl/Buffer.h"
 #include "opengl/Program.h"
 #include "opengl/VAO.h"
-#include "font.h"
-#include "IRenderable.h"
 
 class Hud;
 class Camera;

@@ -150,7 +150,7 @@ void Bsp::LoadDecals() {
 			int x, y, z;
 			std::stringstream(*originStr) >> x >> y >> z;
 
-			const glm::vec3 origin{ x, y, z };
+			const glm::vec3 origin{x, y, z};
 			const auto leaf = findLeaf(origin);
 			if (!leaf) {
 				std::clog << "ERROR finding decal leaf\n";

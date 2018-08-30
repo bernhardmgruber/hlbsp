@@ -2,10 +2,10 @@
 
 #include <vector>
 
-#include "opengl/Program.h"
-#include "opengl/VAO.h"
 #include "IRenderable.h"
 #include "mathlib.h"
+#include "opengl/Program.h"
+#include "opengl/VAO.h"
 
 class GLRenderer {
 public:

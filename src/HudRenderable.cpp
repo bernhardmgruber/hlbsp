@@ -2,19 +2,17 @@
 
 #include <iomanip>
 
-#include "mathlib.h"
 #include "Camera.h"
 #include "Hud.h"
+#include "mathlib.h"
 
 HudRenderable::HudRenderable(const Hud& hud, const Camera& camera)
 	: m_hud(hud), m_camera(camera) {
-
 	m_font = Font("../../data/fonts/helvetica.ttf", m_hud.fontHeight());
 
 	m_fontProgram = gl::Program{
 		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/font.vert"}),
-		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/font.frag"})
-	};
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/font.frag"})};
 }
 
 void HudRenderable::render(const RenderSettings& settings) {

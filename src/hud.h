@@ -22,7 +22,7 @@ public:
 
 	auto texts() const -> std::vector<Text>;
 	auto fontHeight() const -> int;
-	auto fontColor() const-> glm::vec3;
+	auto fontColor() const -> glm::vec3;
 
 private:
 	const Camera& m_camera;

@@ -31,19 +31,19 @@ auto Hud::texts() const -> std::vector<Text> {
 
 	int nCurrentY = m_camera.viewportHeight;
 
-	result.push_back({ FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
-		IPSS() << std::fixed << std::setprecision(1) << "FPS: " << fps });
-	result.push_back({ FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
-		IPSS() << std::fixed << std::setprecision(1) << "Cam pos: " << cameraPos.x << "x " << cameraPos.y << "y " << cameraPos.z << "z" });
-	result.push_back({ FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
-		IPSS() << std::fixed << std::setprecision(1) << "Cam view: " << pitch << "°pitch " << yaw << "°yaw (vec: " << cameraView.x << "x " << cameraView.y << "y " << cameraView.z << "z)" });
+	result.push_back({FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
+		IPSS() << std::fixed << std::setprecision(1) << "FPS: " << fps});
+	result.push_back({FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
+		IPSS() << std::fixed << std::setprecision(1) << "Cam pos: " << cameraPos.x << "x " << cameraPos.y << "y " << cameraPos.z << "z"});
+	result.push_back({FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
+		IPSS() << std::fixed << std::setprecision(1) << "Cam view: " << pitch << "°pitch " << yaw << "°yaw (vec: " << cameraView.x << "x " << cameraView.y << "y " << cameraView.z << "z)"});
 
 	// console
 	nCurrentY = FONT_HUD_SPACE;
 	for (const auto& line : m_console) {
 		if (nCurrentY + FONT_HUD_HEIGHT >= CONSOLE_HEIGHT)
 			break;
-		result.push_back({ FONT_HUD_SPACE, nCurrentY, line });
+		result.push_back({FONT_HUD_SPACE, nCurrentY, line});
 		nCurrentY += FONT_HUD_HEIGHT + FONT_HUD_SPACE;
 	}
 

@@ -12,7 +12,7 @@ namespace gl {
 		VAO& operator=(VAO&& other);
 		~VAO();
 
-		auto id() const->GLuint;
+		auto id() const -> GLuint;
 		void bind();
 
 	private:

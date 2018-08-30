@@ -2,10 +2,10 @@
 
 #include <iostream>
 
+#include "Bsp.h"
 #include "BspRenderable.h"
 #include "HudRenderable.h"
 #include "Image.h"
-#include "Bsp.h"
 
 namespace {
 	constexpr auto WINDOW_CAPTION = "HL BSP";

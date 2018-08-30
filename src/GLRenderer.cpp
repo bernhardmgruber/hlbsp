@@ -84,8 +84,7 @@ GLRenderer::GLRenderer() {
 
 	m_coordsProgram = gl::Program{
 		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.vert"}),
-		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.frag"})
-	};
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.frag"})};
 }
 
 void GLRenderer::addRenderable(std::unique_ptr<IRenderable> renderable) {
@@ -111,4 +110,3 @@ void GLRenderer::render(RenderSettings settings) {
 		glDrawArrays(GL_LINES, 0, 12);
 	}
 }
-
