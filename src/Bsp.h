@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GL/glew.h>
-#include <GL/gl.h>
 #include <boost/dynamic_bitset.hpp>
 
 #include <experimental/filesystem>
@@ -20,7 +18,7 @@ struct FaceTexCoords {
 };
 
 struct Decal {
-	GLuint tex{};
+	uint32_t texIndex;
 	vec3 normal;
 	vec3 vec[4];
 };
@@ -37,6 +35,7 @@ public:
 	auto loadSkyBox() const -> std::optional<std::array<Image, 6>>;
 	auto textures() const -> const std::vector<MipmapTexture>&;
 	auto lightmaps() const -> const std::vector<Image>&;
+	auto decals() const -> const std::vector<Decal>&;
 
 private:
 	bsp30::Header header{};                       // Stores the header
@@ -62,7 +61,7 @@ private:
 	std::vector<unsigned int> specialEntities; // IndicUnloadWadFileses of special entities in entities
 	std::vector<Wad> wadFiles;
 	std::vector<Wad> decalWads;
-	std::vector<Decal> decals;
+	std::vector<Decal> m_decals;
 	std::vector<boost::dynamic_bitset<std::uint8_t>> visLists; // Stores the vis lists for all faces
 
 	std::vector<MipmapTexture> m_textures;

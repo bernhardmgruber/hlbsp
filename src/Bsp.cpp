@@ -170,26 +170,17 @@ void Bsp::LoadDecals() {
 	}
 
 	// Texture name table for texture loading
-	int nLoadedTex = 0;
-	struct LoadedTex {
-		std::string name;
-		GLuint texID{};
-		int width{};
-		int height{};
-	};
-	std::vector<LoadedTex> aLoadedTex(infodecals.size());
+	std::unordered_map<std::string, unsigned int> loadedTex;
 
-	// Allocate new decals
-	decals.resize(infodecals.size());
+	m_decals.reserve(infodecals.size());
 
 	// Process each decal
-	for (int i = 0; i < infodecals.size(); i++) {
-		if (auto pszOrigin = infodecals[i]->findProperty("origin")) {
+	for (const auto& infodecal : infodecals) {
+		if (auto originStr = infodecal->findProperty("origin")) {
 			int x, y, z;
-			sscanf(pszOrigin->c_str(), "%d %d %d", &x, &y, &z);
+			std::stringstream(*originStr) >> x >> y >> z;
 
 			const vec3 origin{ x, y, z };
-
 			const auto leaf = findLeaf(origin);
 			if (!leaf) {
 				std::clog << "ERROR finding decal leaf\n";
@@ -199,14 +190,14 @@ void Bsp::LoadDecals() {
 			// Loop through each face in this leaf
 			for (int j = 0; j < leaves[*leaf].markSurfaceCount; j++) {
 				// Find face
-				int iFace = markSurfaces[leaves[*leaf].firstMarkSurface + j];
+				const auto& face = faces[markSurfaces[leaves[*leaf].firstMarkSurface + j]];
 
 				// Find normal
-				vec3 normal = planes[faces[iFace].planeIndex].normal;
+				vec3 normal = planes[face.planeIndex].normal;
 
 				// Find a vertex on the face
 				vec3 vertex;
-				const int iEdge = surfEdges[faces[iFace].firstEdgeIndex]; // This gives the index into the edge lump
+				const int iEdge = surfEdges[face.firstEdgeIndex]; // This gives the index into the edge lump
 				if (iEdge > 0)
 					vertex = vertices[edges[iEdge].vertexIndex[0]];
 				else
@@ -214,73 +205,42 @@ void Bsp::LoadDecals() {
 
 				// Check if decal origin is in this face
 				if (PointInPlane(origin, normal, glm::dot(normal, vertex))) {
-					// TEXTURE
-					GLuint texID = 0;
-					int width = 0;
-					int height = 0;
-
-					auto texName = infodecals[i]->findProperty("texture");
-					if (texName == nullptr) {
+					// texture
+					const auto texName = infodecal->findProperty("texture");
+					if (!texName) {
 						std::clog << "ERROR retrieving texture name from decal\n";
-						continue;
+						break;
 					}
 
 					// Check if texture has already been loaded
-					for (int k = 0; k < nLoadedTex; k++) {
-						if (*texName == aLoadedTex[k].name) {
-							// Found already loaded texture
-							texID = aLoadedTex[k].texID;
-							width = aLoadedTex[k].width;
-							height = aLoadedTex[k].height;
+					auto it = loadedTex.find(*texName);
+					if (it == end(loadedTex)) {
+						// Load new texture
+						auto mipTex = LoadDecalTexture(texName->c_str());
+						if (!mipTex) {
+							std::clog << "ERROR loading mipTexture " << texName << "\n";
 							break;
 						}
+						it = loadedTex.emplace(*texName, m_textures.size()).first;
+						m_textures.emplace_back(std::move(*mipTex));
 					}
 
-					if (texID == 0) {
-						// Load new texture
-						auto pMipTex = LoadDecalTexture(texName->c_str());
-						if (!pMipTex) {
-							std::clog << "#" << std::setw(3) << i + 1 << " ERROR loading mipTexture " << texName << "\n";
-							continue;
-						}
+					const auto& texIndex = it->second;
+					const auto& img0 = m_textures[texIndex].Img[0];
 
-						glGenTextures(1, &texID);
+					const float h2 = img0.height / 2.0f;
+					const float w2 = img0.width / 2.0f;
 
-						glBindTexture(GL_TEXTURE_2D, texID);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, bsp30::MIPLEVELS - 1);
+					const auto& s = textureInfos[face.textureInfo].s;
+					const auto& t = textureInfos[face.textureInfo].t;
 
-						for (int k = 0; k < bsp30::MIPLEVELS; k++) {
-							AdjustTextureToPowerOfTwo(&pMipTex->Img[k]);
-							glTexImage2D(GL_TEXTURE_2D, k, GL_RGBA, pMipTex->Img[k].width, pMipTex->Img[k].height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pMipTex->Img[k].data.data());
-						}
-
-						// Decal size
-						width = pMipTex->Img[0].width;
-						height = pMipTex->Img[0].height;
-
-						// Add to loaded textures
-						aLoadedTex[nLoadedTex].name = *texName;
-						aLoadedTex[nLoadedTex].texID = texID;
-						aLoadedTex[nLoadedTex].width = width;
-						aLoadedTex[nLoadedTex].height = height;
-						nLoadedTex++;
-					}
-
-					const float h2 = height / 2.0f;
-					const float w2 = width / 2.0f;
-
-					const auto& s = textureInfos[faces[iFace].textureInfo].s;
-					const auto& t = textureInfos[faces[iFace].textureInfo].t;
-
-					decals[i].normal = normal;
-					decals[i].tex = texID;
-
-					decals[i].vec[0] = origin - t * h2 - s * w2;
-					decals[i].vec[1] = origin - t * h2 + s * w2;
-					decals[i].vec[2] = origin + t * h2 + s * w2;
-					decals[i].vec[3] = origin + t * h2 - s * w2;
+					auto& decal = m_decals.emplace_back();
+					decal.normal = normal;
+					decal.texIndex = it->second;
+					decal.vec[0] = origin - t * h2 - s * w2;
+					decal.vec[1] = origin - t * h2 + s * w2;
+					decal.vec[2] = origin + t * h2 + s * w2;
+					decal.vec[3] = origin + t * h2 - s * w2;
 
 					break;
 				}
@@ -288,7 +248,7 @@ void Bsp::LoadDecals() {
 		}
 	}
 
-	std::clog << "Loaded " << decals.size() << " decals, " << nLoadedTex << " decal textures\n";
+	std::clog << "Loaded " << m_decals.size() << " decals, " << loadedTex.size() << " decal textures\n";
 }
 
 void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
@@ -678,9 +638,6 @@ auto Bsp::loadSkyBox() const -> std::optional<std::array<Image, 6>> {
 	if (skyname == nullptr)
 		return {}; // we don't have a sky texture
 
-	GLuint nSkyTex[6];
-	glGenTextures(6, nSkyTex);
-
 	char size[6][3] = {"ft", "bk", "up", "dn", "rt", "lf"};
 	std::array<Image, 6> result;
 	for (auto i = 0; i < 6; i++)
@@ -694,4 +651,8 @@ auto Bsp::textures() const -> const std::vector<MipmapTexture>& {
 
 auto Bsp::lightmaps() const -> const std::vector<Image>& {
 	return m_lightmaps;
+}
+
+auto Bsp::decals() const -> const std::vector<Decal>& {
+	return m_decals;
 }

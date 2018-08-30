@@ -181,8 +181,9 @@ void BspRenderable::renderDecals() {
 
 	glActiveTexture(GL_TEXTURE0);
 
-	for (auto i = 0; i < m_bsp->decals.size(); i++) {
-		glBindTexture(GL_TEXTURE_2D, m_bsp->decals[i].tex);
+	const auto& decals = m_bsp->decals();
+	for (auto i = 0; i < decals.size(); i++) {
+		glBindTexture(GL_TEXTURE_2D, m_textureIds[decals[i].texIndex].id());
 		glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
 	}
 
@@ -414,7 +415,7 @@ void BspRenderable::buildBuffers() {
 		// decals
 		std::vector<Vertex> vertices;
 
-		for (const auto& decal : m_bsp->decals) {
+		for (const auto& decal : m_bsp->decals()) {
 			for (auto i = 0; i < 4; i++) {
 				auto& v = vertices.emplace_back();
 				v.position = decal.vec[i];
