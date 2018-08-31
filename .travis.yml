@@ -1,9 +1,12 @@
 dist: trusty
 sudo: false
 language: cpp
+cache: ccache
 
 addons:
   apt:
+    sources:
+      - sourceline: 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main'
     packages:
       - libboost-all-dev
       - libglew-dev
