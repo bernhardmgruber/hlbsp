@@ -53,8 +53,8 @@ Font::Font(const std::experimental::filesystem::path& path, int height) {
 		c.bearing.y = g->bitmap_top;
 		c.texX = static_cast<float>(x) / atlasSize.x;
 
-		for (auto gy = 0; gy < g->bitmap.rows; gy++)
-			for (auto gx = 0; gx < g->bitmap.width; gx++)
+		for (auto gy = 0u; gy < g->bitmap.rows; gy++)
+			for (auto gx = 0u; gx < g->bitmap.width; gx++)
 				m_atlas.data[gy * m_atlas.width + x + gx] = g->bitmap.buffer[gy * g->bitmap.width + gx];
 
 		x += g->bitmap.width;

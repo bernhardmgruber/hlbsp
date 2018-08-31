@@ -42,8 +42,10 @@ namespace {
 
 		std::cerr << "OpenGL debug callback: [" << severityStr << "|" << sourceStr << "|" << typeStr << "] " << std::string(message, length) << '\n';
 
+#ifdef _WIN32
 		if (type == GL_DEBUG_TYPE_ERROR_ARB)
 			__debugbreak();
+#endif
 	}
 }
 

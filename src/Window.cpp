@@ -12,7 +12,7 @@ namespace {
 }
 
 Window::Window(Bsp& bsp)
-	: GlfwWindow(WINDOW_CAPTION), bsp(bsp), hud(camera, timer) {
+	: GlfwWindow(WINDOW_CAPTION), hud(camera, timer), bsp(bsp) {
 	m_renderer.addRenderable(std::make_unique<BspRenderable>(bsp, camera));
 	m_renderer.addRenderable(std::make_unique<HudRenderable>(hud, camera));
 
@@ -21,9 +21,7 @@ Window::Window(Bsp& bsp)
 	// place camera at spawn
 	if (const auto info_player_start = bsp.FindEntity("info_player_start")) {
 		if (auto origin = info_player_start->findProperty("origin")) {
-			std::istringstream iss(*origin);
-			glm::vec3 o;
-			iss >> camera.position.x >> camera.position.y >> camera.position.z;
+			std::istringstream(*origin) >> camera.position.x >> camera.position.y >> camera.position.z;
 		}
 
 		if (auto angle = info_player_start->findProperty("angle")) {

@@ -26,5 +26,6 @@ struct RenderSettings {
 
 class IRenderable {
 public:
+	virtual ~IRenderable() = default;
 	virtual void render(const RenderSettings& settings) = 0;
 };

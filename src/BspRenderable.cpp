@@ -1,12 +1,12 @@
 #include "BspRenderable.h"
 
-#include <glm/gtx/euler_angles.hpp>
-
 #include <iostream>
 #include <numeric>
+#include <random>
 
 #include "Bsp.h"
 #include "Camera.h"
+#include "mathlib.h"
 
 namespace {
 	auto channelsToTextureType(const Image& img) {
@@ -49,7 +49,6 @@ void BspRenderable::loadTextures() {
 	const auto& mipTexs = m_bsp->textures();
 
 	m_textureIds.reserve(mipTexs.size());
-	int i = 0;
 	for (const auto& mipTex : mipTexs) {
 		m_textureIds.emplace_back().bind(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -141,7 +140,9 @@ void BspRenderable::render(const RenderSettings& settings) {
 }
 
 void BspRenderable::renderSkybox() {
-	auto matrix = m_settings->projection * glm::eulerAngleXZX(degToRad(-m_settings->pitch - 90.0f), degToRad(-m_settings->yaw), degToRad(+90.0f));
+	// TODO: glm in WSL Ubuntu does not yet have this function
+	//auto matrix = m_settings->projection * glm::eulerAngleXZX(degToRad(-m_settings->pitch - 90.0f), degToRad(-m_settings->yaw), degToRad(+90.0f));
+	auto matrix = m_settings->projection * glm::eulerAngleX(degToRad(-m_settings->pitch - 90.0f)) * glm::eulerAngleZ(degToRad(-m_settings->yaw)) * glm::eulerAngleX(degToRad(+90.0f));
 
 	m_skyBoxVao.bind();
 	m_skyboxProgram.use();
@@ -193,51 +194,51 @@ void BspRenderable::renderDecals() {
 
 
 void BspRenderable::renderLeafOutlines() {
+	std::mt19937 engine;
+	std::uniform_real_distribution dist(0.0f, 1.0f);
+
 	glLineWidth(1.0f);
 	glLineStipple(1, 0xF0F0);
 	glEnable(GL_LINE_STIPPLE);
-	for (const auto& leaf : m_bsp->leaves)
-		renderLeafOutlines(leaf);
+	for (const auto& leaf : m_bsp->leaves) {
+		glColor3f(dist(engine), dist(engine), dist(engine));
+
+		glBegin(GL_LINES);
+		// Draw right face of bounding box
+		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
+		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
+		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
+		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
+		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
+		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
+		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
+		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
+
+		// Draw left face of bounding box
+		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
+		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
+		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
+		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
+		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
+		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
+		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
+		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
+
+		// Connect the faces
+		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
+		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
+		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
+		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
+		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
+		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
+		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
+		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
+		glEnd();
+	}
 	glDisable(GL_LINE_STIPPLE);
 	glColor3f(1, 1, 1);
 }
 
-void BspRenderable::renderLeafOutlines(const bsp30::Leaf& leaf) {
-	srand(reinterpret_cast<unsigned>(&leaf));
-	glColor3ub(rand() % 255, rand() % 255, rand() % 255);
-
-	glBegin(GL_LINES);
-	// Draw right face of bounding box
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-
-	// Draw left face of bounding box
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-
-	// Connect the faces
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-	glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-	glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-	glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-	glEnd();
-}
 void BspRenderable::renderFace(int face, std::vector<FaceRenderInfo>& fri) {
 	if (facesDrawn[face])
 		return;
@@ -396,7 +397,14 @@ void BspRenderable::buildBuffers() {
 			vertexOffsets.push_back(face.edgeCount);
 		}
 
-		std::exclusive_scan(begin(vertexOffsets), end(vertexOffsets), begin(vertexOffsets), 0);
+		// TODO clang does not yet have exclusive_scan
+		//std::exclusive_scan(begin(vertexOffsets), end(vertexOffsets), begin(vertexOffsets), 0);
+		auto sum = 0u;
+		for (auto i = 0u; i < vertexOffsets.size(); i++) {
+			const auto val = vertexOffsets[i];
+			vertexOffsets[i] = sum;
+			sum += val;
+		}
 
 		m_staticGeometryVao.bind();
 		m_staticGeometryVbo.bind(GL_ARRAY_BUFFER);
