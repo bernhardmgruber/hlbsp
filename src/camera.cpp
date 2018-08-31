@@ -9,10 +9,10 @@ auto Camera::viewVector() const -> glm::vec3 {
 	v.z = 0;
 
 	// rotate pitch along -y
-	v = RotateY(-pitch, v);
+	v = glm::rotateY(v , degToRad(-pitch));
 
 	// rotate yaw along z
-	v = RotateZ(yaw, v);
+	v = glm::rotateZ(v, degToRad(yaw));
 
 	return v;
 }
