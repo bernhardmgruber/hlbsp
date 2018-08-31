@@ -3,10 +3,9 @@
 #include <glm/vec2.hpp>
 
 #include <experimental/filesystem>
-#include <string>
 #include <vector>
 
-#include "opengl/Buffer.h"
+#include "Image.h"
 
 class Font {
 public:
@@ -18,7 +17,8 @@ public:
 	Font& operator=(Font&& other) noexcept;
 	~Font();
 
-	friend void renderText(gl::Buffer& buffer, int nX, int nY, const Font& font, const std::string& text, float sx = 1, float sy = 1);
+	auto glyphs() const -> const auto& { return m_glyphs; }
+	auto atlas() const -> const auto& { return m_atlas; }
 
 private:
 	struct Glyph {
@@ -31,6 +31,5 @@ private:
 	void swap(Font& other);
 
 	std::vector<Glyph> m_glyphs;
-	glm::vec2 m_atlasSize;
-	GLuint m_id = 0;
+	Image m_atlas;
 };
