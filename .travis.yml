@@ -2,6 +2,14 @@ dist: trusty
 sudo: false
 language: cpp
 
+addons:
+  apt:
+    packages:
+      - libboost-all-dev
+      - libglew-dev
+      - libglfw3-dev
+      - libfreetype6-dev
+
 script:
   - mkdir build
   - cd build
