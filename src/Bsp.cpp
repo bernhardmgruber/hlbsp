@@ -10,8 +10,8 @@
 #include "IO.h"
 
 namespace {
-	const auto WAD_DIR = fs::path("../../data/wads");
-	const auto SKY_DIR = fs::path("../../data/textures/sky");
+	const auto WAD_DIR = fs::path("../data/wads");
+	const auto SKY_DIR = fs::path("../data/textures/sky");
 }
 
 void Bsp::LoadWadFiles(std::string wadStr) {

@@ -8,7 +8,7 @@
 
 HudRenderable::HudRenderable(const Hud& hud, const Camera& camera)
 	: m_hud(hud), m_camera(camera) {
-	m_font = Font("../../data/fonts/helvetica.ttf", m_hud.fontHeight());
+	m_font = Font("../data/fonts/helvetica.ttf", m_hud.fontHeight());
 
 	glBindTexture(GL_TEXTURE_2D, m_fontTex.id());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -20,8 +20,9 @@ HudRenderable::HudRenderable(const Hud& hud, const Camera& camera)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_font.atlas().width, m_font.atlas().height, 0, GL_RED, GL_UNSIGNED_BYTE, m_font.atlas().data.data());
 
 	m_fontProgram = gl::Program{
-		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/font.vert"}),
-		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/font.frag"})};
+		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/shader/font.vert"}),
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/shader/font.frag"})
+	};
 }
 
 void HudRenderable::render(const RenderSettings& settings) {

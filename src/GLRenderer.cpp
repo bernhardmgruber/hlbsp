@@ -83,8 +83,8 @@ GLRenderer::GLRenderer() {
 	//glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0001f);
 
 	m_coordsProgram = gl::Program{
-		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.vert"}),
-		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/coords.frag"})};
+		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/shader/coords.vert"}),
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/shader/coords.frag"})};
 }
 
 void GLRenderer::addRenderable(std::unique_ptr<IRenderable> renderable) {

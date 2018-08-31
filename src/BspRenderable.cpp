@@ -24,13 +24,13 @@ BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 	: m_bsp(&bsp), m_camera(&camera) {
 	std::clog << "Loading bsp shaders ...\n";
 	m_shaderProgram = gl::Program{
-		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/main.vert"}),
-		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/main.frag"}),
+		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/shader/main.vert"}),
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/shader/main.frag"}),
 	};
 
 	m_skyboxProgram = gl::Program{
-		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../../src/shader/skybox.vert"}),
-		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../../src/shader/skybox.frag"}),
+		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/shader/skybox.vert"}),
+		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/shader/skybox.frag"}),
 	};
 
 	loadSkyTextures();
