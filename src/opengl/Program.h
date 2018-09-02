@@ -20,8 +20,9 @@ namespace gl {
 		auto id() const -> GLuint;
 		void use() const;
 
-		auto uniformLocation(const std::string& name) const -> GLint;
 		auto attributeLocation(const std::string& name) const -> GLint;
+		auto uniformLocation(const std::string& name) const -> GLint;
+		auto uniformBlockIndex(const std::string& name) const -> GLint;
 
 	private:
 		void swap(Program& other);
@@ -29,5 +30,6 @@ namespace gl {
 		GLuint m_id = 0;
 		std::unordered_map<std::string, GLint> m_attributes;
 		std::unordered_map<std::string, GLint> m_uniforms;
+		std::unordered_map<std::string, GLint> m_uniformBlocks;
 	};
 }
