@@ -432,17 +432,20 @@ void BspRenderable::renderBrushEntity(const Entity& ent, glm::vec3 pos) {
 }
 
 void BspRenderable::renderFri(std::vector<FaceRenderInfo> fri) {
-	// TODO: sort takes too much CPU time, FPS dropped by 20%
-	//// sort by texture id to avoid some rebinds
-	//std::sort(begin(fri), end(fri), [](const FaceRenderInfo& a, const FaceRenderInfo& b) {
-	//	return a.texId < b.texId;
-	//});
+	// sort by texture id to avoid some rebinds
+	std::sort(begin(fri), end(fri), [](const FaceRenderInfo& a, const FaceRenderInfo& b) {
+		return a.texId < b.texId;
+	});
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, m_lightmapAtlasId.id());
 	glActiveTexture(GL_TEXTURE0);
+	GLint curId = 0;
 	for (const auto& i : fri) {
-		glBindTexture(GL_TEXTURE_2D, i.texId);
+		if (curId != i.texId) {
+			glBindTexture(GL_TEXTURE_2D, i.texId);
+			curId = i.texId;
+		}
 		glDrawArrays(GL_TRIANGLE_FAN, i.offset, i.count);
 	}
 }
