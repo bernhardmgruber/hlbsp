@@ -9,6 +9,69 @@
 #include "mathlib.h"
 
 namespace {
+	class LightmapAtlas {
+	public:
+		LightmapAtlas(unsigned int width, unsigned int height, unsigned int channels = 3)
+			: m_img(width, height, channels), allocated(width) {}
+
+		auto store(const Image& image) -> glm::uvec2 {
+			if (image.channels != m_img.channels)
+				throw std::logic_error("image and atlas channel count mismatch");
+
+			const auto loc = allocLightmap(image.width, image.height);
+			if (!loc)
+				throw std::runtime_error("atlas is full");
+
+			for (auto y = 0u; y < image.height; y++) {
+				const auto src = &image.data[(y * image.width) * image.channels];
+				const auto dst = &m_img.data[((loc->y + y) * m_img.width + loc->x) * image.channels];
+				std::copy(src, src + image.width * image.channels, dst);
+			}
+
+			return *loc;
+		}
+
+		auto convertCoord(const Image& image, glm::uvec2 storedPos, glm::vec2 coord) {
+			return (glm::vec2(storedPos) + coord * glm::vec2(image.width, image.height)) / glm::vec2(m_img.width, m_img.height);
+		}
+
+		auto img() const -> const auto& { return m_img; }
+
+	private:
+		// from: http://fabiensanglard.net/quake2/quake2_opengl_renderer.php
+		// based on Quake 2
+		auto allocLightmap(unsigned int lmWidth, unsigned int lmHeight) -> std::optional<glm::uvec2> {
+			glm::uvec2 pos(0, 0);
+
+			auto best = m_img.height;
+			for (auto i = 0u; i < m_img.width - lmWidth; i++) {
+				auto best2 = 0u;
+				auto j = 0u;
+				for (j = 0u; j < lmWidth; j++) {
+					if (allocated[i + j] >= best)
+						break;
+					if (allocated[i + j] > best2)
+						best2 = allocated[i + j];
+				}
+				if (j == lmWidth) {
+					pos.x = i;
+					pos.y = best = best2;
+				}
+			}
+
+			if (best + lmHeight > m_img.height)
+				return {};
+
+			for (int i = 0; i < lmWidth; i++)
+				allocated[pos.x + i] = best + lmHeight;
+
+			return pos;
+		}
+
+		std::vector<unsigned int> allocated;
+		Image m_img;
+	};
+
 	auto channelsToTextureType(const Image& img) {
 		switch (img.channels) {
 			case 1: return GL_RED;
@@ -35,8 +98,8 @@ BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 
 	loadSkyTextures();
 	loadTextures();
-	loadLightmaps();
-	buildBuffers();
+	auto lmCoords = loadLightmaps();
+	buildBuffers(std::move(lmCoords));
 
 	facesDrawn.resize(bsp.faces.size());
 }
@@ -59,18 +122,37 @@ void BspRenderable::loadTextures() {
 	}
 }
 
-void BspRenderable::loadLightmaps() {
+auto BspRenderable::loadLightmaps() -> std::vector<std::vector<glm::vec2>> {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 	const auto& lightmaps = m_bsp->lightmaps();
 
-	m_lightmapIds.reserve(lightmaps.size());
-	for (const auto& lm : lightmaps) {
-		m_lightmapIds.emplace_back().bind(GL_TEXTURE_2D);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, lm.width, lm.height, 0, GL_RGB, GL_UNSIGNED_BYTE, lm.data.data());
+	// create lightmap atlas
+	LightmapAtlas atlas(1024, 1024, 3);
+	std::vector<glm::uvec2> lmPositions(lightmaps.size());
+	for (auto i = 0u; i < lightmaps.size(); i++) {
+		const auto& lm = lightmaps[i];
+		if (lm.width == 0 || lm.height == 0)
+			continue;
+		lmPositions[i] = atlas.store(lm);
 	}
+	atlas.img().Save("atlas.png");
+
+	// recompute lightmap coords
+	std::vector<std::vector<glm::vec2>> lmCoords(m_bsp->faces.size());
+	for (const auto& face : m_bsp->faces) {
+		const auto faceIndex = &face - &m_bsp->faces.front();
+		auto& coords = m_bsp->faceTexCoords[faceIndex];
+		for (auto& coord : coords.lightmapCoords)
+			lmCoords[faceIndex].push_back(atlas.convertCoord(lightmaps[faceIndex], lmPositions[faceIndex], coord));
+	}
+
+	m_lightmapAtlasId.bind(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, atlas.img().width, atlas.img().height, 0, GL_RGB, GL_UNSIGNED_BYTE, atlas.img().data.data());
+
+	return lmCoords;
 }
 
 void BspRenderable::loadSkyTextures() {
@@ -256,11 +338,6 @@ void BspRenderable::renderFace(int face, std::vector<FaceRenderInfo>& fri) {
 	else
 		i.texId = 0;
 
-	if (m_settings->lightmaps && lightmapAvailable)
-		i.lmId = m_lightmapIds[face].id();
-	else
-		i.lmId = 0;
-
 	i.offset = vertexOffsets[face];
 	i.count = m_bsp->faces[face].edgeCount;
 }
@@ -361,28 +438,27 @@ void BspRenderable::renderFri(std::vector<FaceRenderInfo> fri) {
 	//	return a.texId < b.texId;
 	//});
 
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, m_lightmapAtlasId.id());
+	glActiveTexture(GL_TEXTURE0);
 	for (const auto& i : fri) {
-		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, i.texId);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, i.lmId);
 		glDrawArrays(GL_TRIANGLE_FAN, i.offset, i.count);
 	}
 }
 
-void BspRenderable::buildBuffers() {
+void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords) {
 	{
 		// static and brush geometry
 		std::vector<VertexWithLM> vertices;
 
 		for (const auto& face : m_bsp->faces) {
 			const auto faceIndex = &face - &m_bsp->faces.front();
+			const auto& coords = m_bsp->faceTexCoords[faceIndex];
 			for (int i = 0; i < face.edgeCount; i++) {
 				auto& v = vertices.emplace_back();
-
-				const auto& coords = m_bsp->faceTexCoords[faceIndex];
 				v.texCoord = coords.texCoords[i];
-				v.lightmapCoord = coords.lightmapCoords.empty() ? glm::vec2{0.0} : coords.lightmapCoords[i];
+				v.lightmapCoord = lmCoords[faceIndex].empty() ? glm::vec2{0.0} : lmCoords[faceIndex][i];
 
 				v.normal = m_bsp->planes[face.planeIndex].normal;
 				if (face.planeSide)

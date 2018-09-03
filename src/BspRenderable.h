@@ -26,13 +26,12 @@ public:
 private:
 	struct FaceRenderInfo {
 		GLint texId;
-		GLint lmId;
 		unsigned int offset;
 		unsigned int count;
 	};
 
 	void loadTextures();
-	void loadLightmaps();
+	auto loadLightmaps() -> std::vector<std::vector<glm::vec2>>;
 	void loadSkyTextures();
 
 	void renderSkybox();
@@ -46,7 +45,7 @@ private:
 	void renderBrushEntity(const Entity& ent, glm::vec3 pos);                                                                      // Renders a brush entity by rendering each face of the associated model by the given index
 	void renderFri(std::vector<FaceRenderInfo> fri);
 
-	void buildBuffers();
+	void buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords);
 
 private:
 	struct Vertex {
@@ -69,7 +68,7 @@ private:
 	gl::Program m_skyboxProgram;
 
 	std::vector<gl::Texture> m_textureIds;
-	std::vector<gl::Texture> m_lightmapIds;
+	gl::Texture m_lightmapAtlasId;
 	gl::Program m_shaderProgram;
 	std::vector<unsigned int> vertexOffsets;
 	gl::VAO m_staticGeometryVao;
