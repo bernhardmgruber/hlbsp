@@ -9,9 +9,9 @@
 #include "mathlib.h"
 
 namespace {
-	class LightmapAtlas {
+	class TextureAtlas {
 	public:
-		LightmapAtlas(unsigned int width, unsigned int height, unsigned int channels = 3)
+		TextureAtlas(unsigned int width, unsigned int height, unsigned int channels = 3)
 			: m_img(width, height, channels), allocated(width) {}
 
 		auto store(const Image& image) -> glm::uvec2 {
@@ -111,6 +111,17 @@ void BspRenderable::loadTextures() {
 
 	const auto& mipTexs = m_bsp->textures();
 
+	//// create texture atlas
+	//TextureAtlas atlas(2048, 2048, 4);
+	//std::vector<glm::uvec2> lmPositions(mipTexs.size());
+	//for (auto i = 0u; i < mipTexs.size(); i++) {
+	//	const auto& lm = mipTexs[i].Img[0];
+	//	if (lm.width == 0 || lm.height == 0)
+	//		continue;
+	//	lmPositions[i] = atlas.store(lm);
+	//}
+	//atlas.img().Save("tex_atlas.png");
+
 	m_textureIds.reserve(mipTexs.size());
 	for (const auto& mipTex : mipTexs) {
 		m_textureIds.emplace_back().bind(GL_TEXTURE_2D);
@@ -128,7 +139,7 @@ auto BspRenderable::loadLightmaps() -> std::vector<std::vector<glm::vec2>> {
 	const auto& lightmaps = m_bsp->lightmaps();
 
 	// create lightmap atlas
-	LightmapAtlas atlas(1024, 1024, 3);
+	TextureAtlas atlas(1024, 1024, 3);
 	std::vector<glm::uvec2> lmPositions(lightmaps.size());
 	for (auto i = 0u; i < lightmaps.size(); i++) {
 		const auto& lm = lightmaps[i];
@@ -136,7 +147,7 @@ auto BspRenderable::loadLightmaps() -> std::vector<std::vector<glm::vec2>> {
 			continue;
 		lmPositions[i] = atlas.store(lm);
 	}
-	atlas.img().Save("atlas.png");
+	atlas.img().Save("lm_atlas.png");
 
 	// recompute lightmap coords
 	std::vector<std::vector<glm::vec2>> lmCoords(m_bsp->faces.size());
@@ -201,7 +212,8 @@ void BspRenderable::render(const RenderSettings& settings) {
 		renderStaticGeometry(cameraPos);
 
 	if (settings.renderBrushEntities)
-		renderBrushEntities(cameraPos);
+		for (const auto i : m_bsp->brushEntities)
+			renderBrushEntity(m_bsp->entities[i], cameraPos);
 
 	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), 0);
 	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
@@ -247,11 +259,6 @@ void BspRenderable::renderStaticGeometry(glm::vec3 pos) {
 	const auto leaf = m_bsp->findLeaf(pos);
 	renderBSP(0, !leaf || m_bsp->visLists.empty() ? boost::dynamic_bitset<std::uint8_t>{} : m_bsp->visLists[*leaf - 1], pos, fri);
 	renderFri(std::move(fri));
-}
-
-void BspRenderable::renderBrushEntities(glm::vec3 pos) {
-	for (const auto i : m_bsp->brushEntities)
-		renderBrushEntity(m_bsp->entities[i], pos);
 }
 
 void BspRenderable::renderDecals() {
@@ -321,30 +328,31 @@ void BspRenderable::renderLeafOutlines() {
 	glColor3f(1, 1, 1);
 }
 
-void BspRenderable::renderFace(int face, std::vector<FaceRenderInfo>& fri) {
-	if (facesDrawn[face])
-		return;
-	facesDrawn[face] = true;
+void BspRenderable::renderLeaf(int leaf, std::vector<FaceRenderInfo>& fris) {
+	for (int i = 0; i < m_bsp->leaves[leaf].markSurfaceCount; i++) {
+		const auto& faceIndex = m_bsp->markSurfaces[m_bsp->leaves[leaf].firstMarkSurface + i];
 
-	if (m_bsp->faces[face].styles[0] == 0xFF)
-		return;
+		if (facesDrawn[faceIndex])
+			continue;
+		facesDrawn[faceIndex] = true;
 
-	// if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
-	const bool lightmapAvailable = static_cast<signed>(m_bsp->faces[face].lightmapOffset) != -1 && m_bsp->header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
+		const auto& face = m_bsp->faces[faceIndex];
 
-	auto& i = fri.emplace_back();
-	if (m_settings->textures)
-		i.texId = m_textureIds[m_bsp->textureInfos[m_bsp->faces[face].textureInfo].miptexIndex].id();
-	else
-		i.texId = 0;
+		if (face.styles[0] == 0xFF)
+			continue;
 
-	i.offset = vertexOffsets[face];
-	i.count = m_bsp->faces[face].edgeCount;
-}
+		// if the light map offset is not -1 and the lightmap lump is not empty, there are lightmaps
+		const bool lightmapAvailable = static_cast<signed>(face.lightmapOffset) != -1 && m_bsp->header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
 
-void BspRenderable::renderLeaf(int leaf, std::vector<FaceRenderInfo>& fri) {
-	for (int i = 0; i < m_bsp->leaves[leaf].markSurfaceCount; i++)
-		renderFace(m_bsp->markSurfaces[m_bsp->leaves[leaf].firstMarkSurface + i], fri);
+		auto& fri = fris.emplace_back();
+		if (m_settings->textures)
+			fri.texId = m_textureIds[m_bsp->textureInfos[face.textureInfo].miptexIndex].id();
+		else
+			fri.texId = 0;
+
+		fri.offset = vertexOffsets[faceIndex];
+		fri.count = face.edgeCount;
+	}
 }
 
 void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, glm::vec3 pos, std::vector<FaceRenderInfo>& fri) {
