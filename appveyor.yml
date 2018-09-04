@@ -4,11 +4,7 @@ environment:
   VCPKG_DEFAULT_TRIPLET: x64-windows
 install:
 - ps: |
-    vcpkg install glew
-    vcpkg install glfw3
-    vcpkg install glm
-    vcpkg install stb
-    vcpkg install freetype
+    vcpkg install stb glfw3 glew glm freetype
 build_script:
 - ps: |
     mkdir build
