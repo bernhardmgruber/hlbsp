@@ -14,7 +14,12 @@ include_directories(${OPENGL_INCLUDE_DIR})
 find_package(GLEW REQUIRED)
 include_directories(${GLEW_INCLUDE_DIRS})
 
-find_package(glfw3 REQUIRED)
+if (MSVC)
+	find_package(glfw3 REQUIRED)
+else()
+	find_package(PkgConfig REQUIRED)
+	pkg_search_module(GLFW REQUIRED glfw3)
+endif()
 include_directories(${GLFW3_INCLUDE_DIRS})
 
 find_package(Freetype REQUIRED)
@@ -30,22 +35,21 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 	-DGLM_ENABLE_EXPERIMENTAL
 )
 
+target_link_libraries(${PROJECT_NAME} PRIVATE
+	GLEW::GLEW
+	Freetype::Freetype
+	${Boost_LIBRARIES}
+)
 if(MSVC)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
-		GLEW::GLEW
-		Freetype::Freetype
 		glfw
 		opengl32
-		${Boost_LIBRARIES}
 	)
 else()
 	target_link_libraries(${PROJECT_NAME} PRIVATE
-		GLEW::GLEW
-		Freetype::Freetype
-		glfw
+		${GLFW_LIBRARIES}
 		GL
 		stdc++fs
-		${Boost_LIBRARIES}
 	)
 endif()
 
