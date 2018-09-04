@@ -11,6 +11,8 @@ addons:
       - libboost-all-dev
       - libglew-dev
       - libfreetype6-dev
+      - xorg-dev # needed by glfw3
+      - libglu1-mesa-dev # needed by glfw3
 
 before_install:
     - sudo apt-get --allow-unauthenticated install libglfw3-dev
