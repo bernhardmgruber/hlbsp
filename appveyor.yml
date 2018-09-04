@@ -1,7 +1,17 @@
 image: Visual Studio 2017
+cache: C:\tools\vcpkg\installed\
+environment:
+  VCPKG_DEFAULT_TRIPLET: x64-windows
+install:
+- ps: |
+    vcpkg install glew
+    vcpkg install glfw3
+    vcpkg install glm
+    vcpkg install stb
+    vcpkg install freetype
 build_script:
 - ps: |
     mkdir build
     pushd build
-    cmake -G "Visual Studio 15 2017 Win64" ..
+    cmake -DCMAKE_TOOLCHAIN_FILE=C:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 15 2017 Win64" ..
     cmake --build . --config "Release"
