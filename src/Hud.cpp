@@ -7,7 +7,7 @@
 namespace {
 	constexpr auto FONT_HUD_HEIGHT = 12;
 	constexpr auto FONT_HUD_SPACE = 5;
-	constexpr glm::vec3 FONT_HUD_COLOR = {1.0f, 0.0f, 0.0f};
+	const glm::vec3 FONT_HUD_COLOR = {1.0f, 0.0f, 0.0f};
 
 	constexpr auto CONSOLE_WIDTH = 400;
 	constexpr auto CONSOLE_HEIGHT = 300;
