@@ -23,6 +23,9 @@ endif()
 include_directories(${GLFW3_INCLUDE_DIRS})
 
 find_package(Freetype REQUIRED)
+if (NOT MSVC)
+	include_directories(${FREETYPE_INCLUDE_DIRS})
+endif()
 
 include_directories(thirdparty)
 
@@ -37,17 +40,18 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	GLEW::GLEW
-	Freetype::Freetype
 	${Boost_LIBRARIES}
 )
 if(MSVC)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		glfw
+		Freetype::Freetype
 		opengl32
 	)
 else()
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		${GLFW_LIBRARIES}
+		${FREETYPE_LIBRARIES}
 		GL
 		stdc++fs
 	)
