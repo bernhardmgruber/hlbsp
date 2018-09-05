@@ -53,7 +53,7 @@ GLRenderer::GLRenderer() {
 #ifndef NDEBUG
 	// error callback
 	if (GLEW_ARB_debug_output) {
-		glDebugMessageCallbackARB(debugCallback, nullptr);
+		glDebugMessageCallback(debugCallback, nullptr);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	}
 #endif
