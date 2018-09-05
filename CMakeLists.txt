@@ -23,8 +23,13 @@ else()
 endif()
 include_directories(${GLFW3_INCLUDE_DIRS})
 
-find_package(glm REQUIRED)
-include_directories(${GLM_INCLUDE_DIR})
+find_package(glm)
+if (glm_FOUND)
+	include_directories(${glm_INCLUDE_DIR})
+else()
+	find_package(GLM) # older versions
+	include_directories(${GLM_INCLUDE_DIR})
+endif()
 
 find_package(Freetype REQUIRED)
 if (NOT MSVC)
