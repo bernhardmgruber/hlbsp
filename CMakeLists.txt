@@ -5,6 +5,7 @@ project(hlbsp)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# find packages
 find_package(Boost REQUIRED COMPONENTS system filesystem)
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -29,6 +30,7 @@ endif()
 
 include_directories(thirdparty)
 
+# executable
 file(GLOB_RECURSE source_files src/*.cpp src/*.h src/*.hpp src/*.vert src/*.frag)
 add_executable(${PROJECT_NAME} ${source_files})
 source_group("" FILES ${source_files})
@@ -63,6 +65,7 @@ else()
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
 endif()
 
+# clang-format
 add_custom_target(
 	clang-format
 	COMMAND clang-format
