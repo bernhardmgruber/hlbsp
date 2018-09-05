@@ -23,6 +23,9 @@ else()
 endif()
 include_directories(${GLFW3_INCLUDE_DIRS})
 
+find_package(glm REQUIRED)
+include_directories(${GLM_INCLUDE_DIR})
+
 find_package(Freetype REQUIRED)
 if (NOT MSVC)
 	include_directories(${FREETYPE_INCLUDE_DIRS})
