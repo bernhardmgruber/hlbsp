@@ -1,3 +1,5 @@
+# g++7 see: https://github.com/richelbilderbeek/travis_gcc_cpp17/blob/master/.travis.yml
+
 dist: trusty
 sudo: true
 language: cpp
@@ -15,8 +17,14 @@ addons:
       - libglu1-mesa-dev # needed by glfw3
 
 before_install:
-    - sudo apt-get --allow-unauthenticated install libglfw3-dev
-      
+  - sudo apt-get --allow-unauthenticated install libglfw3-dev
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
+
+install:
+  - sudo apt-get install -qq g++-8
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90
+  
 script:
   - mkdir build
   - cd build
