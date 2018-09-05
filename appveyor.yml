@@ -4,6 +4,10 @@ environment:
   VCPKG_DEFAULT_TRIPLET: x64-windows
 install:
 - ps: |
+    pushd C:\tools\vcpkg
+    git pull
+    popd
+    vcpkg update
     vcpkg install boost stb glfw3 glew glm freetype
 build_script:
 - ps: |
