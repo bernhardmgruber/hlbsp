@@ -1,4 +1,4 @@
-#include "wad.h"
+#include "Wad.h"
 
 #include <boost/algorithm/string.hpp>
 

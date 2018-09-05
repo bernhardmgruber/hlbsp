@@ -1,4 +1,4 @@
-#include "entity.h"
+#include "Entity.h"
 
 Entity::Entity(const std::string& propertiesString) {
 	std::size_t pos = 0;

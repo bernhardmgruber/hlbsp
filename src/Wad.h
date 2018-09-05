@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Image.h"
-#include "bspdef.h"
 #include <cstdint>
 #include <fstream>
 #include <optional>
+
+#include "Image.h"
+#include "bspdef.h"
 
 struct WadHeader {
 	char magic[4];     // should be WAD2/WAD3

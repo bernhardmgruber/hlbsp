@@ -7,8 +7,8 @@
 #include <string_view>
 
 #include "bspdef.h"
-#include "entity.h"
-#include "wad.h"
+#include "Entity.h"
+#include "Wad.h"
 
 namespace fs = std::experimental::filesystem;
 

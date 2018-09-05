@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IRenderable.h"
-#include "font.h"
+#include "Font.h"
 #include "opengl/Buffer.h"
 #include "opengl/Program.h"
 #include "opengl/Texture.h"

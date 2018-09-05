@@ -2,9 +2,9 @@
 
 #include "GLRenderer.h"
 #include "GlfwWindow.h"
-#include "camera.h"
-#include "hud.h"
-#include "timer.h"
+#include "Camera.h"
+#include "Hud.h"
+#include "Timer.h"
 
 class Bsp;
 
