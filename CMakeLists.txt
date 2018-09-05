@@ -44,10 +44,6 @@ add_executable(${PROJECT_NAME} ${source_files})
 source_group("" FILES ${source_files})
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${source_files})
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-	-DGLM_ENABLE_EXPERIMENTAL
-)
-
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	GLEW::GLEW
 	${Boost_LIBRARIES}
@@ -67,6 +63,10 @@ else()
 	)
 endif()
 
+target_compile_options(${PROJECT_NAME} PRIVATE
+	-DGLM_ENABLE_EXPERIMENTAL
+	-DGLM_FORCE_RADIANS
+)
 if(MSVC)
 	target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 else()
