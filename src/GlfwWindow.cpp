@@ -25,7 +25,7 @@ GlfwWindow::GlfwWindow(std::string windowTitle)
 	{
 		std::lock_guard lock{g_guisMutex};
 		if (g_guis.empty())
-			if (glfwInit() != GLFW_TRUE)
+			if (!glfwInit())
 				throw std::runtime_error("failed to init GLFW");
 	}
 
@@ -33,9 +33,9 @@ GlfwWindow::GlfwWindow(std::string windowTitle)
 	// list of available hints and their defaults: http://www.glfw.org/docs/3.0/window.html#window_hints
 	glfwWindowHint(GLFW_DEPTH_BITS, 32);
 	glfwWindowHint(GLFW_STENCIL_BITS, 0);
-	glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
+	glfwWindowHint(GLFW_FOCUSED, false);
 #ifndef NDEBUG
-		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 #endif
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -66,7 +66,7 @@ auto GlfwWindow::handle() const -> GLFWwindow* {
 }
 
 auto GlfwWindow::shouldClose() const -> bool {
-	return glfwWindowShouldClose(m_window) == GL_TRUE;
+	return glfwWindowShouldClose(m_window);
 }
 
 void GlfwWindow::toggleFullscreen() {
@@ -143,7 +143,7 @@ void GlfwWindow::toggleFullscreen() {
 }
 
 void GlfwWindow::toggleStereo() {
-	glfwWindowHint(GLFW_STEREO, m_stereo ? GLFW_FALSE : GLFW_TRUE);
+	glfwWindowHint(GLFW_STEREO, !m_stereo);
 
 	// if we are fullscreen, create the new window in fullscreen mode on the same monitor again
 	auto monitor = glfwGetWindowMonitor(m_window);
