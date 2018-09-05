@@ -12,6 +12,7 @@ addons:
     packages:
       - libboost-all-dev
       - libglew-dev
+      - libglm-dev
       - libfreetype6-dev
       - xorg-dev # needed by glfw3
       - libglu1-mesa-dev # needed by glfw3
