@@ -50,7 +50,7 @@ namespace {
 
 	// some GLEW versions still have the last parameter mutable (looking at you travis)
 	void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, void* userParam) {
-		debugCallback(source, type, id, severity, length, message, userParam);
+		debugCallback(source, type, id, severity, length, message, static_cast<const void*>(userParam));
 	}
 }
 
