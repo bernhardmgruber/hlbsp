@@ -36,16 +36,19 @@ if (NOT MSVC)
 	include_directories(${FREETYPE_INCLUDE_DIRS})
 endif()
 
+find_package(imgui CONFIG REQUIRED)
+
 include_directories(thirdparty)
 
 # executable
-file(GLOB_RECURSE source_files src/*.cpp src/*.h src/*.hpp src/*.vert src/*.frag)
+file(GLOB_RECURSE source_files src/*.cpp src/*.h src/*.hpp src/*.vert src/*.frag thirdparty/*.cpp thirdparty/*.h)
 add_executable(${PROJECT_NAME} ${source_files})
 source_group("" FILES ${source_files})
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${source_files})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	GLEW::GLEW
+	imgui::imgui
 	${Boost_LIBRARIES}
 )
 if(MSVC)
@@ -66,6 +69,7 @@ endif()
 target_compile_options(${PROJECT_NAME} PRIVATE
 	-DGLM_ENABLE_EXPERIMENTAL
 	-DGLM_FORCE_RADIANS
+	-DIMGUI_IMPL_OPENGL_LOADER_GLEW
 )
 if(MSVC)
 	target_compile_options(${PROJECT_NAME} PRIVATE /W4)

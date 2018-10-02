@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+
 #include "Bsp.h"
 #include "BspRenderable.h"
 #include "HudRenderable.h"
@@ -13,6 +16,11 @@ namespace {
 
 Window::Window(Bsp& bsp)
 	: GlfwWindow(WINDOW_CAPTION), hud(camera, timer), bsp(bsp) {
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui_ImplGlfw_InitForOpenGL(handle(), false);
+
 	m_renderer.addRenderable(std::make_unique<BspRenderable>(bsp, camera));
 	m_renderer.addRenderable(std::make_unique<HudRenderable>(hud, camera));
 
@@ -31,7 +39,11 @@ Window::Window(Bsp& bsp)
 	}
 }
 
-Window::~Window() = default;
+Window::~Window() {
+	m_renderer = {};
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+}
 
 void Window::update() {
 	timer.Tick();
@@ -61,6 +73,8 @@ void Window::update() {
 }
 
 void Window::draw() {
+	ImGui_ImplGlfw_NewFrame();
+
 	m_settings.projection = camera.projectionMatrix();
 	m_settings.view = camera.viewMatrix();
 	m_settings.pitch = camera.pitch;
@@ -82,6 +96,8 @@ void Window::onResize(int width, int height) {
 }
 
 void Window::onMouseButton(int button, int action, int modifiers) {
+	ImGui_ImplGlfw_MouseButtonCallback(handle(), button, action, modifiers);
+
 	if (action == GLFW_PRESS) {
 		switch (button) {
 			case GLFW_MOUSE_BUTTON_RIGHT:
@@ -104,9 +120,13 @@ void Window::onMouseButton(int button, int action, int modifiers) {
 
 void Window::onMouseMove(double dx, double dy) {}
 
-void Window::onMouseWheel(double xOffset, double yOffset) {}
+void Window::onMouseWheel(double xOffset, double yOffset) {
+	ImGui_ImplGlfw_ScrollCallback(handle(), xOffset, yOffset);
+}
 
 void Window::onKey(int key, int scancode, int action, int mods) {
+	ImGui_ImplGlfw_KeyCallback(handle(), key, scancode, action, mods);
+
 	if (action == GLFW_PRESS) {
 		switch (key) {
 			case GLFW_KEY_TAB:
@@ -254,4 +274,6 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 	}
 }
 
-void Window::onChar(unsigned int codepoint) {}
+void Window::onChar(unsigned int codepoint) {
+	ImGui_ImplGlfw_CharCallback(handle(), codepoint);
+}

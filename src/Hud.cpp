@@ -1,5 +1,7 @@
 #include "Hud.h"
 
+#include <imgui.h>
+
 #include "Camera.h"
 #include "IPSS.h"
 #include "Timer.h"
@@ -20,34 +22,26 @@ void Hud::print(std::string text) {
 	m_console.push_back(std::move(text));
 }
 
-auto Hud::texts() const -> std::vector<Text> {
-	std::vector<Text> result;
-
+auto Hud::drawData() const -> ImDrawData* {
 	const auto& cameraPos = m_camera.position;
 	const auto& cameraView = m_camera.viewVector();
 	const auto& pitch = m_camera.pitch;
 	const auto& yaw = m_camera.yaw;
 	const auto& fps = m_timer.TPS;
 
-	int nCurrentY = m_camera.viewportHeight;
+	ImGui::NewFrame();
 
-	result.push_back({FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
-		IPSS() << std::fixed << std::setprecision(1) << "FPS: " << fps});
-	result.push_back({FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
-		IPSS() << std::fixed << std::setprecision(1) << "Cam pos: " << cameraPos.x << "x " << cameraPos.y << "y " << cameraPos.z << "z"});
-	result.push_back({FONT_HUD_SPACE, nCurrentY -= (FONT_HUD_SPACE + FONT_HUD_HEIGHT),
-		IPSS() << std::fixed << std::setprecision(1) << "Cam view: " << pitch << "°pitch " << yaw << "°yaw (vec: " << cameraView.x << "x " << cameraView.y << "y " << cameraView.z << "z)"});
+	ImGui::LabelText("FPS", (IPSS() << std::fixed << std::setprecision(1) << fps).str().c_str());
+	ImGui::LabelText("cam pos", (IPSS() << std::fixed << std::setprecision(1) << cameraPos.x << "x " << cameraPos.y << "y " << cameraPos.z << "z").str().c_str());
+	ImGui::LabelText("cam view", (IPSS() << std::fixed << std::setprecision(1) << pitch << " pitch " << yaw << " yaw (vec: " << cameraView.x << "x " << cameraView.y << "y " << cameraView.z << "z)").str().c_str());
+	ImGui::Begin("Log");
+	for (const auto& line : m_console)
+		ImGui::Text(line.c_str());
+	ImGui::End();
 
-	// console
-	nCurrentY = FONT_HUD_SPACE;
-	for (const auto& line : m_console) {
-		if (nCurrentY + FONT_HUD_HEIGHT >= CONSOLE_HEIGHT)
-			break;
-		result.push_back({FONT_HUD_SPACE, nCurrentY, line});
-		nCurrentY += FONT_HUD_HEIGHT + FONT_HUD_SPACE;
-	}
+	ImGui::Render();
 
-	return result;
+	return ImGui::GetDrawData();
 }
 
 auto Hud::fontHeight() const -> int {

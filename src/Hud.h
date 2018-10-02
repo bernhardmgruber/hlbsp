@@ -5,14 +5,9 @@
 
 #include "mathlib.h"
 
+struct ImDrawData;
 class Camera;
 class Timer;
-
-struct Text {
-	int x = 0;
-	int y = 0;
-	std::string text;
-};
 
 class Hud {
 public:
@@ -20,7 +15,7 @@ public:
 
 	void print(std::string text);
 
-	auto texts() const -> std::vector<Text>;
+	auto drawData() const -> ImDrawData*;
 	auto fontHeight() const -> int;
 	auto fontColor() const -> glm::vec3;
 
