@@ -1,3 +1,5 @@
+#include "opengl/Renderer.h" // include glew.h before ... FIXME
+
 #include "Window.h"
 
 #include <iostream>
@@ -21,8 +23,9 @@ Window::Window(Bsp& bsp)
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForOpenGL(handle(), false);
 
-	m_renderer.addRenderable(std::make_unique<BspRenderable>(bsp, camera));
-	m_renderer.addRenderable(std::make_unique<HudRenderable>(hud, camera));
+	m_renderer = std::make_unique<render::opengl::Renderer>();
+	m_renderables.emplace_back(std::make_unique<BspRenderable>(*m_renderer, bsp, camera));
+	m_renderables.emplace_back(std::make_unique<HudRenderable>(*m_renderer, hud));
 
 	onResize(m_width, m_height);
 
@@ -80,7 +83,11 @@ void Window::draw() {
 	m_settings.pitch = camera.pitch;
 	m_settings.yaw = camera.yaw;
 
-	m_renderer.render(m_settings);
+	m_renderer->clear();
+	for (auto& renderable : m_renderables)
+		renderable->render(m_settings);
+	if (m_settings.renderCoords)
+		m_renderer->renderCoords(m_settings.projection * m_settings.view);
 }
 
 void Window::onResize(int width, int height) {
@@ -92,7 +99,7 @@ void Window::onResize(int width, int height) {
 	camera.viewportWidth = width;
 	camera.viewportHeight = height;
 
-	m_renderer.resizeViewport(width, height);
+	m_renderer->resizeViewport(width, height);
 }
 
 void Window::onMouseButton(int button, int action, int modifiers) {

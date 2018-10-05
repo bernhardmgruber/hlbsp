@@ -1,10 +1,14 @@
 #pragma once
 
-#include "GLRenderer.h"
 #include "GlfwWindow.h"
 #include "Camera.h"
 #include "Hud.h"
 #include "Timer.h"
+#include "IRenderable.h"
+
+namespace render {
+	class IRenderer;
+}
 
 class Bsp;
 
@@ -30,7 +34,8 @@ private:
 	Bsp& bsp;
 
 	RenderSettings m_settings;
-	GLRenderer m_renderer;
+	std::vector<std::unique_ptr<IRenderable>> m_renderables;
+	std::unique_ptr<render::IRenderer> m_renderer;
 
 	bool m_captureMouse = false;
 	glm::dvec2 m_mouseDownPos;

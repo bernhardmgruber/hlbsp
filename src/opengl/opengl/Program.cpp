@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "../IO.h"
+#include "../../IO.h"
 
 namespace gl {
 	namespace {

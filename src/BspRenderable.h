@@ -7,10 +7,7 @@
 #include "IRenderable.h"
 #include "bspdef.h"
 #include "mathlib.h"
-#include "opengl/Buffer.h"
-#include "opengl/Program.h"
-#include "opengl/Texture.h"
-#include "opengl/VAO.h"
+#include "IRenderer.h"
 
 class Bsp;
 class Camera;
@@ -18,30 +15,21 @@ class Entity;
 
 class BspRenderable : public IRenderable {
 public:
-	BspRenderable(const Bsp& bsp, const Camera& camera);
+	BspRenderable(render::IRenderer& renderer, const Bsp& bsp, const Camera& camera);
 	~BspRenderable();
 
 	virtual void render(const RenderSettings& settings) override;
 
 private:
-	struct FaceRenderInfo {
-		GLint texId;
-		unsigned int offset;
-		unsigned int count;
-	};
-
 	void loadTextures();
 	auto loadLightmaps() -> std::vector<std::vector<glm::vec2>>;
 	void loadSkyTextures();
 
 	void renderSkybox();
-	void renderStaticGeometry(glm::vec3 pos);
-	void renderDecals();
-	void renderLeafOutlines();
-	void renderLeaf(int iLeaf, std::vector<FaceRenderInfo>& fri);                                                                  // Renders a leaf of the BSP tree by rendering each face of the leaf by the given index
-	void renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, glm::vec3 pos, std::vector<FaceRenderInfo>& fri); // Recursively walks through the BSP tree and draws it
-	void renderBrushEntity(const Entity& ent, glm::vec3 pos);                                                                      // Renders a brush entity by rendering each face of the associated model by the given index
-	void renderFri(std::vector<FaceRenderInfo> fri);
+	auto renderStaticGeometry(glm::vec3 pos) -> std::vector<render::FaceRenderInfo>;
+	//void renderLeafOutlines();
+	void renderLeaf(int iLeaf, std::vector<render::FaceRenderInfo>& fri);                                                                  // Renders a leaf of the BSP tree by rendering each face of the leaf by the given index
+	void renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, glm::vec3 pos, std::vector<render::FaceRenderInfo>& fri); // Recursively walks through the BSP tree and draws it
 
 	void buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords);
 
@@ -56,24 +44,23 @@ private:
 		glm::vec2 lightmapCoord;
 	};
 
+	render::IRenderer& m_renderer;
 	const Bsp* m_bsp;
 	const Camera* m_camera;
 
 	const RenderSettings* m_settings = nullptr;
 
-	gl::VAO m_skyBoxVao;
-	std::optional<gl::Texture> m_skyboxTex;
-	gl::Program m_skyboxProgram;
+	std::optional<std::unique_ptr<render::ITexture>> m_skyboxTex;
+	std::vector<std::unique_ptr<render::ITexture>> m_textures;
+	std::unique_ptr<render::ITexture> m_lightmapAtlas;
 
-	std::vector<gl::Texture> m_textureIds;
-	gl::Texture m_lightmapAtlasId;
-	gl::Program m_shaderProgram;
+	std::unique_ptr<render::IBuffer> m_staticGeometryVbo;
+	std::unique_ptr<render::IBuffer> m_decalVbo;
+
+	std::unique_ptr<render::IInputLayout> m_staticGeometryVao;
+	std::unique_ptr<render::IInputLayout> m_decalVao;
+
 	std::vector<unsigned int> vertexOffsets;
-	gl::VAO m_staticGeometryVao;
-	gl::Buffer m_staticGeometryVbo;
-
-	gl::VAO m_decalVao;
-	gl::Buffer m_decalVbo;
 
 	mutable std::vector<bool> facesDrawn;
 };

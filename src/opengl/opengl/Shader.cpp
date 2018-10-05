@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "../IO.h"
+#include "../../IO.h"
 
 namespace gl {
 	Shader::Shader(GLenum shaderType, const std::string& source) {

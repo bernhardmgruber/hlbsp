@@ -71,31 +71,10 @@ namespace {
 		std::vector<unsigned int> allocated;
 		Image m_img;
 	};
-
-	auto channelsToTextureType(const Image& img) {
-		switch (img.channels) {
-			case 1: return GL_RED;
-			case 2: return GL_RG;
-			case 3: return GL_RGB;
-			case 4: return GL_RGBA;
-			default: assert(false);
-		}
-	}
 }
 
-BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
-	: m_bsp(&bsp), m_camera(&camera) {
-	std::clog << "Loading bsp shaders ...\n";
-	m_shaderProgram = gl::Program{
-		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/shader/main.vert"}),
-		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/shader/main.frag"}),
-	};
-
-	m_skyboxProgram = gl::Program{
-		gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/shader/skybox.vert"}),
-		gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/shader/skybox.frag"}),
-	};
-
+BspRenderable::BspRenderable(render::IRenderer& renderer, const Bsp& bsp, const Camera& camera)
+	: m_renderer(renderer), m_bsp(&bsp), m_camera(&camera) {
 	loadSkyTextures();
 	loadTextures();
 	auto lmCoords = loadLightmaps();
@@ -107,8 +86,6 @@ BspRenderable::BspRenderable(const Bsp& bsp, const Camera& camera)
 BspRenderable::~BspRenderable() = default;
 
 void BspRenderable::loadTextures() {
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
 	const auto& mipTexs = m_bsp->textures();
 
 	//// create texture atlas
@@ -122,20 +99,12 @@ void BspRenderable::loadTextures() {
 	//}
 	//atlas.img().Save("tex_atlas.png");
 
-	m_textureIds.reserve(mipTexs.size());
-	for (const auto& mipTex : mipTexs) {
-		m_textureIds.emplace_back().bind(GL_TEXTURE_2D);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, bsp30::MIPLEVELS - 1);
-		for (int j = 0; j < bsp30::MIPLEVELS; j++)
-			glTexImage2D(GL_TEXTURE_2D, j, GL_RGBA, mipTex.Img[j].width, mipTex.Img[j].height, 0, channelsToTextureType(mipTex.Img[j]), GL_UNSIGNED_BYTE, mipTex.Img[j].data.data());
-	}
+	m_textures.reserve(mipTexs.size());
+	for (const auto& mipTex : mipTexs)
+		m_textures.emplace_back(m_renderer.createTexture(std::vector<Image>{mipTex.Img, mipTex.Img + 4}));
 }
 
 auto BspRenderable::loadLightmaps() -> std::vector<std::vector<glm::vec2>> {
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
 	const auto& lightmaps = m_bsp->lightmaps();
 
 	// create lightmap atlas
@@ -158,11 +127,7 @@ auto BspRenderable::loadLightmaps() -> std::vector<std::vector<glm::vec2>> {
 			lmCoords[faceIndex].push_back(atlas.convertCoord(lightmaps[faceIndex], lmPositions[faceIndex], coord));
 	}
 
-	m_lightmapAtlasId.bind(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, atlas.img().width, atlas.img().height, 0, GL_RGB, GL_UNSIGNED_BYTE, atlas.img().data.data());
-
+	m_lightmapAtlas = m_renderer.createTexture({ atlas.img() });
 	return lmCoords;
 }
 
@@ -170,15 +135,7 @@ void BspRenderable::loadSkyTextures() {
 	const auto images = m_bsp->loadSkyBox();
 	if (!images)
 		return;
-
-	m_skyboxTex.emplace().bind(GL_TEXTURE_CUBE_MAP);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	for (auto i = 0; i < 6; i++)
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, (*images)[i].width, (*images)[i].height, 0, (*images)[i].channels == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (*images)[i].data.data());
+	m_skyboxTex = m_renderer.createCubeTexture(*images);
 }
 
 void BspRenderable::render(const RenderSettings& settings) {
@@ -188,48 +145,49 @@ void BspRenderable::render(const RenderSettings& settings) {
 	if (m_skyboxTex && settings.renderSkybox)
 		renderSkybox();
 
-	m_shaderProgram.use();
-	glUniform1i(m_shaderProgram.uniformLocation("tex1"), 0);
-	glUniform1i(m_shaderProgram.uniformLocation("tex2"), 1);
-	glUniform1i(m_shaderProgram.uniformLocation("nightvision"), static_cast<GLint>(settings.nightvision));
-	//glUniform1i(m_shaderProgram.uniformLocation("flashlight"), static_cast<GLint>(settings.flashlight));
-	glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), static_cast<GLint>(settings.textures));
-	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), static_cast<GLint>(settings.lightmaps));
-
-	glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 0);
-
 	const auto& cameraPos = m_camera->position;
 
-	const auto matrix = settings.projection * settings.view;
-	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
-
-	glEnable(GL_DEPTH_TEST);
-
 	if (settings.renderStaticBSP || settings.renderBrushEntities)
-		m_staticGeometryVao.bind();
+		for (auto&& b : facesDrawn)
+			b = false;
 
+	std::vector<render::EntityData> ents;
 	if (settings.renderStaticBSP)
-		renderStaticGeometry(cameraPos);
+		ents.push_back(render::EntityData{ renderStaticGeometry(cameraPos), glm::vec3{}, 1.0f, bsp30::RenderMode::RENDER_MODE_NORMAL });
 
-	if (settings.renderBrushEntities)
-		for (const auto i : m_bsp->brushEntities)
-			renderBrushEntity(m_bsp->entities[i], cameraPos);
+	if (settings.renderBrushEntities) {
+		for (const auto i : m_bsp->brushEntities) {
+			const auto& ent = m_bsp->entities[i];
 
-	glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), 0);
-	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
+			const int model = std::stoi(ent.findProperty("model")->substr(1));
 
-	if (settings.renderDecals)
-		renderDecals();
+			const auto alpha = [&] {
+				if (const auto renderamt = ent.findProperty("renderamt"))
+					return std::stoi(*renderamt) / 255.0f;
+				return 1.0f;
+			}();
 
-	glDisable(GL_DEPTH_TEST);
+			const auto renderMode = [&] {
+				if (const auto pszRenderMode = ent.findProperty("rendermode"))
+					return static_cast<bsp30::RenderMode>(std::stoi(*pszRenderMode));
+				else
+					return bsp30::RENDER_MODE_NORMAL;
+			}();
 
-	glBindVertexArray(0);
-	glUseProgram(0);
+			std::vector<render::FaceRenderInfo> fri;
+			renderBSP(m_bsp->models[model].headNodesIndex[0], boost::dynamic_bitset<uint8_t>{}, cameraPos, fri); // for some odd reason, VIS does not work for entities ...
+
+			ents.push_back(render::EntityData{ std::move(fri), m_bsp->models[model].origin, alpha, renderMode });
+		}
+	}
+
+	m_renderer.renderStatic(std::move(ents), m_bsp->decals(), *m_staticGeometryVao, *m_decalVao, m_textures, *m_lightmapAtlas, settings);
 
 	// Leaf outlines
 	if (settings.renderLeafOutlines) {
-		glLoadMatrixf(glm::value_ptr(matrix));
-		renderLeafOutlines();
+		std::cerr << "Rendering leaf outlines is currently disabled\n";
+		//glLoadMatrixf(glm::value_ptr(matrix));
+		//renderLeafOutlines();
 	}
 }
 
@@ -238,97 +196,63 @@ void BspRenderable::renderSkybox() {
 	//auto matrix = m_settings->projection * glm::eulerAngleXZX(degToRad(-m_settings->pitch - 90.0f), degToRad(-m_settings->yaw), degToRad(+90.0f));
 	auto matrix = m_settings->projection * glm::eulerAngleX(degToRad(-m_settings->pitch - 90.0f)) * glm::eulerAngleZ(degToRad(-m_settings->yaw)) * glm::eulerAngleX(degToRad(+90.0f));
 
-	m_skyBoxVao.bind();
-	m_skyboxProgram.use();
-	glUniform1i(m_skyboxProgram.uniformLocation("cubeSampler"), 0);
-	glUniformMatrix4fv(m_skyboxProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
-
-	glActiveTexture(GL_TEXTURE0);
-	m_skyboxTex->bind(GL_TEXTURE_CUBE_MAP);
-
-	glDepthMask(GL_FALSE);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glDepthMask(GL_TRUE);
+	m_renderer.renderSkyBox(**m_skyboxTex, matrix);
 }
 
-void BspRenderable::renderStaticGeometry(glm::vec3 pos) {
-	for (auto&& b : facesDrawn)
-		b = false;
-
-	std::vector<FaceRenderInfo> fri;
+auto BspRenderable::renderStaticGeometry(glm::vec3 pos) -> std::vector<render::FaceRenderInfo> {
+	std::vector<render::FaceRenderInfo> fri;
 	const auto leaf = m_bsp->findLeaf(pos);
 	renderBSP(0, !leaf || m_bsp->visLists.empty() ? boost::dynamic_bitset<std::uint8_t>{} : m_bsp->visLists[*leaf - 1], pos, fri);
-	renderFri(std::move(fri));
+	return fri;
 }
 
-void BspRenderable::renderDecals() {
-	m_decalVao.bind();
+//void BspRenderable::renderLeafOutlines() {
+//	std::mt19937 engine;
+//	std::uniform_real_distribution dist(0.0f, 1.0f);
+//
+//	glLineWidth(1.0f);
+//	glLineStipple(1, 0xF0F0);
+//	glEnable(GL_LINE_STIPPLE);
+//	for (const auto& leaf : m_bsp->leaves) {
+//		glColor3f(dist(engine), dist(engine), dist(engine));
+//
+//		glBegin(GL_LINES);
+//		// Draw right face of bounding box
+//		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
+//		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
+//		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
+//		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
+//		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
+//		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
+//		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
+//		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
+//
+//		// Draw left face of bounding box
+//		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
+//		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
+//		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
+//		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
+//		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
+//		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
+//		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
+//		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
+//
+//		// Connect the faces
+//		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
+//		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
+//		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
+//		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
+//		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
+//		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
+//		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
+//		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
+//		glEnd();
+//	}
+//	glDisable(GL_LINE_STIPPLE);
+//	glColor3f(1, 1, 1);
+//}
 
-	glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonOffset(0.0f, -2.0f);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glActiveTexture(GL_TEXTURE0);
-
-	const auto& decals = m_bsp->decals();
-	for (auto i = 0; i < decals.size(); i++) {
-		glBindTexture(GL_TEXTURE_2D, m_textureIds[decals[i].texIndex].id());
-		glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
-	}
-
-	glDisable(GL_BLEND);
-	glDisable(GL_POLYGON_OFFSET_FILL);
-}
-
-
-void BspRenderable::renderLeafOutlines() {
-	std::mt19937 engine;
-	std::uniform_real_distribution dist(0.0f, 1.0f);
-
-	glLineWidth(1.0f);
-	glLineStipple(1, 0xF0F0);
-	glEnable(GL_LINE_STIPPLE);
-	for (const auto& leaf : m_bsp->leaves) {
-		glColor3f(dist(engine), dist(engine), dist(engine));
-
-		glBegin(GL_LINES);
-		// Draw right face of bounding box
-		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-
-		// Draw left face of bounding box
-		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-
-		// Connect the faces
-		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.upper[2]);
-		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.upper[2]);
-		glVertex3f(leaf.lower[0], leaf.upper[1], leaf.lower[2]);
-		glVertex3f(leaf.upper[0], leaf.upper[1], leaf.lower[2]);
-		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.lower[2]);
-		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.lower[2]);
-		glVertex3f(leaf.lower[0], leaf.lower[1], leaf.upper[2]);
-		glVertex3f(leaf.upper[0], leaf.lower[1], leaf.upper[2]);
-		glEnd();
-	}
-	glDisable(GL_LINE_STIPPLE);
-	glColor3f(1, 1, 1);
-}
-
-void BspRenderable::renderLeaf(int leaf, std::vector<FaceRenderInfo>& fris) {
+void BspRenderable::renderLeaf(int leaf, std::vector<render::FaceRenderInfo>& fris) {
 	for (int i = 0; i < m_bsp->leaves[leaf].markSurfaceCount; i++) {
 		const auto& faceIndex = m_bsp->markSurfaces[m_bsp->leaves[leaf].firstMarkSurface + i];
 
@@ -346,16 +270,16 @@ void BspRenderable::renderLeaf(int leaf, std::vector<FaceRenderInfo>& fris) {
 
 		auto& fri = fris.emplace_back();
 		if (m_settings->textures)
-			fri.texId = m_textureIds[m_bsp->textureInfos[face.textureInfo].miptexIndex].id();
+			fri.tex = m_textures[m_bsp->textureInfos[face.textureInfo].miptexIndex].get();
 		else
-			fri.texId = 0;
+			fri.tex = nullptr;
 
 		fri.offset = vertexOffsets[faceIndex];
 		fri.count = face.edgeCount;
 	}
 }
 
-void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, glm::vec3 pos, std::vector<FaceRenderInfo>& fri) {
+void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t>& visList, glm::vec3 pos, std::vector<render::FaceRenderInfo>& fri) {
 	if (node < 0) {
 		if (node == -1)
 			return;
@@ -384,80 +308,6 @@ void BspRenderable::renderBSP(int node, const boost::dynamic_bitset<std::uint8_t
 	renderBSP(m_bsp->nodes[node].childIndex[child2], visList, pos, fri);
 }
 
-void BspRenderable::renderBrushEntity(const Entity& ent, glm::vec3 pos) {
-	const int model = std::stoi(ent.findProperty("model")->substr(1));
-
-	const auto alpha = [&] {
-		if (const auto renderamt = ent.findProperty("renderamt"))
-			return std::stoi(*renderamt) / 255.0f;
-		return 1.0f;
-	}();
-
-	const auto renderMode = [&] {
-		if (const auto pszRenderMode = ent.findProperty("rendermode"))
-			return static_cast<bsp30::RenderMode>(std::stoi(*pszRenderMode));
-		else
-			return bsp30::RENDER_MODE_NORMAL;
-	}();
-
-	const auto matrix = glm::translate(m_settings->projection * m_settings->view, m_bsp->models[model].origin);
-	glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
-
-	switch (renderMode) {
-		case bsp30::RENDER_MODE_NORMAL:
-			break;
-		case bsp30::RENDER_MODE_TEXTURE:
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-			glDepthMask(GL_FALSE);
-			break;
-		case bsp30::RENDER_MODE_SOLID:
-			glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 1);
-			break;
-		case bsp30::RENDER_MODE_ADDITIVE:
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_ONE, GL_ONE);
-			glDepthMask(GL_FALSE);
-			break;
-	}
-
-	std::vector<FaceRenderInfo> fri;
-	renderBSP(m_bsp->models[model].headNodesIndex[0], boost::dynamic_bitset<uint8_t>{}, pos, fri); // for some odd reason, VIS does not work for entities ...
-	renderFri(std::move(fri));
-
-	switch (renderMode) {
-		case bsp30::RENDER_MODE_NORMAL:
-			break;
-		case bsp30::RENDER_MODE_TEXTURE:
-		case bsp30::RENDER_MODE_ADDITIVE:
-			glDisable(GL_BLEND);
-			glDepthMask(GL_TRUE);
-			break;
-		case bsp30::RENDER_MODE_SOLID:
-			glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 0);
-			break;
-	}
-}
-
-void BspRenderable::renderFri(std::vector<FaceRenderInfo> fri) {
-	// sort by texture id to avoid some rebinds
-	std::sort(begin(fri), end(fri), [](const FaceRenderInfo& a, const FaceRenderInfo& b) {
-		return a.texId < b.texId;
-	});
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, m_lightmapAtlasId.id());
-	glActiveTexture(GL_TEXTURE0);
-	GLint curId = 0;
-	for (const auto& i : fri) {
-		if (curId != i.texId) {
-			glBindTexture(GL_TEXTURE_2D, i.texId);
-			curId = i.texId;
-		}
-		glDrawArrays(GL_TRIANGLE_FAN, i.offset, i.count);
-	}
-}
-
 void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords) {
 	{
 		// static and brush geometry
@@ -469,7 +319,7 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 			for (int i = 0; i < face.edgeCount; i++) {
 				auto& v = vertices.emplace_back();
 				v.texCoord = coords.texCoords[i];
-				v.lightmapCoord = lmCoords[faceIndex].empty() ? glm::vec2{0.0} : lmCoords[faceIndex][i];
+				v.lightmapCoord = lmCoords[faceIndex].empty() ? glm::vec2{ 0.0 } : lmCoords[faceIndex][i];
 
 				v.normal = m_bsp->planes[face.planeIndex].normal;
 				if (face.planeSide)
@@ -493,17 +343,13 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 			sum += val;
 		}
 
-		m_staticGeometryVao.bind();
-		m_staticGeometryVbo.bind(GL_ARRAY_BUFFER);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VertexWithLM), vertices.data(), GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, position)));
-		glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, normal)));
-		glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, texCoord)));
-		glVertexAttribPointer(3, 2, GL_FLOAT, false, sizeof(VertexWithLM), reinterpret_cast<void*>(offsetof(VertexWithLM, lightmapCoord)));
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		glEnableVertexAttribArray(2);
-		glEnableVertexAttribArray(3);
+		m_staticGeometryVbo = m_renderer.createBuffer(vertices.size() * sizeof(VertexWithLM), vertices.data());
+		m_staticGeometryVao = m_renderer.createInputLayout(*m_staticGeometryVbo, {
+			render::AttributeLayout{ 3, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, position     ) },
+			render::AttributeLayout{ 3, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, normal       ) },
+			render::AttributeLayout{ 2, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, texCoord     ) },
+			render::AttributeLayout{ 2, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, lightmapCoord) }
+		});
 	}
 
 	{
@@ -522,16 +368,11 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 			}
 		}
 
-		m_decalVao.bind();
-		m_decalVbo.bind(GL_ARRAY_BUFFER);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
-		glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, normal)));
-		glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, texCoord)));
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		glEnableVertexAttribArray(2);
+		m_decalVbo = m_renderer.createBuffer(vertices.size() * sizeof(Vertex), vertices.data());
+		m_decalVao = m_renderer.createInputLayout(*m_decalVbo, {
+			render::AttributeLayout{ 3, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, position) },
+			render::AttributeLayout{ 3, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, normal  ) },
+			render::AttributeLayout{ 2, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, texCoord) },
+		});
 	}
-
-	glBindVertexArray(0);
 }
