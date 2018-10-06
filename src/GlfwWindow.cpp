@@ -44,9 +44,6 @@ GlfwWindow::GlfwWindow(std::string windowTitle)
 
 	m_window = glfwCreateWindow(m_width, m_height, m_windowTitle.c_str(), nullptr, nullptr);
 	onWindowCreated();
-
-	std::cout << "OpenGL version: " << reinterpret_cast<const char*>(glGetString(GL_VERSION)) << '\n';
-	std::cout << "OpenGL vendor:  " << reinterpret_cast<const char*>(glGetString(GL_VENDOR)) << '\n';
 }
 
 GlfwWindow::~GlfwWindow() {

@@ -91,6 +91,9 @@ namespace render::opengl {
 	}
 
 	Renderer::Renderer() {
+		std::cout << "OpenGL version: " << reinterpret_cast<const char*>(glGetString(GL_VERSION)) << '\n';
+		std::cout << "OpenGL vendor:  " << reinterpret_cast<const char*>(glGetString(GL_VENDOR)) << '\n';
+
 #ifndef NDEBUG
 		// error callback
 		if (GLEW_ARB_debug_output) {

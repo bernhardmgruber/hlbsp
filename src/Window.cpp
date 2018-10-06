@@ -1,5 +1,3 @@
-#include "opengl/Renderer.h" // include glew.h before ... FIXME
-
 #include "Window.h"
 
 #include <iostream>
@@ -7,6 +5,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 
+#include "opengl/Renderer.h"
 #include "Bsp.h"
 #include "BspRenderable.h"
 #include "HudRenderable.h"
