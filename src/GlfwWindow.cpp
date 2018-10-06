@@ -3,16 +3,13 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
-#include <mutex>
-#include <unordered_map>
+#include <atomic>
 
 namespace {
-	std::mutex g_guisMutex;
-	std::unordered_map<GLFWwindow*, GlfwWindow*> g_guis;
+	std::atomic<unsigned int> g_guiCount = 0;
 
-	auto gui(GLFWwindow* w) -> GlfwWindow* {
-		std::lock_guard<std::mutex> lock(g_guisMutex);
-		return g_guis.at(w);
+	auto gui(GLFWwindow* w) -> GlfwWindow& {
+		return *static_cast<GlfwWindow*>(glfwGetWindowUserPointer(w));
 	}
 }
 
@@ -23,8 +20,7 @@ GlfwWindow::GlfwWindow(std::string windowTitle)
 
 	// if this is the first window, init GLFW
 	{
-		std::lock_guard lock{g_guisMutex};
-		if (g_guis.empty())
+		if (g_guiCount++ == 0)
 			if (!glfwInit())
 				throw std::runtime_error("failed to init GLFW");
 	}
@@ -50,12 +46,8 @@ GlfwWindow::~GlfwWindow() {
 	glfwDestroyWindow(m_window);
 
 	// if this is the last window, terminate GLFW
-	{
-		std::lock_guard lock{g_guisMutex};
-		g_guis.erase(m_window);
-		if (g_guis.size() == 1)
-			glfwTerminate();
-	}
+	if (g_guiCount-- == 1)
+		glfwTerminate();
 }
 
 auto GlfwWindow::handle() const -> GLFWwindow* {
@@ -167,30 +159,30 @@ void GlfwWindow::onError(int error, const char* description) {
 }
 
 void GlfwWindow::onResize(GLFWwindow* window, int width, int height) {
-	auto* g = gui(window);
-	g->m_width = width;
-	g->m_height = height;
-	g->onResize(width, height);
+	auto& g = gui(window);
+	g.m_width = width;
+	g.m_height = height;
+	g.onResize(width, height);
 }
 
 void GlfwWindow::onMouseButton(GLFWwindow* window, int button, int action, int modifiers) {
-	gui(window)->onMouseButton(button, action, modifiers);
+	gui(window).onMouseButton(button, action, modifiers);
 }
 
 void GlfwWindow::onMouseMove(GLFWwindow* window, double dx, double dy) {
-	gui(window)->onMouseMove(dx, dy);
+	gui(window).onMouseMove(dx, dy);
 }
 
 void GlfwWindow::onMouseWheel(GLFWwindow* window, double xOffset, double yOffset) {
-	gui(window)->onMouseWheel(xOffset, yOffset);
+	gui(window).onMouseWheel(xOffset, yOffset);
 }
 
 void GlfwWindow::onKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	gui(window)->onKey(key, scancode, action, mods);
+	gui(window).onKey(key, scancode, action, mods);
 }
 
 void GlfwWindow::onChar(GLFWwindow* window, unsigned int codepoint) {
-	gui(window)->onChar(codepoint);
+	gui(window).onChar(codepoint);
 }
 
 void GlfwWindow::onWindowCreated() {
@@ -199,11 +191,7 @@ void GlfwWindow::onWindowCreated() {
 		return;
 	}
 
-	// register window
-	{
-		std::lock_guard<std::mutex> lock{g_guisMutex};
-		g_guis.insert(std::make_pair(m_window, this));
-	}
+	glfwSetWindowUserPointer(m_window, this);
 
 	// after the window has been created, we have an OpenGL context
 	glfwMakeContextCurrent(m_window);

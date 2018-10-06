@@ -40,11 +40,11 @@ private:
 	void onWindowCreated();
 
 	// stored when going fullscreen to allow reverting back to same window
-	int m_windowedX;
-	int m_windowedY;
-	int m_windowedWidth;
-	int m_windowedHeight;
+	int m_windowedX = 0;
+	int m_windowedY = 0;
+	int m_windowedWidth = 0;
+	int m_windowedHeight = 0;
 
-	GLFWwindow* m_window;
+	GLFWwindow* m_window = nullptr;
 	std::string m_windowTitle;
 };
