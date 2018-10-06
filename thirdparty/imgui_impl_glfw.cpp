@@ -45,12 +45,6 @@
 #define GLFW_HAS_VULKAN             (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwCreateWindowSurface
 
 // Data
-enum GlfwClientApi
-{
-    GlfwClientApi_Unknown,
-    GlfwClientApi_OpenGL,
-    GlfwClientApi_Vulkan
-};
 static GLFWwindow*      g_Window = NULL;
 static GlfwClientApi    g_ClientApi = GlfwClientApi_Unknown;
 static double           g_Time = 0.0;
@@ -110,7 +104,7 @@ void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
     glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
 }
 
-static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
+bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
 {
     g_Window = window;
     g_Time = 0.0;

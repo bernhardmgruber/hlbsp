@@ -20,7 +20,7 @@ Window::Window(Bsp& bsp)
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGui_ImplGlfw_InitForOpenGL(handle(), false);
+	ImGui_ImplGlfw_Init(handle(), false, GlfwClientApi_Unknown);
 
 	m_renderer = std::make_unique<render::opengl::Renderer>();
 	m_renderables.emplace_back(std::make_unique<BspRenderable>(*m_renderer, bsp, camera));

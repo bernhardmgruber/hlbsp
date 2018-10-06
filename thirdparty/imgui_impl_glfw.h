@@ -18,6 +18,14 @@
 
 struct GLFWwindow;
 
+enum GlfwClientApi
+{
+	GlfwClientApi_Unknown,
+	GlfwClientApi_OpenGL,
+	GlfwClientApi_Vulkan
+};
+
+IMGUI_IMPL_API bool     ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api);
 IMGUI_IMPL_API bool     ImGui_ImplGlfw_InitForOpenGL(GLFWwindow* window, bool install_callbacks);
 IMGUI_IMPL_API bool     ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks);
 IMGUI_IMPL_API void     ImGui_ImplGlfw_Shutdown();
