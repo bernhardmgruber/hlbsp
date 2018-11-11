@@ -3,10 +3,12 @@
 #include <GLFW/glfw3.h>
 
 #include <string>
+#include <memory>
+#include <functional>
 
 class GlfwWindow {
 public:
-	GlfwWindow(std::string windowTitle);
+	GlfwWindow(std::string windowTitle, std::function<GLFWwindow*(int width, int height, const char* title, GLFWmonitor* monitor)> createWindowAndContext);
 	~GlfwWindow();
 
 	auto handle() const -> GLFWwindow*;

@@ -8,13 +8,14 @@
 
 namespace render {
 	class IRenderer;
+	class IPlatform;
 }
 
 class Bsp;
 
 class Window : public GlfwWindow {
 public:
-	Window(Bsp& bsp);
+	Window(render::IPlatform& platform, Bsp& bsp);
 	~Window();
 
 	void update();
@@ -35,6 +36,7 @@ private:
 
 	RenderSettings m_settings;
 	std::vector<std::unique_ptr<IRenderable>> m_renderables;
+	render::IPlatform& m_platform;
 	std::unique_ptr<render::IRenderer> m_renderer;
 
 	bool m_captureMouse = false;

@@ -9,6 +9,9 @@
 #include "Image.h"
 #include "bspdef.h"
 
+struct GLFWwindow;
+struct GLFWmonitor;
+
 class Camera;
 struct Decal;
 struct ImDrawData;
@@ -37,7 +40,9 @@ namespace render {
 	};
 
 	struct AttributeLayout {
-		int size;
+		const char* semantic;
+		unsigned int semanticIndex;
+		unsigned int size;
 		enum class Type {
 			Float
 		} type;
@@ -54,7 +59,7 @@ namespace render {
 
 	class IRenderer {
 	public:
-		~IRenderer() = default;
+		virtual ~IRenderer() = default;
 
 		virtual void resizeViewport(int width, int height) = 0;
 		virtual void clear() = 0;
@@ -68,5 +73,12 @@ namespace render {
 		virtual void renderSkyBox(ITexture& cubemap, const glm::mat4& matrix) = 0;
 		virtual void renderStatic(std::vector<EntityData> entities, const std::vector<Decal>& decals, IInputLayout& staticLayout, IInputLayout& decalLayout, std::vector<std::unique_ptr<render::ITexture>>& textures, render::ITexture& lightmapAtlas, const RenderSettings& settings) = 0;
 		virtual void renderImgui(ImDrawData* data) = 0;
+	};
+
+	class IPlatform {
+	public:
+		virtual auto createWindowAndContext(int width, int height, const char* title, GLFWmonitor* monitor) -> GLFWwindow* = 0;
+		virtual auto createRenderer() -> std::unique_ptr<IRenderer> = 0;
+		virtual void swapBuffers() = 0;
 	};
 }

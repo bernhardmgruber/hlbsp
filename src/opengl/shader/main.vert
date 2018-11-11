@@ -15,9 +15,6 @@ out vec2 lightmapCoord;
 
 void main() {
 	gl_Position = matrix * vec4(inPosition, 1.0);
-
-	if (unit1Enabled)
-		texCoord = inTexCoord;
-	if (unit2Enabled)
-		lightmapCoord = inLightmapCoord;
+	texCoord = inTexCoord;
+	lightmapCoord = inLightmapCoord;
 }

@@ -36,9 +36,18 @@ namespace render::opengl {
 		} m_glew;
 
 		gl::VAO m_emptyVao;
-		gl::VAO m_skyBoxVao;
 		gl::Program m_skyboxProgram;
 		gl::Program m_shaderProgram;
 		gl::Program m_coordsProgram;
+	};
+
+	class Platform : public IPlatform {
+	public:
+		virtual auto createWindowAndContext(int width, int height, const char * title, GLFWmonitor * monitor) -> GLFWwindow* override;
+		virtual auto createRenderer() -> std::unique_ptr<IRenderer> override;
+		virtual void swapBuffers() override;
+
+	private:
+		GLFWwindow* m_window;
 	};
 }

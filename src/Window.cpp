@@ -5,7 +5,6 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 
-#include "opengl/Renderer.h"
 #include "Bsp.h"
 #include "BspRenderable.h"
 #include "HudRenderable.h"
@@ -15,14 +14,18 @@ namespace {
 	constexpr auto WINDOW_CAPTION = "HL BSP";
 }
 
-Window::Window(Bsp& bsp)
-	: GlfwWindow(WINDOW_CAPTION), hud(camera, timer), bsp(bsp) {
+Window::Window(render::IPlatform& platform, Bsp& bsp)
+	: GlfwWindow(WINDOW_CAPTION, [&](int width, int height, const char* title, GLFWmonitor* monitor) -> GLFWwindow* { return platform.createWindowAndContext(width, height, title, monitor); })
+	, hud(camera, timer)
+	, bsp(bsp)
+	, m_platform(platform) {
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_Init(handle(), false, GlfwClientApi_Unknown);
 
-	m_renderer = std::make_unique<render::opengl::Renderer>();
+	m_renderer = platform.createRenderer();
+
 	m_renderables.emplace_back(std::make_unique<BspRenderable>(*m_renderer, bsp, camera));
 	m_renderables.emplace_back(std::make_unique<HudRenderable>(*m_renderer, hud));
 
@@ -42,7 +45,7 @@ Window::Window(Bsp& bsp)
 }
 
 Window::~Window() {
-	m_renderer = {};
+	m_renderer = nullptr;
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 }

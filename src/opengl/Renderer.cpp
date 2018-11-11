@@ -1,5 +1,6 @@
 #include "Renderer.h"
 
+#include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 
@@ -79,11 +80,11 @@ namespace render::opengl {
 		}
 	}
 
-	class Texture : public ITexture, public gl::Texture {};
+	struct Texture : ITexture, gl::Texture {};
 
-	class Buffer : public IBuffer, public gl::Buffer {};
+	struct Buffer : IBuffer, gl::Buffer {};
 
-	class InputLayout : public IInputLayout, public gl::VAO {};
+	struct InputLayout : IInputLayout, gl::VAO {};
 
 	Renderer::Glew::Glew() {
 		if (glewInit() != GLEW_OK)
@@ -165,7 +166,7 @@ namespace render::opengl {
 		t->bind(GL_TEXTURE_2D);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(mipmaps.size() - 1));
 		for (int i = 0; i < mipmaps.size(); i++)
 			glTexImage2D(GL_TEXTURE_2D, i, GL_RGBA, mipmaps[i].width, mipmaps[i].height, 0, channelsToTextureType(mipmaps[i]), GL_UNSIGNED_BYTE, mipmaps[i].data.data());
@@ -216,7 +217,7 @@ namespace render::opengl {
 	}
 
 	void Renderer::renderSkyBox(ITexture& cubemap, const glm::mat4& matrix) {
-		m_skyBoxVao.bind();
+		m_emptyVao.bind();
 		m_skyboxProgram.use();
 		glUniform1i(m_skyboxProgram.uniformLocation("cubeSampler"), 0);
 		glUniformMatrix4fv(m_skyboxProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
@@ -338,5 +339,32 @@ namespace render::opengl {
 	void Renderer::renderImgui(ImDrawData* data) {
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplOpenGL3_RenderDrawData(data);
+	}
+
+	auto Platform::createWindowAndContext(int width, int height, const char * title, GLFWmonitor * monitor) -> GLFWwindow* {
+		// set window hints before creating window
+		// list of available hints and their defaults: http://www.glfw.org/docs/3.0/window.html#window_hints
+		glfwWindowHint(GLFW_DEPTH_BITS, 32);
+		glfwWindowHint(GLFW_STENCIL_BITS, 0);
+		glfwWindowHint(GLFW_FOCUSED, false);
+#ifndef NDEBUG
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+#endif
+
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+		m_window = glfwCreateWindow(width, height, title, monitor, nullptr);
+
+		return m_window;
+	}
+
+	auto Platform::createRenderer() -> std::unique_ptr<IRenderer> {
+		return std::make_unique<Renderer>();
+	}
+
+	void Platform::swapBuffers() {
+		glfwSwapBuffers(m_window);
 	}
 }

@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "directx11/Renderer.h"
+#include "opengl/Renderer.h"
 #include "Bsp.h"
 #include "Window.h"
 
@@ -10,7 +12,8 @@ int main(const int argc, const char* argv[]) try {
 	const auto mapFile = argv[1];
 	Bsp bsp(mapFile);
 
-	Window window(bsp);
+	auto platform = std::make_unique<render::directx11::Platform>();
+	Window window(*platform, bsp);
 
 	while (true) {
 		glfwPollEvents();
@@ -21,7 +24,7 @@ int main(const int argc, const char* argv[]) try {
 
 		window.update();
 		window.draw();
-		glfwSwapBuffers(window.handle());
+		platform->swapBuffers();
 	}
 
 	return 0;

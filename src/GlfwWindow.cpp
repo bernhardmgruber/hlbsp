@@ -13,7 +13,7 @@ namespace {
 	}
 }
 
-GlfwWindow::GlfwWindow(std::string windowTitle)
+GlfwWindow::GlfwWindow(std::string windowTitle, std::function<GLFWwindow*(int width, int height, const char* title, GLFWmonitor* monitor)> createWindowAndContext)
 	: m_windowTitle(std::move(windowTitle)) {
 	// set GLFW error callback before any other GLFW function call
 	glfwSetErrorCallback(onError);
@@ -25,20 +25,8 @@ GlfwWindow::GlfwWindow(std::string windowTitle)
 				throw std::runtime_error("failed to init GLFW");
 	}
 
-	// set window hints before creating window
-	// list of available hints and their defaults: http://www.glfw.org/docs/3.0/window.html#window_hints
-	glfwWindowHint(GLFW_DEPTH_BITS, 32);
-	glfwWindowHint(GLFW_STENCIL_BITS, 0);
-	glfwWindowHint(GLFW_FOCUSED, false);
-#ifndef NDEBUG
-		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
-#endif
+	m_window = createWindowAndContext(m_width, m_height, windowTitle.c_str(), nullptr);
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	m_window = glfwCreateWindow(m_width, m_height, m_windowTitle.c_str(), nullptr, nullptr);
 	onWindowCreated();
 }
 

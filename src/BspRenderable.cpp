@@ -345,10 +345,10 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 
 		m_staticGeometryVbo = m_renderer.createBuffer(vertices.size() * sizeof(VertexWithLM), vertices.data());
 		m_staticGeometryVao = m_renderer.createInputLayout(*m_staticGeometryVbo, {
-			render::AttributeLayout{ 3, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, position     ) },
-			render::AttributeLayout{ 3, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, normal       ) },
-			render::AttributeLayout{ 2, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, texCoord     ) },
-			render::AttributeLayout{ 2, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, lightmapCoord) }
+			render::AttributeLayout{ "POSITION", 0, 3, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, position     ) },
+			render::AttributeLayout{ "NORMAL"  , 0, 3, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, normal       ) },
+			render::AttributeLayout{ "TEXCOORD", 0, 2, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, texCoord     ) },
+			render::AttributeLayout{ "TEXCOORD", 1, 2, render::AttributeLayout::Type::Float, sizeof(VertexWithLM), offsetof(VertexWithLM, lightmapCoord) }
 		});
 	}
 
@@ -370,9 +370,10 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 
 		m_decalVbo = m_renderer.createBuffer(vertices.size() * sizeof(Vertex), vertices.data());
 		m_decalVao = m_renderer.createInputLayout(*m_decalVbo, {
-			render::AttributeLayout{ 3, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, position) },
-			render::AttributeLayout{ 3, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, normal  ) },
-			render::AttributeLayout{ 2, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, texCoord) },
+			render::AttributeLayout{ "POSITION", 0, 3, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, position) },
+			render::AttributeLayout{ "NORMAL"  , 0, 3, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, normal  ) },
+			render::AttributeLayout{ "TEXCOORD", 0, 2, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, texCoord) },
+			render::AttributeLayout{ "TEXCOORD", 1, 2, render::AttributeLayout::Type::Float, sizeof(Vertex), offsetof(Vertex, texCoord) }, // we do not need this one
 		});
 	}
 }
