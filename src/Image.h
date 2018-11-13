@@ -11,10 +11,14 @@ public:
 	Image() = default;
 	Image(unsigned int width, unsigned int height, unsigned int channels);
 	explicit Image(const fs::path& path);
+	Image(const Image& img, unsigned int channels);
 	Image(const Image&) = default;
 	Image& operator=(const Image&) = default;
 	Image(Image&&) = default;
 	Image& operator=(Image&&) = default;
+
+	auto operator()(unsigned int x, unsigned int y) -> std::uint8_t*;
+	auto operator()(unsigned int x, unsigned int y) const -> const std::uint8_t*;
 
 	void Save(const fs::path& path) const;
 
