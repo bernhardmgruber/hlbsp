@@ -26,6 +26,8 @@ namespace render::opengl {
 		virtual void renderStatic(std::vector<EntityData> entities, const std::vector<Decal>& decals, IInputLayout& staticLayout, IInputLayout& decalLayout, std::vector<std::unique_ptr<render::ITexture>>& textures, render::ITexture& lightmapAtlas, const RenderSettings& settings) override;
 		virtual void renderImgui(ImDrawData* data) override;
 
+		virtual auto screenshot() const -> Image override;
+
 	private:
 		void renderBrushEntity(std::vector<FaceRenderInfo> fri, render::ITexture& lightmapAtlas, const RenderSettings& settings, glm::vec3 origin, float alpha, bsp30::RenderMode renderMode);
 		void renderFri(std::vector<FaceRenderInfo> fri, render::ITexture& lightmapAtlas);

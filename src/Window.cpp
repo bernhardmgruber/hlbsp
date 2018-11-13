@@ -153,21 +153,14 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 				break;
 
 			case GLFW_KEY_F5: {
-				Image pImg(m_width, m_height, 3);
-				glReadPixels(0, 0, pImg.width, pImg.height, GL_RGB, GL_UNSIGNED_BYTE, pImg.data.data());
+				const auto img = m_renderer->screenshot();
 
-				//get filename
-				char szFileName[512];
-
-				for (int i = 1;; i++) {
-					sprintf(szFileName, "screenshots/Screenshot%d.bmp", i);
-					FILE* pFile;
-					if ((pFile = fopen(szFileName, "rbe")) == nullptr)
+				std::string filename;
+				for (auto i = 1;; i++) 
+					if (!std::experimental::filesystem::exists(filename = "screenshots/Screenshot" + std::to_string(i) + ".bmp"))
 						break;
-					fclose(pFile);
-				}
 
-				pImg.Save(szFileName);
+				img.Save(filename);
 				break;
 			}
 
@@ -219,16 +212,16 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 					hud.print("leaf outlines disabled");
 				break;
 
-			case GLFW_KEY_P:
-				m_settings.polygons = !m_settings.polygons;
-				if (m_settings.polygons) {
-					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-					hud.print("polygon mode set to line");
-				} else {
-					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-					hud.print("polygon mode set to fill");
-				}
-				break;
+			//case GLFW_KEY_P:
+			//	m_settings.polygons = !m_settings.polygons;
+			//	if (m_settings.polygons) {
+			//		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			//		hud.print("polygon mode set to line");
+			//	} else {
+			//		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			//		hud.print("polygon mode set to fill");
+			//	}
+			//	break;
 
 			case GLFW_KEY_V:
 				m_settings.flashlight = !m_settings.flashlight;

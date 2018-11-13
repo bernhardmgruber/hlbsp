@@ -275,7 +275,7 @@ void BspRenderable::renderLeaf(int leaf, std::vector<render::FaceRenderInfo>& fr
 			fri.tex = nullptr;
 
 		fri.offset = vertexOffsets[faceIndex];
-		fri.count = face.edgeCount;
+		fri.count = (face.edgeCount - 2) * 3;
 	}
 }
 
@@ -316,7 +316,15 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 		for (const auto& face : m_bsp->faces) {
 			const auto faceIndex = &face - &m_bsp->faces.front();
 			const auto& coords = m_bsp->faceTexCoords[faceIndex];
+			const auto firstIndex = vertices.size();
 			for (int i = 0; i < face.edgeCount; i++) {
+				if (i > 2) {
+					auto first = vertices[firstIndex];
+					auto prev = vertices.back();
+					vertices.push_back(first);
+					vertices.push_back(prev);
+				}
+
 				auto& v = vertices.emplace_back();
 				v.texCoord = coords.texCoords[i];
 				v.lightmapCoord = lmCoords[faceIndex].empty() ? glm::vec2{ 0.0 } : lmCoords[faceIndex][i];
@@ -331,16 +339,7 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 				else
 					v.position = m_bsp->vertices[m_bsp->edges[-edge].vertexIndex[1]];
 			}
-			vertexOffsets.push_back(face.edgeCount);
-		}
-
-		// TODO clang does not yet have exclusive_scan
-		//std::exclusive_scan(begin(vertexOffsets), end(vertexOffsets), begin(vertexOffsets), 0);
-		auto sum = 0u;
-		for (auto i = 0u; i < vertexOffsets.size(); i++) {
-			const auto val = vertexOffsets[i];
-			vertexOffsets[i] = sum;
-			sum += val;
+			vertexOffsets.push_back(firstIndex);
 		}
 
 		m_staticGeometryVbo = m_renderer.createBuffer(vertices.size() * sizeof(VertexWithLM), vertices.data());
@@ -357,14 +356,13 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 		std::vector<Vertex> vertices;
 
 		for (const auto& decal : m_bsp->decals()) {
-			for (auto i = 0; i < 4; i++) {
+			for (auto i = 0; i < 6; i++) {
 				auto& v = vertices.emplace_back();
-				v.position = decal.vec[i];
 				v.normal = decal.normal;
-				if (i == 0) v.texCoord = glm::vec2(0, 0);
-				if (i == 1) v.texCoord = glm::vec2(1, 0);
-				if (i == 2) v.texCoord = glm::vec2(1, 1);
-				if (i == 3) v.texCoord = glm::vec2(0, 1);
+				if (i == 0 || i == 3) { v.position = decal.vec[0]; v.texCoord = glm::vec2(0, 0); }
+				if (i == 1)           { v.position = decal.vec[1]; v.texCoord = glm::vec2(1, 0); }
+				if (i == 2 || i == 4) { v.position = decal.vec[2]; v.texCoord = glm::vec2(1, 1); }
+				if (i == 5)           { v.position = decal.vec[3]; v.texCoord = glm::vec2(0, 1); }
 			}
 		}
 

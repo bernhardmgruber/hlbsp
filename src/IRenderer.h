@@ -73,6 +73,8 @@ namespace render {
 		virtual void renderSkyBox(ITexture& cubemap, const glm::mat4& matrix) = 0;
 		virtual void renderStatic(std::vector<EntityData> entities, const std::vector<Decal>& decals, IInputLayout& staticLayout, IInputLayout& decalLayout, std::vector<std::unique_ptr<render::ITexture>>& textures, render::ITexture& lightmapAtlas, const RenderSettings& settings) = 0;
 		virtual void renderImgui(ImDrawData* data) = 0;
+
+		virtual auto screenshot() const -> Image = 0;
 	};
 
 	class IPlatform {

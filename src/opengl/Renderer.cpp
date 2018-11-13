@@ -315,7 +315,7 @@ namespace render::opengl {
 				glBindTexture(GL_TEXTURE_2D, static_cast<Texture&>(*i.tex).id());
 				curId = i.tex;
 			}
-			glDrawArrays(GL_TRIANGLE_FAN, i.offset, i.count);
+			glDrawArrays(GL_TRIANGLES, i.offset, i.count);
 		}
 	}
 
@@ -329,7 +329,7 @@ namespace render::opengl {
 
 		for (auto i = 0; i < decals.size(); i++) {
 			glBindTexture(GL_TEXTURE_2D, static_cast<Texture&>(*textures[decals[i].texIndex]).id());
-			glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
+			glDrawArrays(GL_TRIANGLES, i * 4, 4);
 		}
 
 		glDisable(GL_BLEND);
@@ -339,6 +339,14 @@ namespace render::opengl {
 	void Renderer::renderImgui(ImDrawData* data) {
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplOpenGL3_RenderDrawData(data);
+	}
+
+	auto Renderer::screenshot() const -> Image {
+		GLint vp[4];
+		glGetIntegerv(GL_VIEWPORT, vp);
+		Image img(vp[2], vp[3], 3);
+		glReadPixels(vp[0], vp[1], vp[2], vp[3], GL_RGB, GL_UNSIGNED_BYTE, img.data.data());
+		return img;
 	}
 
 	auto Platform::createWindowAndContext(int width, int height, const char * title, GLFWmonitor * monitor) -> GLFWwindow* {
