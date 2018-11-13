@@ -12,7 +12,8 @@ int main(const int argc, const char* argv[]) try {
 	const auto mapFile = argv[1];
 	Bsp bsp(mapFile);
 
-	auto platform = std::make_unique<render::directx11::Platform>();
+	auto platform = std::make_unique<render::opengl::Platform>();
+	//auto platform = std::make_unique<render::directx11::Platform>();
 	Window window(*platform, bsp);
 
 	while (true) {

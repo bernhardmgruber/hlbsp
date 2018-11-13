@@ -42,6 +42,10 @@ include_directories(thirdparty)
 
 # executable
 file(GLOB_RECURSE source_files src/*.cpp src/*.h src/*.hpp src/*.vert src/*.frag thirdparty/*.cpp thirdparty/*.h)
+file(GLOB_RECURSE hlsl_files src/*.hlsl)
+foreach(hlsl_file ${hlsl_files})
+	set_source_files_properties(${hlsl_file} PROPERTIES VS_TOOL_OVERRIDE "None")
+endforeach()
 add_executable(${PROJECT_NAME} ${source_files})
 source_group("" FILES ${source_files})
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${source_files})
@@ -72,6 +76,12 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 	-DGLM_FORCE_RADIANS
 	-DIMGUI_IMPL_OPENGL_LOADER_GLEW
 )
+
+if(WIN32)
+	target_compile_options(${PROJECT_NAME} PRIVATE -DGLFW_EXPOSE_NATIVE_WIN32 -DNOMINMAX)
+	target_link_libraries(${PROJECT_NAME} PRIVATE D3D11.lib D3DCompiler.lib)
+endif()
+
 if(MSVC)
 	target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 else()
