@@ -1,6 +1,8 @@
 #include <iostream>
 
+#ifdef _WIN32
 #include "directx11/Renderer.h"
+#endif
 #include "opengl/Renderer.h"
 #include "Bsp.h"
 #include "Window.h"

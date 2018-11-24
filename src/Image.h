@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <vector>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 class Image {
 public:

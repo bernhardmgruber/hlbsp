@@ -21,7 +21,7 @@ namespace dx11 {
 		}
 	}
 
-	Shader::Shader(const std::string& profile, const std::string& entryPoint, const std::experimental::filesystem::path& file)
+	Shader::Shader(const std::string& profile, const std::string& entryPoint, const fs::path& file)
 		: Shader(profile, entryPoint, readTextFile(file), file.string()) {}
 
 	Shader::Shader(Shader&& other) {
@@ -54,7 +54,7 @@ namespace dx11 {
 			throw std::runtime_error("Failed to create vertex shader from compiled bytecode");
 	}
 
-	VertexShader::VertexShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const std::experimental::filesystem::path& file)
+	VertexShader::VertexShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const fs::path& file)
 		: VertexShader(device, profile, entryPoint, readTextFile(file), file.string()) {}
 
 	auto VertexShader::shader() -> ID3D11VertexShader* {
@@ -67,7 +67,7 @@ namespace dx11 {
 			throw std::runtime_error("Failed to create vertex shader from compiled bytecode");
 	}
 
-	PixelShader::PixelShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const std::experimental::filesystem::path& file)
+	PixelShader::PixelShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const fs::path& file)
 		: PixelShader(device, profile, entryPoint, readTextFile(file), file.string()) {}
 
 	auto PixelShader::shader() -> ID3D11PixelShader* {

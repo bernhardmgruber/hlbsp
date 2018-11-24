@@ -157,7 +157,7 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 
 				std::string filename;
 				for (auto i = 1;; i++) 
-					if (!std::experimental::filesystem::exists(filename = "screenshots/Screenshot" + std::to_string(i) + ".bmp"))
+					if (!fs::exists(filename = "screenshots/Screenshot" + std::to_string(i) + ".bmp"))
 						break;
 
 				img.Save(filename);

@@ -2,14 +2,16 @@
 
 #include <GL/glew.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace gl {
 	class Shader {
 	public:
 		Shader() = default;
 		Shader(GLenum shaderType, const std::string& source, const std::string& filename = "");
-		Shader(GLenum shaderType, const std::experimental::filesystem::path& file);
+		Shader(GLenum shaderType, const fs::path& file);
 		Shader(const Shader&) = delete;
 		Shader& operator=(const Shader&) = delete;
 		Shader(Shader&& other);

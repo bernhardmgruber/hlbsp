@@ -26,7 +26,7 @@ namespace gl {
 					  << buildLog << "\n";
 	}
 
-	Shader::Shader(GLenum shaderType, const std::experimental::filesystem::path& file)
+	Shader::Shader(GLenum shaderType, const fs::path& file)
 		: Shader(shaderType, readTextFile(file), file.string()) {}
 
 	Shader::Shader(Shader&& other) {

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <fstream>
 #include <istream>
 #include <iterator>
 #include <vector>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 template<typename T>
 void read(std::istream& is, T& t) {

@@ -6,14 +6,16 @@
 using Microsoft::WRL::ComPtr;
 #endif
 
-#include <experimental/filesystem>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace dx11 {
 	class Shader {
 	public:
 		Shader() = default;
 		Shader(const std::string& profile, const std::string& entryPoint, const std::string& source, const std::string& filename = "");
-		Shader(const std::string& profile, const std::string& entryPoint, const std::experimental::filesystem::path& file);
+		Shader(const std::string& profile, const std::string& entryPoint, const fs::path& file);
 		Shader(const Shader&) = delete;
 		Shader& operator=(const Shader&) = delete;
 		Shader(Shader&& other);
@@ -33,7 +35,7 @@ namespace dx11 {
 	public:
 		VertexShader() = default;
 		VertexShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const std::string& source, const std::string& filename = "");
-		VertexShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const std::experimental::filesystem::path& file);
+		VertexShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const fs::path& file);
 
 		auto shader() -> ID3D11VertexShader*;
 
@@ -45,7 +47,7 @@ namespace dx11 {
 	public:
 		PixelShader() = default;
 		PixelShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const std::string& source, const std::string& filename = "");
-		PixelShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const std::experimental::filesystem::path& file);
+		PixelShader(ID3D11Device* device, const std::string& profile, const std::string& entryPoint, const fs::path& file);
 
 		auto shader() -> ID3D11PixelShader*;
 

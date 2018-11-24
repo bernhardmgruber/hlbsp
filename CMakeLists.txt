@@ -36,23 +36,30 @@ if (NOT MSVC)
 	include_directories(${FREETYPE_INCLUDE_DIRS})
 endif()
 
-find_package(imgui CONFIG REQUIRED)
-
 include_directories(thirdparty)
 
 # executable
-file(GLOB_RECURSE source_files src/*.cpp src/*.h src/*.hpp src/*.vert src/*.frag thirdparty/*.cpp thirdparty/*.h)
-file(GLOB_RECURSE hlsl_files src/*.hlsl)
-foreach(hlsl_file ${hlsl_files})
-	set_source_files_properties(${hlsl_file} PROPERTIES VS_TOOL_OVERRIDE "None")
-endforeach()
+file(GLOB source_files src/*.cpp src/*.h src/*.hpp thirdparty/*.cpp thirdparty/*.h)
+file(GLOB_RECURSE opengl_files src/opengl/*.cpp src/opengl/*.h src/opengl/*.hpp src/opengl/*.vert src/opengl/*.frag)
+list(APPEND source_files ${opengl_files})
+if(WIN32)
+	file(GLOB_RECURSE directx_files src/directx/*.cpp src/directx/*.h src/directx/*.hpp )
+	file(GLOB_RECURSE hlsl_files src/*.hlsl)
+	foreach(hlsl_file ${hlsl_files})
+		set_source_files_properties(${hlsl_file} PROPERTIES VS_TOOL_OVERRIDE "None")
+	endforeach()
+	list(APPEND source_files ${hlsl_files})
+else()
+	file(GLOB_RECURSE directx_imgui_files thirdparty/imgui_impl_dx11.*)
+	list(REMOVE_ITEM source_files ${directx_imgui_files})
+endif()
+
 add_executable(${PROJECT_NAME} ${source_files})
 source_group("" FILES ${source_files})
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${source_files})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	GLEW::GLEW
-	imgui::imgui
 	${Boost_LIBRARIES}
 )
 if(MSVC)

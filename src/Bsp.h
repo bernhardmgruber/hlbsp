@@ -2,15 +2,13 @@
 
 #include <boost/dynamic_bitset.hpp>
 
-#include <experimental/filesystem>
 #include <optional>
 #include <string_view>
 
 #include "bspdef.h"
 #include "Entity.h"
 #include "Wad.h"
-
-namespace fs = std::experimental::filesystem;
+#include "IO.h"
 
 struct FaceTexCoords {
 	std::vector<glm::vec2> texCoords;

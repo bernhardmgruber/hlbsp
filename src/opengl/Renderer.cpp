@@ -131,18 +131,18 @@ namespace render::opengl {
 		//glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0001f);
 
 		m_skyboxProgram = gl::Program{
-			gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/opengl/shader/skybox.vert"}),
-			gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/opengl/shader/skybox.frag"}),
+			gl::Shader(GL_VERTEX_SHADER, fs::path{"../src/opengl/shader/skybox.vert"}),
+			gl::Shader(GL_FRAGMENT_SHADER, fs::path{"../src/opengl/shader/skybox.frag"}),
 		};
 
 		m_shaderProgram = gl::Program{
-			gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/opengl/shader/main.vert"}),
-			gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/opengl/shader/main.frag"}),
+			gl::Shader(GL_VERTEX_SHADER, fs::path{"../src/opengl/shader/main.vert"}),
+			gl::Shader(GL_FRAGMENT_SHADER, fs::path{"../src/opengl/shader/main.frag"}),
 		};
 
 		m_coordsProgram = gl::Program{
-			gl::Shader(GL_VERTEX_SHADER, std::experimental::filesystem::path{"../src/opengl/shader/coords.vert"}),
-			gl::Shader(GL_FRAGMENT_SHADER, std::experimental::filesystem::path{"../src/opengl/shader/coords.frag"}),
+			gl::Shader(GL_VERTEX_SHADER, fs::path{"../src/opengl/shader/coords.vert"}),
+			gl::Shader(GL_FRAGMENT_SHADER, fs::path{"../src/opengl/shader/coords.frag"}),
 		};
 
 		ImGui_ImplOpenGL3_Init("#version 330");
