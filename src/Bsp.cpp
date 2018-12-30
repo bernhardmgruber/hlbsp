@@ -314,7 +314,7 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 }
 
 // Checks if an entity is a valid brush entity (has a model)
-bool IsBrushEntity(const Entity& e) {
+auto IsBrushEntity(const Entity& e) -> bool {
 	if (e.findProperty("model") != nullptr) {
 		if (auto classname = e.findProperty("classname")) {
 			if (*classname == "func_door_rotating" ||

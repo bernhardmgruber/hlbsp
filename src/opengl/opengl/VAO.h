@@ -7,9 +7,9 @@ namespace gl {
 	public:
 		VAO();
 		VAO(const VAO&) = delete;
-		VAO& operator=(const VAO&) = delete;
+		auto operator=(const VAO&) -> VAO& = delete;
 		VAO(VAO&& other);
-		VAO& operator=(VAO&& other);
+		auto operator=(VAO&& other) -> VAO&;
 		~VAO();
 
 		auto id() const -> GLuint;

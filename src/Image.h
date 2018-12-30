@@ -13,9 +13,9 @@ public:
 	explicit Image(const fs::path& path);
 	Image(const Image& img, unsigned int channels);
 	Image(const Image&) = default;
-	Image& operator=(const Image&) = default;
+	auto operator=(const Image&) -> Image& = default;
 	Image(Image&&) = default;
-	Image& operator=(Image&&) = default;
+	auto operator=(Image&&) -> Image& = default;
 
 	auto operator()(unsigned int x, unsigned int y) -> std::uint8_t*;
 	auto operator()(unsigned int x, unsigned int y) const -> const std::uint8_t*;

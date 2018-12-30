@@ -12,9 +12,9 @@ namespace dx11 {
 		Program() = default;
 		Program(VertexShader vs, PixelShader ps);
 		Program(const Program&) = delete;
-		Program& operator=(const Program&) = delete;
+		auto operator=(const Program&) -> Program& = delete;
 		Program(Program&& other);
-		Program& operator=(Program&& other);
+		auto operator=(Program&& other) -> Program&;
 		~Program();
 
 		auto vertexShader() -> VertexShader&;

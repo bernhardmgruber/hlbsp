@@ -7,9 +7,9 @@ namespace gl {
 	public:
 		Buffer();
 		Buffer(const Buffer&) = delete;
-		Buffer& operator=(const Buffer&) = delete;
+		auto operator=(const Buffer&) -> Buffer& = delete;
 		Buffer(Buffer&& other);
-		Buffer& operator=(Buffer&& other);
+		auto operator=(Buffer&& other) -> Buffer&;
 		~Buffer();
 
 		auto id() const -> GLuint;

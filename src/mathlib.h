@@ -23,5 +23,5 @@ auto radToDeg(T rad) -> T {
 	return rad * 180.0 / boost::math::constants::pi<T>();
 }
 
-bool PointInBox(glm::vec3 point, const int16_t vMin[3], const int16_t vMax[3]);
-bool PointInPlane(glm::vec3 point, glm::vec3 normal, float dist);
+auto PointInBox(glm::vec3 point, const int16_t vMin[3], const int16_t vMax[3]) -> bool;
+auto PointInPlane(glm::vec3 point, glm::vec3 normal, float dist) -> bool;

@@ -17,9 +17,9 @@ namespace dx11 {
 		Shader(const std::string& profile, const std::string& entryPoint, const std::string& source, const std::string& filename = "");
 		Shader(const std::string& profile, const std::string& entryPoint, const fs::path& file);
 		Shader(const Shader&) = delete;
-		Shader& operator=(const Shader&) = delete;
+		auto operator=(const Shader&) -> Shader& = delete;
 		Shader(Shader&& other);
-		Shader& operator=(Shader&& other);
+		auto operator=(Shader&& other) -> Shader&;
 		~Shader();
 
 		auto blob() -> ID3DBlob*;

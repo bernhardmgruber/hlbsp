@@ -7,7 +7,7 @@
 #include "Bsp.h"
 #include "Window.h"
 
-int main(const int argc, const char* argv[]) try {
+auto main(const int argc, const char* argv[]) -> int try {
 	if (argc != 2)
 		throw std::runtime_error("Missing map name as command line argument");
 

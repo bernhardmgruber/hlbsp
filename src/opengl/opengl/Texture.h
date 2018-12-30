@@ -7,9 +7,9 @@ namespace gl {
 	public:
 		Texture();
 		Texture(const Texture&) = delete;
-		Texture& operator=(const Texture&) = delete;
+		auto operator=(const Texture&) -> Texture& = delete;
 		Texture(Texture&& other);
-		Texture& operator=(Texture&& other);
+		auto operator=(Texture&& other) -> Texture&;
 		~Texture();
 
 		auto id() const -> GLuint;

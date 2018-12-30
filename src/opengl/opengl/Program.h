@@ -12,9 +12,9 @@ namespace gl {
 		Program() = default;
 		Program(std::initializer_list<Shader> shaders);
 		Program(const Program&) = delete;
-		Program& operator=(const Program&) = delete;
+		auto operator=(const Program&) -> Program& = delete;
 		Program(Program&& other);
-		Program& operator=(Program&& other);
+		auto operator=(Program&& other) -> Program&;
 		~Program();
 
 		auto id() const -> GLuint;

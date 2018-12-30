@@ -13,9 +13,9 @@ namespace gl {
 		Shader(GLenum shaderType, const std::string& source, const std::string& filename = "");
 		Shader(GLenum shaderType, const fs::path& file);
 		Shader(const Shader&) = delete;
-		Shader& operator=(const Shader&) = delete;
+		auto operator=(const Shader&) -> Shader& = delete;
 		Shader(Shader&& other);
-		Shader& operator=(Shader&& other);
+		auto operator=(Shader&& other) -> Shader&;
 		~Shader();
 
 		auto id() const -> GLuint;
