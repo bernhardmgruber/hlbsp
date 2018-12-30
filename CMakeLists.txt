@@ -31,11 +31,6 @@ else()
 	include_directories(${GLM_INCLUDE_DIR})
 endif()
 
-find_package(Freetype REQUIRED)
-if (NOT MSVC)
-	include_directories(${FREETYPE_INCLUDE_DIRS})
-endif()
-
 include_directories(thirdparty)
 
 # executable
@@ -65,13 +60,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 if(MSVC)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		glfw
-		Freetype::Freetype
 		opengl32
 	)
 else()
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		${GLFW_LIBRARIES}
-		${FREETYPE_LIBRARIES}
 		GL
 		stdc++fs
 	)
