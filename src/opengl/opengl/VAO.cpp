@@ -11,7 +11,7 @@ namespace gl {
 		swap(other);
 	}
 
-	VAO& VAO::operator=(VAO&& other) {
+	auto VAO::operator=(VAO&& other) -> VAO& {
 		swap(other);
 		return *this;
 	}

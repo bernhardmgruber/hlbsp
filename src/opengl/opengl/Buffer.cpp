@@ -11,7 +11,7 @@ namespace gl {
 		swap(other);
 	}
 
-	Buffer& Buffer::operator=(Buffer&& other) {
+	auto Buffer::operator=(Buffer&& other) -> Buffer& {
 		swap(other);
 		return *this;
 	}

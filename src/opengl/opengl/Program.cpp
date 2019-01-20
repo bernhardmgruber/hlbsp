@@ -61,7 +61,7 @@ namespace gl {
 		swap(other);
 	}
 
-	Program& Program::operator=(Program&& other) {
+	auto Program::operator=(Program&& other) -> Program& {
 		swap(other);
 		return *this;
 	}

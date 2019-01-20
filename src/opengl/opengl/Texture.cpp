@@ -11,7 +11,7 @@ namespace gl {
 		swap(other);
 	}
 
-	Texture& Texture::operator=(Texture&& other) {
+	auto Texture::operator=(Texture&& other) -> Texture& {
 		swap(other);
 		return *this;
 	}

@@ -33,7 +33,7 @@ namespace gl {
 		swap(other);
 	}
 
-	Shader& Shader::operator=(Shader&& other) {
+	auto Shader::operator=(Shader&& other) -> Shader& {
 		swap(other);
 		return *this;
 	}
