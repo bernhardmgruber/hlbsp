@@ -8,7 +8,6 @@
 
 namespace render {
 	class IRenderer;
-	class IPlatform;
 }
 
 class Bsp;

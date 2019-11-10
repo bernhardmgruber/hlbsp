@@ -15,7 +15,7 @@ namespace {
 }
 
 Window::Window(render::IPlatform& platform, Bsp& bsp)
-	: GlfwWindow(WINDOW_CAPTION, [&](int width, int height, const char* title, GLFWmonitor* monitor) -> GLFWwindow* { return platform.createWindowAndContext(width, height, title, monitor); })
+	: GlfwWindow(WINDOW_CAPTION, platform)
 	, hud(camera, timer)
 	, bsp(bsp)
 	, m_platform(platform) {

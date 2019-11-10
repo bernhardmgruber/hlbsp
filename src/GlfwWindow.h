@@ -6,9 +6,13 @@
 #include <memory>
 #include <functional>
 
+namespace render {
+	class IPlatform;
+}
+
 class GlfwWindow {
 public:
-	GlfwWindow(std::string windowTitle, std::function<GLFWwindow*(int width, int height, const char* title, GLFWmonitor* monitor)> createWindowAndContext);
+	GlfwWindow(std::string windowTitle, render::IPlatform& platform);
 	~GlfwWindow();
 
 	auto handle() const -> GLFWwindow*;

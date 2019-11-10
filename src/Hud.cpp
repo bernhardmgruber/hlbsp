@@ -5,6 +5,7 @@
 #include "Camera.h"
 #include "IPSS.h"
 #include "Timer.h"
+#include "global.h"
 
 namespace {
 	constexpr auto FONT_HUD_HEIGHT = 12;
@@ -34,6 +35,15 @@ auto Hud::drawData() const -> ImDrawData* {
 	ImGui::LabelText("FPS", (IPSS() << std::fixed << std::setprecision(1) << fps).str().c_str());
 	ImGui::LabelText("cam pos", (IPSS() << std::fixed << std::setprecision(1) << cameraPos.x << "x " << cameraPos.y << "y " << cameraPos.z << "z").str().c_str());
 	ImGui::LabelText("cam view", (IPSS() << std::fixed << std::setprecision(1) << pitch << " pitch " << yaw << " yaw (vec: " << cameraView.x << "x " << cameraView.y << "y " << cameraView.z << "z)").str().c_str());
+
+	ImGui::Combo("render API", (int*)&global::renderApi,
+#ifdef WIN32
+		"OpenGL\0Direct3D\0"
+#else
+		"OpenGL\0"
+#endif
+	);
+
 	ImGui::Begin("Log");
 	for (const auto& line : m_console)
 		ImGui::Text(line.c_str());

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <atomic>
 
+#include "IRenderer.h"
+
 namespace {
 	std::atomic<unsigned int> g_guiCount = 0;
 
@@ -13,7 +15,7 @@ namespace {
 	}
 }
 
-GlfwWindow::GlfwWindow(std::string windowTitle, std::function<GLFWwindow*(int width, int height, const char* title, GLFWmonitor* monitor)> createWindowAndContext)
+GlfwWindow::GlfwWindow(std::string windowTitle, render::IPlatform& platform)
 	: m_windowTitle(std::move(windowTitle)) {
 	// set GLFW error callback before any other GLFW function call
 	glfwSetErrorCallback(onError);
@@ -25,7 +27,7 @@ GlfwWindow::GlfwWindow(std::string windowTitle, std::function<GLFWwindow*(int wi
 				throw std::runtime_error("failed to init GLFW");
 	}
 
-	m_window = createWindowAndContext(m_width, m_height, windowTitle.c_str(), nullptr);
+	m_window = platform.createWindowAndContext(m_width, m_height, windowTitle.c_str(), nullptr);
 
 	onWindowCreated();
 }
@@ -181,7 +183,7 @@ void GlfwWindow::onWindowCreated() {
 
 	glfwSetWindowUserPointer(m_window, this);
 
-	// after the window has been created, we have an OpenGL context
+	// after the window has been created, we have a context
 	glfwMakeContextCurrent(m_window);
 
 	// configure GLFW context
