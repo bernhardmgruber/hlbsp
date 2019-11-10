@@ -18,7 +18,7 @@ namespace {
 
 class Camera {
 public:
-	glm::vec3 position;
+	glm::vec3 position{};
 	float pitch = 0; // up down rotation
 	float yaw = 0;   // side to side rotation
 

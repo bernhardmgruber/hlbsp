@@ -24,33 +24,36 @@ void Camera::update(double t, float xDelta, float yDelta, uint8_t directions) {
 	pitch += lookSensitivity * yDelta;
 	pitch = std::clamp(pitch, -90.0f, 90.0f);
 
-	double fTmpMoveSens = moveSensitivity * t;
+	double dist = moveSensitivity * t;
 
 	if (directions & Up)
-		position.z += fTmpMoveSens;
+		position.z += static_cast<float>(dist);
 
 	if (directions & Down)
-		position.z -= fTmpMoveSens;
+		position.z -= static_cast<float>(dist);
 
 	// TODO: If strafing and moving reduce speed to keep total move per frame constant
+	const auto cosYaw = static_cast<float>(std::cos(degToRad(yaw)) * dist);
+	const auto sinYaw = static_cast<float>(std::sin(degToRad(yaw)) * dist);
+
 	if (directions & Forward) {
-		position.x += std::cos(degToRad(yaw)) * fTmpMoveSens;
-		position.y += std::sin(degToRad(yaw)) * fTmpMoveSens;
+		position.x += cosYaw;
+		position.y += sinYaw;
 	}
 
 	if (directions & Backward) {
-		position.x -= std::cos(degToRad(yaw)) * fTmpMoveSens;
-		position.y -= std::sin(degToRad(yaw)) * fTmpMoveSens;
+		position.x -= cosYaw;
+		position.y -= sinYaw;
 	}
 
 	if (directions & Left) {
-		position.x += std::cos(degToRad(yaw + 90.0f)) * fTmpMoveSens;
-		position.y += std::sin(degToRad(yaw + 90.0f)) * fTmpMoveSens;
+		position.x -= sinYaw;
+		position.y += cosYaw;
 	}
 
 	if (directions & Right) {
-		position.x += std::cos(degToRad(yaw - 90.0f)) * fTmpMoveSens;
-		position.y += std::sin(degToRad(yaw - 90.0f)) * fTmpMoveSens;
+		position.x += sinYaw;
+		position.y -= cosYaw;
 	}
 }
 

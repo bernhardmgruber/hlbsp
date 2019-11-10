@@ -15,12 +15,12 @@
 
 template<typename T>
 auto degToRad(T deg) -> T {
-	return deg * boost::math::constants::pi<T>() / 180.0;
+	return deg * boost::math::constants::pi<T>() / T{180};
 }
 
 template<typename T>
 auto radToDeg(T rad) -> T {
-	return rad * 180.0 / boost::math::constants::pi<T>();
+	return rad * T{180} / boost::math::constants::pi<T>();
 }
 
 auto PointInBox(glm::vec3 point, const int16_t vMin[3], const int16_t vMax[3]) -> bool;

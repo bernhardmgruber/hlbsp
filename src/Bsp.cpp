@@ -271,10 +271,10 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 
 			/* ********** http://www.gamedev.net/community/forums/topic.asp?topic_id=538713 (last refresh: 20.02.2010) ********** */
 
-			float fMidPolyU = (fMinU + fMaxU) / 2.0;
-			float fMidPolyV = (fMinV + fMaxV) / 2.0;
-			float fMidTexU = static_cast<float>(nWidth) / 2.0;
-			float fMidTexV = static_cast<float>(nHeight) / 2.0;
+			float fMidPolyU = (fMinU + fMaxU) / 2.0f;
+			float fMidPolyV = (fMinV + fMaxV) / 2.0f;
+			float fMidTexU = static_cast<float>(nWidth) / 2.0f;
+			float fMidTexV = static_cast<float>(nHeight) / 2.0f;
 
 			for (int j = 0; j < faces[i].edgeCount; ++j) {
 				int iEdge = surfEdges[faces[i].firstEdgeIndex + j];
@@ -343,7 +343,7 @@ void Bsp::ParseEntities(const std::string& entitiesString) {
 		pos = end + 1;
 
 		if (IsBrushEntity(e)) {
-			brushEntities.push_back(entities.size() - 1);
+			brushEntities.push_back(static_cast<unsigned int>(entities.size() - 1));
 
 			// if entity has property "origin" apply to model struct for rendering
 			if (auto szOrigin = e.findProperty("origin")) {
@@ -351,7 +351,7 @@ void Bsp::ParseEntities(const std::string& entitiesString) {
 				sscanf(szOrigin->c_str(), "%f %f %f", &models[iModel].origin.x, &models[iModel].origin.y, &models[iModel].origin.z);
 			}
 		} else
-			specialEntities.push_back(entities.size() - 1);
+			specialEntities.push_back(static_cast<unsigned int>(entities.size() - 1));
 	}
 
 	// order brush entities so that those with RENDER_MODE_TEXTURE are at the back

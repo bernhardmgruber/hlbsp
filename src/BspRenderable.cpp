@@ -62,7 +62,7 @@ namespace {
 			if (best + lmHeight > m_img.height)
 				return {};
 
-			for (int i = 0; i < lmWidth; i++)
+			for (unsigned int i = 0; i < lmWidth; i++)
 				allocated[pos.x + i] = best + lmHeight;
 
 			return pos;
@@ -339,7 +339,7 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 				else
 					v.position = m_bsp->vertices[m_bsp->edges[-edge].vertexIndex[1]];
 			}
-			vertexOffsets.push_back(firstIndex);
+			vertexOffsets.push_back(static_cast<unsigned int>(firstIndex));
 		}
 
 		m_staticGeometryVbo = m_renderer.createBuffer(vertices.size() * sizeof(VertexWithLM), vertices.data());

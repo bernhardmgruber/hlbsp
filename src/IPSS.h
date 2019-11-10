@@ -7,7 +7,7 @@ class IPSS {
 public:
 	IPSS() = default;
 	IPSS(const IPSS&) = delete;
-	IPSS(IPSS&&) = default;
+	IPSS(IPSS&&) noexcept = default;
 
 	auto str() const -> std::string {
 		return oss.str();
@@ -18,7 +18,7 @@ public:
 	}
 
 	template<typename T>
-	friend auto operator<<(IPSS&& ipss, T&& t) -> IPSS {
+	friend auto operator<<(IPSS&& ipss, T&& t) -> IPSS&& {
 		ipss.oss << std::forward<T>(t);
 		return std::move(ipss);
 	}

@@ -50,6 +50,6 @@ namespace render::opengl {
 		virtual void swapBuffers() override;
 
 	private:
-		GLFWwindow* m_window;
+		GLFWwindow* m_window = nullptr;
 	};
 }
