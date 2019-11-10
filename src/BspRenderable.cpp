@@ -7,6 +7,7 @@
 #include "Bsp.h"
 #include "Camera.h"
 #include "mathlib.h"
+#include "global.h"
 
 namespace {
 	class TextureAtlas {
@@ -142,20 +143,20 @@ void BspRenderable::render(const RenderSettings& settings) {
 	m_settings = &settings;
 
 	// render sky box
-	if (m_skyboxTex && settings.renderSkybox)
+	if (m_skyboxTex && global::renderSkybox)
 		renderSkybox();
 
 	const auto& cameraPos = m_camera->position;
 
-	if (settings.renderStaticBSP || settings.renderBrushEntities)
+	if (global::renderStaticBSP || global::renderBrushEntities)
 		for (auto&& b : facesDrawn)
 			b = false;
 
 	std::vector<render::EntityData> ents;
-	if (settings.renderStaticBSP)
+	if (global::renderStaticBSP)
 		ents.push_back(render::EntityData{ renderStaticGeometry(cameraPos), glm::vec3{}, 1.0f, bsp30::RenderMode::RENDER_MODE_NORMAL });
 
-	if (settings.renderBrushEntities) {
+	if (global::renderBrushEntities) {
 		for (const auto i : m_bsp->brushEntities) {
 			const auto& ent = m_bsp->entities[i];
 
@@ -184,7 +185,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 	m_renderer.renderStatic(std::move(ents), m_bsp->decals(), *m_staticGeometryVao, *m_decalVao, m_textures, *m_lightmapAtlas, settings);
 
 	// Leaf outlines
-	if (settings.renderLeafOutlines) {
+	if (global::renderLeafOutlines) {
 		std::cerr << "Rendering leaf outlines is currently disabled\n";
 		//glLoadMatrixf(glm::value_ptr(matrix));
 		//renderLeafOutlines();
@@ -269,7 +270,7 @@ void BspRenderable::renderLeaf(int leaf, std::vector<render::FaceRenderInfo>& fr
 		const bool lightmapAvailable = static_cast<signed>(face.lightmapOffset) != -1 && m_bsp->header.lump[bsp30::LumpType::LUMP_LIGHTING].length > 0;
 
 		auto& fri = fris.emplace_back();
-		if (m_settings->textures)
+		if (global::textures)
 			fri.tex = m_textures[m_bsp->textureInfos[face.textureInfo].miptexIndex].get();
 		else
 			fri.tex = nullptr;

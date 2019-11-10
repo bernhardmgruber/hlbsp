@@ -9,6 +9,7 @@
 #include "BspRenderable.h"
 #include "HudRenderable.h"
 #include "Image.h"
+#include "global.h"
 
 namespace {
 	constexpr auto WINDOW_CAPTION = "HL BSP";
@@ -88,7 +89,7 @@ void Window::draw() {
 	m_renderer->clear();
 	for (auto& renderable : m_renderables)
 		renderable->render(m_settings);
-	if (m_settings.renderCoords)
+	if (global::renderCoords)
 		m_renderer->renderCoords(m_settings.projection * m_settings.view);
 }
 
@@ -165,56 +166,56 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 			}
 
 			case GLFW_KEY_C:
-				m_settings.renderCoords = !m_settings.renderCoords;
-				if (m_settings.renderCoords)
+				global::renderCoords = !global::renderCoords;
+				if (global::renderCoords)
 					hud.print("coords enabled");
 				else
 					hud.print("coords disabled");
 				break;
 
 			case GLFW_KEY_H:
-				m_settings.renderHUD = !m_settings.renderHUD;
-				if (m_settings.renderHUD)
+				global::renderHUD = !global::renderHUD;
+				if (global::renderHUD)
 					hud.print("hud enabled");
 				else
 					hud.print("hud disabled");
 				break;
 
 			case GLFW_KEY_L:
-				m_settings.lightmaps = !m_settings.lightmaps;
-				if (m_settings.lightmaps)
+				global::lightmaps = !global::lightmaps;
+				if (global::lightmaps)
 					hud.print("lightmaps enabled");
 				else
 					hud.print("lightmaps disabled");
 				break;
 
 			case GLFW_KEY_N:
-				m_settings.nightvision = !m_settings.nightvision;
-				if (m_settings.nightvision)
+				global::nightvision = !global::nightvision;
+				if (global::nightvision)
 					hud.print("nightvision enabled");
 				else
 					hud.print("nightvision disabled");
 				break;
 
 			case GLFW_KEY_T:
-				m_settings.textures = !m_settings.textures;
-				if (m_settings.textures)
+				global::textures = !global::textures;
+				if (global::textures)
 					hud.print("textures enabled");
 				else
 					hud.print("textures disabled");
 				break;
 
 			case GLFW_KEY_O:
-				m_settings.renderLeafOutlines = !m_settings.renderLeafOutlines;
-				if (m_settings.renderLeafOutlines)
+				global::renderLeafOutlines = !global::renderLeafOutlines;
+				if (global::renderLeafOutlines)
 					hud.print("leaf outlines enabled");
 				else
 					hud.print("leaf outlines disabled");
 				break;
 
 			//case GLFW_KEY_P:
-			//	m_settings.polygons = !m_settings.polygons;
-			//	if (m_settings.polygons) {
+			//	global::polygons = !global::polygons;
+			//	if (global::polygons) {
 			//		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			//		hud.print("polygon mode set to line");
 			//	} else {
@@ -224,40 +225,40 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 			//	break;
 
 			case GLFW_KEY_V:
-				m_settings.flashlight = !m_settings.flashlight;
-				if (m_settings.flashlight)
+				global::flashlight = !global::flashlight;
+				if (global::flashlight)
 					hud.print("flashlight enabled");
 				else
 					hud.print("flashlight disabled");
 				break;
 
 			case GLFW_KEY_1:
-				m_settings.renderSkybox = !m_settings.renderSkybox;
-				if (m_settings.renderSkybox)
+				global::renderSkybox = !global::renderSkybox;
+				if (global::renderSkybox)
 					hud.print("skybox enabled");
 				else
 					hud.print("skybox disabled");
 				break;
 
 			case GLFW_KEY_2:
-				m_settings.renderStaticBSP = !m_settings.renderStaticBSP;
-				if (m_settings.renderStaticBSP)
+				global::renderStaticBSP = !global::renderStaticBSP;
+				if (global::renderStaticBSP)
 					hud.print("static geometry enabled");
 				else
 					hud.print("static geometry  disabled");
 				break;
 
 			case GLFW_KEY_3:
-				m_settings.renderBrushEntities = !m_settings.renderBrushEntities;
-				if (m_settings.renderBrushEntities)
+				global::renderBrushEntities = !global::renderBrushEntities;
+				if (global::renderBrushEntities)
 					hud.print("entities enabled");
 				else
 					hud.print("entities disabled");
 				break;
 
 			case GLFW_KEY_4:
-				m_settings.renderDecals = !m_settings.renderDecals;
-				if (m_settings.renderDecals)
+				global::renderDecals = !global::renderDecals;
+				if (global::renderDecals)
 					hud.print("decals enabled");
 				else
 					hud.print("decals disabled");

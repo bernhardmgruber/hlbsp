@@ -11,6 +11,7 @@
 #include "../Camera.h"
 #include "../Entity.h"
 #include "../mathlib.h"
+#include "../global.h"
 #include "../Bsp.h"
 
 namespace render::opengl {
@@ -235,10 +236,10 @@ namespace render::opengl {
 		m_shaderProgram.use();
 		glUniform1i(m_shaderProgram.uniformLocation("tex1"), 0);
 		glUniform1i(m_shaderProgram.uniformLocation("tex2"), 1);
-		glUniform1i(m_shaderProgram.uniformLocation("nightvision"), static_cast<GLint>(settings.nightvision));
+		glUniform1i(m_shaderProgram.uniformLocation("nightvision"), static_cast<GLint>(global::nightvision));
 		//glUniform1i(m_shaderProgram.uniformLocation("flashlight"), static_cast<GLint>(settings.flashlight));
-		glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), static_cast<GLint>(settings.textures));
-		glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), static_cast<GLint>(settings.lightmaps));
+		glUniform1i(m_shaderProgram.uniformLocation("unit1Enabled"), static_cast<GLint>(global::textures));
+		glUniform1i(m_shaderProgram.uniformLocation("unit2Enabled"), static_cast<GLint>(global::lightmaps));
 
 		glUniform1i(m_shaderProgram.uniformLocation("alphaTest"), 0);
 
@@ -252,7 +253,7 @@ namespace render::opengl {
 		const auto matrix = settings.projection * settings.view;
 		glUniformMatrix4fv(m_shaderProgram.uniformLocation("matrix"), 1, false, glm::value_ptr(matrix));
 
-		if (settings.renderDecals) {
+		if (global::renderDecals) {
 			static_cast<InputLayout&>(decalLayout).bind();
 			renderDecals(decals, textures);
 		}

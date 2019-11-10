@@ -11,6 +11,7 @@
 #include "../Camera.h"
 #include "../Entity.h"
 #include "../mathlib.h"
+#include "../global.h"
 #include "../Bsp.h"
 
 #include "directx11/Shader.h"
@@ -370,10 +371,10 @@ namespace render::directx11 {
 
 		ConstantBufferData cbd{
 			settings.projection * settings.view,
-			settings.textures,
-			settings.lightmaps,
-			//settings.flashlight,
-			settings.nightvision,
+			global::textures,
+			global::lightmaps,
+			//global::flashlight,
+			global::nightvision,
 			false
 		};
 
