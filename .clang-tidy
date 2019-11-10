@@ -10,7 +10,8 @@ Checks: >
     -hicpp-braces-around-statements,
     -readability-braces-around-statements,
     -fuchsia-default-arguments,
-    -readability-implicit-bool-conversion
+    -readability-implicit-bool-conversion,
+    -fuchsia-trailing-return
 
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
