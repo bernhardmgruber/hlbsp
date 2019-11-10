@@ -34,16 +34,18 @@ endif()
 include_directories(thirdparty)
 
 # executable
-file(GLOB source_files src/*.cpp src/*.h src/*.hpp thirdparty/*.cpp thirdparty/*.h)
-file(GLOB_RECURSE opengl_files src/opengl/*.cpp src/opengl/*.h src/opengl/*.hpp src/opengl/*.vert src/opengl/*.frag)
+file(GLOB source_files src/* thirdparty/*)
+file(GLOB_RECURSE opengl_files src/opengl/*)
 list(APPEND source_files ${opengl_files})
 if(WIN32)
-	file(GLOB_RECURSE directx_files src/directx/*.cpp src/directx/*.h src/directx/*.hpp )
-	file(GLOB_RECURSE hlsl_files src/*.hlsl)
-	foreach(hlsl_file ${hlsl_files})
-		set_source_files_properties(${hlsl_file} PROPERTIES VS_TOOL_OVERRIDE "None")
+	message("Including DirectX")
+	file(GLOB_RECURSE directx_files src/directx11/*)
+	foreach(directx_file ${directx_files})
+		if(${directx_file} MATCHES ".+\\.hlsl")
+			set_source_files_properties(${directx_file} PROPERTIES VS_TOOL_OVERRIDE "None")
+		endif()
 	endforeach()
-	list(APPEND source_files ${hlsl_files})
+	list(APPEND source_files ${directx_files})
 else()
 	file(GLOB_RECURSE directx_imgui_files thirdparty/imgui_impl_dx11.*)
 	list(REMOVE_ITEM source_files ${directx_imgui_files})
@@ -56,19 +58,9 @@ source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${source_files})
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	GLEW::GLEW
 	${Boost_LIBRARIES}
+	glfw
+	OpenGL::GL
 )
-if(MSVC)
-	target_link_libraries(${PROJECT_NAME} PRIVATE
-		glfw
-		opengl32
-	)
-else()
-	target_link_libraries(${PROJECT_NAME} PRIVATE
-		${GLFW_LIBRARIES}
-		GL
-		stdc++fs
-	)
-endif()
 
 target_compile_options(${PROJECT_NAME} PRIVATE
 	-DGLFW_INCLUDE_NONE
