@@ -128,7 +128,7 @@ void Window::onMouseButton(int button, int action, int modifiers) {
 	}
 }
 
-void Window::onMouseMove(double dx, double dy) {}
+void Window::onMouseMove(double xOffset, double yOffset) {}
 
 void Window::onMouseWheel(double xOffset, double yOffset) {
 	ImGui_ImplGlfw_ScrollCallback(handle(), xOffset, yOffset);

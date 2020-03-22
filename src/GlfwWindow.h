@@ -39,7 +39,7 @@ private:
 	static void onResize(GLFWwindow*, int width, int height);
 	static void onMouseButton(GLFWwindow* window, int button, int action, int modifiers);
 	static void onMouseMove(GLFWwindow* window, double dx, double dy);
-	static void onMouseWheel(GLFWwindow* window, double ds, double yOffset);
+	static void onMouseWheel(GLFWwindow* window, double xOffset, double yOffset);
 	static void onKey(GLFWwindow* window, int key, int scancode, int action, int mods);
 	static void onChar(GLFWwindow* window, unsigned int codepoint);
 
