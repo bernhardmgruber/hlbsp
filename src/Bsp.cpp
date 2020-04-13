@@ -313,6 +313,38 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 		std::clog << "ERRORS\n";
 }
 
+void Bsp::LoadHulls() {
+	{
+		// hull 0 is created from normal BSP nodes
+		hull0ClipNodes.resize(nodes.size());
+		std::transform(begin(nodes), end(nodes), begin(hull0ClipNodes), [&](const bsp30::Node& n) {
+			bsp30::ClipNode cn;
+			cn.planeIndex = n.planeIndex;
+			for (int j = 0; j < 2; j++) {
+				if (n.childIndex[j] < 0)
+					cn.childIndex[j] = leaves[~n.childIndex[j]].content;
+				else
+					cn.childIndex[j] = n.childIndex[j];
+			}
+			return cn;
+		});
+
+		auto& hull = hulls[0];
+		hull.clipnodes = hull0ClipNodes.data();
+		hull.firstclipnode = 0;
+		hull.lastclipnode = hull0ClipNodes.size() - 1;
+		hull.planes = planes.data();
+
+	}
+	for (auto i : {1, 2}) {
+		auto& hull = hulls[i];
+		hull.clipnodes = clipNodes.data();
+		hull.firstclipnode = 0;
+		hull.lastclipnode = clipNodes.size() - 1;
+		hull.planes = planes.data();
+	}
+}
+
 // Checks if an entity is a valid brush entity (has a model)
 auto IsBrushEntity(const Entity& e) -> bool {
 	if (e.findProperty("model") != nullptr) {
@@ -572,6 +604,9 @@ Bsp::Bsp(const fs::path& filename) {
 		std::clog << "No VIS found\n";
 
 	file.close();
+
+	// hulls
+	LoadHulls();
 
 	std::clog << "FINISHED LOADING BSP\n";
 }

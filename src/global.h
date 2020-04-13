@@ -22,4 +22,7 @@ namespace global {
 
 	inline bool nightvision = false;
 	inline bool flashlight = false;
+
+	inline bool freeCamera = true;
+	inline int hullIndex = 0;
 }

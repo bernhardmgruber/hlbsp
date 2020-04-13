@@ -10,6 +10,7 @@
 #include "HudRenderable.h"
 #include "Image.h"
 #include "global.h"
+#include "move.h"
 
 namespace {
 	constexpr auto WINDOW_CAPTION = "HL BSP";
@@ -75,7 +76,13 @@ void Window::update() {
 	if (glfwGetKey(handle(), GLFW_KEY_A) == GLFW_PRESS) moveFlags |= Left;
 	if (glfwGetKey(handle(), GLFW_KEY_D) == GLFW_PRESS) moveFlags |= Right;
 
+	const auto before = camera.position;
 	camera.update(timer.interval, delta.x, delta.y, moveFlags);
+	if (!global::freeCamera) {
+		const auto after = camera.position;
+		const auto end = move(bsp.hulls[global::hullIndex], before, after);
+		camera.position = end;
+	}
 }
 
 void Window::draw() {

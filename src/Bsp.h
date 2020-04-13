@@ -21,6 +21,13 @@ struct Decal {
 	glm::vec3 vec[4];
 };
 
+struct Hull {
+	bsp30::ClipNode* clipnodes;
+	bsp30::Plane* planes;
+	int firstclipnode;
+	int lastclipnode;
+};
+
 class Bsp {
 public:
 	explicit Bsp(const fs::path& filename);
@@ -65,6 +72,12 @@ private:
 	std::vector<MipmapTexture> m_textures;
 	std::vector<Image> m_lightmaps;
 
+	std::vector<bsp30::ClipNode> hull0ClipNodes;
+
+public:
+	std::array<Hull, bsp30::MAX_MAP_HULLS> hulls;
+
+private:
 	void LoadWadFiles(std::string wadStr);                                      // Loads and prepares the wad files for further texture loading
 	void UnloadWadFiles();                                                      // Unloads all wad files and frees allocated memory
 	void LoadTextures(std::ifstream& file);                                     // Loads the textures either from the wad file or directly from the bsp file
@@ -72,6 +85,7 @@ private:
 	auto LoadDecalTexture(const char* name) -> std::optional<MipmapTexture>;
 	void LoadDecals();
 	void LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData); // Loads lightmaps and calculates extends and coordinates
+	void LoadHulls();
 
 	void ParseEntities(const std::string& entitiesString); // Parses the entity lump of the bsp file into single entity classes
 

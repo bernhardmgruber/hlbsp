@@ -28,10 +28,12 @@ auto Hud::drawData() const -> ImDrawData* {
 
 	ImGui::NewFrame();
 
-	ImGui::Begin("");
+	ImGui::Begin("Camera");
 	ImGui::LabelText("FPS", (IPSS() << std::fixed << std::setprecision(1) << fps).str().c_str());
 	ImGui::LabelText("cam pos", (IPSS() << std::fixed << std::setprecision(1) << cameraPos.x << "x " << cameraPos.y << "y " << cameraPos.z << "z").str().c_str());
 	ImGui::LabelText("cam view", (IPSS() << std::fixed << std::setprecision(1) << pitch << " pitch " << yaw << " yaw (vec: " << cameraView.x << "x " << cameraView.y << "y " << cameraView.z << "z)").str().c_str());
+	ImGui::Checkbox("free", &global::freeCamera);
+	ImGui::Combo("Hull", &global::hullIndex, " 0\0 1\0 2\0");
 	ImGui::End();
 
 	ImGui::Begin("Log");
