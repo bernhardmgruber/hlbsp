@@ -4,7 +4,7 @@
 #include <cassert>
 #include <iostream>
 
-// the following code is largly inspired by WinQuake's sv_move.c
+// the following code is largly inspired by WinQuake's sv_move.c and Valve"s Halflife SDK's pm_shared.c
 
 namespace {
 	constexpr auto DIST_EPSILON = 0.03125f;
@@ -103,18 +103,133 @@ namespace {
 
 		return false;
 	}
+
+	auto playerTrace(const Hull& hull, glm::vec3 start, glm::vec3 end) {
+		Trace t{};
+		t.fraction = 1;
+		t.allsolid = true;
+		t.endpos = end;
+		recursiveHullCheck(hull, hull.firstclipnode, 0, 1, start, end, t);
+		return t;
+	}
+
+	constexpr auto stopEpsilon = 0.1f;
+	constexpr auto movevars_bounce = 1;
+
+	struct playermove_t {
+		glm::vec3 origin;
+		glm::vec3 velocity;
+		float frametime;
+		int onground;
+		float friction;
+	};
+
+	auto clipVelocity(glm::vec3 in, glm::vec3 normal, float overbounce) -> glm::vec3 {
+		const auto backoff = glm::dot(in, normal) * overbounce;
+		glm::vec3 out = in - normal * backoff;
+		for (int i = 0; i < 3; i++) {
+			if (std::abs(out[i]) < stopEpsilon)
+				out[i] = 0;
+		}
+		return out;
+	}
+
+	void flyMove(const Hull& hull, playermove_t& pmove) {
+		constexpr auto maxBumps = 4;
+
+		auto originalVelocity = pmove.velocity;
+		const auto primalVelocity = pmove.velocity;
+		float timeLeft = pmove.frametime;
+		float totalFraction = 0;
+		std::vector<glm::vec3> planeNormals;
+		for (int bump = 0; bump < maxBumps; bump++) {
+			if (pmove.velocity == glm::vec3{})
+				break;
+
+			const auto end = pmove.origin + timeLeft * pmove.velocity;
+			const Trace trace = playerTrace(hull, pmove.origin, end);
+
+			if (trace.allsolid) {
+				pmove.velocity = {};
+				return;
+			}
+
+			totalFraction += trace.fraction;
+
+			if (trace.fraction > 0) {
+				pmove.origin = trace.endpos;
+				originalVelocity = pmove.velocity;
+				planeNormals.clear();
+			}
+
+			if (trace.fraction == 1)
+				break;
+
+			timeLeft -= timeLeft * trace.fraction;
+
+			planeNormals.push_back(trace.plane.normal);
+
+			// modify originalVelocity so it parallels all of the clip planes
+			if (pmove.onground == -1 || pmove.friction != 1) {
+				glm::vec3 newVelocity{};
+				for (const auto& planeNormal : planeNormals) {
+					if (planeNormal.z > 0.7f) { // floor or slope
+						newVelocity = clipVelocity(originalVelocity, planeNormal, 1);
+						originalVelocity = newVelocity;
+					} else
+						newVelocity = clipVelocity(originalVelocity, planeNormal, 1.0f + movevars_bounce * (1 - pmove.friction));
+				}
+
+				pmove.velocity = newVelocity;
+				originalVelocity = newVelocity;
+			} else {
+				size_t i;
+				for (i = 0; i < planeNormals.size(); i++) {
+					pmove.velocity = clipVelocity(originalVelocity, planeNormals[i], 1);
+					size_t j;
+					for (j = 0; j < planeNormals.size(); j++)
+						if (j != i) {
+							if (glm::dot(pmove.velocity, planeNormals[j]) < 0)
+								break;
+						}
+					if (j == planeNormals.size()) // didn't have to clip, so we're ok
+						break;
+				}
+
+				// did we clip against all planes?
+				if (i == planeNormals.size()) {
+					if (planeNormals.size() != 2) {
+						pmove.velocity = {};
+						break;
+					}
+					const auto dir = glm::cross(planeNormals[0], planeNormals[1]);
+					pmove.velocity = dir * glm::dot(dir, pmove.velocity);
+				}
+
+				// avoid tiny occilations in sloping corners
+				if (glm::dot(pmove.velocity, primalVelocity) <= 0) {
+					pmove.velocity = {};
+					break;
+				}
+			}
+		}
+
+		if (totalFraction == 0)
+			pmove.velocity = {};
+	}
 }
 
 auto move(const Hull& hull, glm::vec3 start, glm::vec3 end) -> glm::vec3 {
 	if (start == end)
 		return end;
 
-	Trace trace{};
-	trace.fraction = 1;
-	trace.allsolid = true;
-	trace.endpos = end;
+	playermove_t pmove{};
+	pmove.origin = start;
+	pmove.velocity = end - start;
+	pmove.frametime = 1;
+	pmove.onground = 1;
+	pmove.friction = 0.0005;
+	flyMove(hull, pmove);
 
-	recursiveHullCheck(hull, hull.firstclipnode, 0, 1, start, end, trace);
-
-	return trace.endpos;
+	return pmove.origin;
 }
