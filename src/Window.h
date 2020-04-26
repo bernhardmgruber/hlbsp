@@ -33,6 +33,7 @@ private:
 	void mouseMove(UserCommand& cmd);
 
 	Timer timer;
+	PlayerMove pmove{};
 	Camera camera;
 	Hud hud;
 	Bsp& bsp;

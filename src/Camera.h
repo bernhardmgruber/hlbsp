@@ -5,7 +5,7 @@
 
 class Camera {
 public:
-	Camera();
+	Camera(PlayerMove& pmove);
 
 	int viewportWidth = 0;
 	int viewportHeight = 0;
@@ -21,8 +21,7 @@ public:
 	auto viewVector() const -> glm::vec3;
 	auto viewMatrix() const -> glm::mat4;
 	auto projectionMatrix() const -> glm::mat4;
-	void update(const Hull& hull, UserCommand cmd);
 
 private:
-	PlayerMove pmove{};
+	PlayerMove& pmove;
 };

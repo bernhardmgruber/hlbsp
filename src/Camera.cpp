@@ -1,20 +1,12 @@
 #include "Camera.h"
 
-#include "mathlib.h"
 #include "global.h"
+#include "mathlib.h"
 
-Camera::Camera() {
-	pmove.friction = 4;
-}
+Camera::Camera(PlayerMove& pmove) : pmove(pmove) {}
 
 auto Camera::viewVector() const -> glm::vec3 {
 	return pmove.forward;
-}
-
-void Camera::update(const Hull& hull, UserCommand cmd) {
-	pmove.cmd = cmd;
-	pmove.movetype = static_cast<MoveType>(global::moveType);
-	playerMove(hull, pmove);
 }
 
 auto Camera::viewMatrix() const -> glm::mat4 {

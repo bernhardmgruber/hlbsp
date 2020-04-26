@@ -26,10 +26,9 @@ namespace {
 }
 
 Window::Window(render::IPlatform& platform, Bsp& bsp)
-	: GlfwWindow(WINDOW_CAPTION, platform)
-	, hud(camera, timer)
-	, bsp(bsp)
-	, m_platform(platform) {
+	: GlfwWindow(WINDOW_CAPTION, platform), camera(pmove), hud(camera, timer), bsp(bsp), m_platform(platform) {
+
+	pmove.friction = 4;
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -113,7 +112,10 @@ void Window::update() {
 	auto cmd = createMove();
 	mouseMove(cmd);
 	cmd.frameTime = timer.interval;
-	camera.update(bsp.hulls[global::hullIndex], cmd);
+
+	pmove.cmd = cmd;
+	pmove.movetype = static_cast<MoveType>(global::moveType);
+	playerMove(bsp.hulls[global::hullIndex], pmove);
 }
 
 void Window::draw() {
