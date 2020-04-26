@@ -648,15 +648,3 @@ auto Bsp::loadSkyBox() const -> std::optional<std::array<Image, 6>> {
 		result[i] = Image(SKY_DIR / (*skyname + size[i] + ".tga"));
 	return result;
 }
-
-auto Bsp::textures() const -> const std::vector<MipmapTexture>& {
-	return m_textures;
-}
-
-auto Bsp::lightmaps() const -> const std::vector<Image>& {
-	return m_lightmaps;
-}
-
-auto Bsp::decals() const -> const std::vector<Decal>& {
-	return m_decals;
-}

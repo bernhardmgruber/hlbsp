@@ -87,7 +87,7 @@ BspRenderable::BspRenderable(render::IRenderer& renderer, const Bsp& bsp, const 
 BspRenderable::~BspRenderable() = default;
 
 void BspRenderable::loadTextures() {
-	const auto& mipTexs = m_bsp->textures();
+	const auto& mipTexs = m_bsp->m_textures;
 
 	//// create texture atlas
 	//TextureAtlas atlas(2048, 2048, 4);
@@ -106,7 +106,7 @@ void BspRenderable::loadTextures() {
 }
 
 auto BspRenderable::loadLightmaps() -> std::vector<std::vector<glm::vec2>> {
-	const auto& lightmaps = m_bsp->lightmaps();
+	const auto& lightmaps = m_bsp->m_lightmaps;
 
 	// create lightmap atlas
 	TextureAtlas atlas(1024, 1024, 3);
@@ -182,7 +182,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 		}
 	}
 
-	m_renderer.renderStatic(std::move(ents), m_bsp->decals(), *m_staticGeometryVao, *m_decalVao, m_textures, *m_lightmapAtlas, settings);
+	m_renderer.renderStatic(std::move(ents), m_bsp->m_decals, *m_staticGeometryVao, *m_decalVao, m_textures, *m_lightmapAtlas, settings);
 
 	// Leaf outlines
 	if (global::renderLeafOutlines) {
@@ -356,7 +356,7 @@ void BspRenderable::buildBuffers(std::vector<std::vector<glm::vec2>>&& lmCoords)
 		// decals
 		std::vector<Vertex> vertices;
 
-		for (const auto& decal : m_bsp->decals()) {
+		for (const auto& decal : m_bsp->m_decals) {
 			for (auto i = 0; i < 6; i++) {
 				auto& v = vertices.emplace_back();
 				v.normal = decal.normal;

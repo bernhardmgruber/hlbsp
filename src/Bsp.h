@@ -38,11 +38,7 @@ public:
 	auto FindEntities(std::string_view name) -> std::vector<Entity*>;
 
 	auto loadSkyBox() const -> std::optional<std::array<Image, 6>>;
-	auto textures() const -> const std::vector<MipmapTexture>&;
-	auto lightmaps() const -> const std::vector<Image>&;
-	auto decals() const -> const std::vector<Decal>&;
 
-private:
 	bsp30::Header header{};                       // Stores the header
 	std::vector<bsp30::Vertex> vertices;          // Stores the vertices
 	std::vector<bsp30::Edge> edges;               // Stores the edges
@@ -73,8 +69,6 @@ private:
 	std::vector<Image> m_lightmaps;
 
 	std::vector<bsp30::ClipNode> hull0ClipNodes;
-
-public:
 	std::array<Hull, bsp30::MAX_MAP_HULLS> hulls;
 
 private:
