@@ -5,6 +5,7 @@
 #include "Hud.h"
 #include "Timer.h"
 #include "IRenderable.h"
+#include "move.h"
 
 namespace render {
 	class IRenderer;
@@ -27,6 +28,9 @@ private:
 	virtual void onMouseWheel(double xOffset, double yOffset) override;
 	virtual void onKey(int key, int scancode, int action, int mods) override;
 	virtual void onChar(unsigned int codepoint) override;
+
+	auto createMove() -> UserCommand;
+	void mouseMove(UserCommand& cmd);
 
 	Timer timer;
 	Camera camera;

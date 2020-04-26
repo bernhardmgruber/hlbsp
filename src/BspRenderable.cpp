@@ -146,7 +146,7 @@ void BspRenderable::render(const RenderSettings& settings) {
 	if (m_skyboxTex && global::renderSkybox)
 		renderSkybox();
 
-	const auto& cameraPos = m_camera->position;
+	const auto& cameraPos = m_camera->position();
 
 	if (global::renderStaticBSP || global::renderBrushEntities)
 		for (auto&& b : facesDrawn)
@@ -194,8 +194,8 @@ void BspRenderable::render(const RenderSettings& settings) {
 
 void BspRenderable::renderSkybox() {
 	// TODO: glm in WSL Ubuntu does not yet have this function
-	//auto matrix = m_settings->projection * glm::eulerAngleXZX(degToRad(-m_settings->pitch - 90.0f), degToRad(-m_settings->yaw), degToRad(+90.0f));
-	auto matrix = m_settings->projection * glm::eulerAngleX(degToRad(-m_settings->pitch - 90.0f)) * glm::eulerAngleZ(degToRad(-m_settings->yaw)) * glm::eulerAngleX(degToRad(+90.0f));
+	auto matrix = m_settings->projection * glm::eulerAngleXZX(degToRad(m_settings->pitch - 90.0f), degToRad(-m_settings->yaw), degToRad(+90.0f));
+	//auto matrix = m_settings->projection * glm::eulerAngleX(degToRad(m_settings->pitch - 90.0f)) * glm::eulerAngleZ(degToRad(-m_settings->yaw)) * glm::eulerAngleX(degToRad(+90.0f));
 
 	m_renderer.renderSkyBox(**m_skyboxTex, matrix);
 }

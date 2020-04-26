@@ -10,10 +10,19 @@
 #include "HudRenderable.h"
 #include "Image.h"
 #include "global.h"
-#include "move.h"
 
 namespace {
 	constexpr auto WINDOW_CAPTION = "HL BSP";
+
+	constexpr auto cl_sidespeed = 400.0f;
+	constexpr auto cl_forwardspeed = 400.0f;
+	constexpr auto cl_downspeed = 400.0f;
+	constexpr auto cl_pitchup = 89.0f;
+	constexpr auto cl_pitchdown = 89.0f;
+
+	constexpr auto m_yaw = 0.022f;
+	constexpr auto m_pitch = 0.022f;
+	constexpr auto sensitivity = 5.0f;
 }
 
 Window::Window(render::IPlatform& platform, Bsp& bsp)
@@ -36,12 +45,12 @@ Window::Window(render::IPlatform& platform, Bsp& bsp)
 	// place camera at spawn
 	if (const auto info_player_start = bsp.FindEntity("info_player_start")) {
 		if (auto origin = info_player_start->findProperty("origin")) {
-			std::istringstream(*origin) >> camera.position.x >> camera.position.y >> camera.position.z;
+			auto& o = camera.position();
+			std::istringstream(*origin) >> o.x >> o.y >> o.z;
 		}
 
 		if (auto angle = info_player_start->findProperty("angle")) {
-			camera.pitch = 0;
-			camera.yaw = std::stof(*angle);
+			camera.yaw() = std::stof(*angle);
 		}
 	}
 }
@@ -52,14 +61,27 @@ Window::~Window() {
 	ImGui::DestroyContext();
 }
 
-void Window::update() {
-	timer.Tick();
+auto Window::createMove() -> UserCommand {
+	UserCommand cmd{};
+	if (glfwGetKey(handle(), GLFW_KEY_SPACE) == GLFW_PRESS) {
+		//cmd.upmove += cl_downspeed;
+		cmd.buttons |= IN_JUMP;
+	}
+	//if (glfwGetKey(handle(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+	//	cmd.upmove -= cl_downspeed;
+	if (glfwGetKey(handle(), GLFW_KEY_W) == GLFW_PRESS)
+		cmd.forwardmove += cl_forwardspeed;
+	if (glfwGetKey(handle(), GLFW_KEY_S) == GLFW_PRESS)
+		cmd.forwardmove -= cl_forwardspeed;
+	if (glfwGetKey(handle(), GLFW_KEY_A) == GLFW_PRESS)
+		cmd.sidemove -= cl_sidespeed;
+	if (glfwGetKey(handle(), GLFW_KEY_D) == GLFW_PRESS)
+		cmd.sidemove += cl_sidespeed;
 
-	std::stringstream windowText;
-	windowText << WINDOW_CAPTION << " - " << std::setprecision(1) << std::fixed << timer.TPS << " FPS";
-	glfwSetWindowTitle(handle(), windowText.str().c_str());
+	return cmd;
+}
 
-	// camera
+void Window::mouseMove(UserCommand& cmd) {
 	glm::dvec2 delta{0, 0};
 	if (m_captureMouse) {
 		glm::dvec2 pos;
@@ -68,21 +90,30 @@ void Window::update() {
 		glfwSetCursorPos(handle(), m_mouseDownPos.x, m_mouseDownPos.y);
 	}
 
-	uint8_t moveFlags = 0;
-	if (glfwGetKey(handle(), GLFW_KEY_SPACE) == GLFW_PRESS) moveFlags |= Up;
-	if (glfwGetKey(handle(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) moveFlags |= Down;
-	if (glfwGetKey(handle(), GLFW_KEY_W) == GLFW_PRESS) moveFlags |= Forward;
-	if (glfwGetKey(handle(), GLFW_KEY_S) == GLFW_PRESS) moveFlags |= Backward;
-	if (glfwGetKey(handle(), GLFW_KEY_A) == GLFW_PRESS) moveFlags |= Left;
-	if (glfwGetKey(handle(), GLFW_KEY_D) == GLFW_PRESS) moveFlags |= Right;
+	auto yaw = camera.yaw();
+	auto pitch = camera.pitch();
+	yaw += m_yaw * delta.x * sensitivity;
+	pitch += m_pitch * -delta.y * sensitivity; // pitch in halflife is negative when looking upward. cf: https://www.jwchong.com/hl/player.html
+	if (pitch > cl_pitchdown)
+		pitch = cl_pitchdown;
+	if (pitch < -cl_pitchup)
+		pitch = -cl_pitchup;
 
-	const auto before = camera.position;
-	camera.update(timer.interval, delta.x, delta.y, moveFlags);
-	if (!global::freeCamera) {
-		const auto after = camera.position;
-		const auto end = move(bsp.hulls[global::hullIndex], before, after);
-		camera.position = end;
-	}
+	cmd.viewangles.x = pitch;
+	cmd.viewangles.y = yaw;
+}
+
+void Window::update() {
+	timer.Tick();
+
+	std::stringstream windowText;
+	windowText << WINDOW_CAPTION << " - " << std::setprecision(1) << std::fixed << timer.TPS << " FPS";
+	glfwSetWindowTitle(handle(), windowText.str().c_str());
+
+	auto cmd = createMove();
+	mouseMove(cmd);
+	cmd.frameTime = timer.interval;
+	camera.update(bsp.hulls[global::hullIndex], cmd);
 }
 
 void Window::draw() {
@@ -90,8 +121,8 @@ void Window::draw() {
 
 	m_settings.projection = camera.projectionMatrix();
 	m_settings.view = camera.viewMatrix();
-	m_settings.pitch = camera.pitch;
-	m_settings.yaw = camera.yaw;
+	m_settings.pitch = camera.pitch();
+	m_settings.yaw = camera.yaw();
 
 	m_renderer->clear();
 	for (auto& renderable : m_renderables)
@@ -146,12 +177,12 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 
 	if (action == GLFW_PRESS) {
 		switch (key) {
-			case GLFW_KEY_TAB:
-				camera.moveSensitivity = CAMERA_MOVE_SENS * 3.0f;
-				break;
-			case GLFW_KEY_LEFT_SHIFT:
-				camera.moveSensitivity = CAMERA_MOVE_SENS / 3.0f;
-				break;
+			//case GLFW_KEY_TAB:
+			//	camera.moveSensitivity = CAMERA_MOVE_SENS * 3.0f;
+			//	break;
+			//case GLFW_KEY_LEFT_SHIFT:
+			//	camera.moveSensitivity = CAMERA_MOVE_SENS / 3.0f;
+			//	break;
 			case GLFW_KEY_F1:
 				if (m_fullscreen)
 					std::clog << "Changing to windowed mode ...\n";
@@ -273,15 +304,15 @@ void Window::onKey(int key, int scancode, int action, int mods) {
 		}
 	}
 
-	if (action == GLFW_RELEASE) {
-		switch (key) {
-			case GLFW_KEY_TAB:
-			case GLFW_KEY_LEFT_SHIFT:
-				camera.moveSensitivity = CAMERA_MOVE_SENS;
-				break;
-		}
-		return;
-	}
+	//if (action == GLFW_RELEASE) {
+	//	switch (key) {
+	//		case GLFW_KEY_TAB:
+	//		case GLFW_KEY_LEFT_SHIFT:
+	//			camera.moveSensitivity = CAMERA_MOVE_SENS;
+	//			break;
+	//	}
+	//	return;
+	//}
 }
 
 void Window::onChar(unsigned int codepoint) {
