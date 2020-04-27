@@ -313,9 +313,14 @@ void Bsp::LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData) {
 		std::clog << "ERRORS\n";
 }
 
-void Bsp::LoadHulls() {
+void Bsp::LoadModels(std::ifstream& file) {
+	std::vector<bsp30::Model> submodels;
+	submodels.resize(header.lump[bsp30::LumpType::LUMP_MODELS].length / sizeof(bsp30::Model));
+	file.seekg(header.lump[bsp30::LumpType::LUMP_MODELS].offset);
+	readVector(file, submodels);
+
+	// hull 0 is created from normal BSP nodes
 	{
-		// hull 0 is created from normal BSP nodes
 		hull0ClipNodes.resize(nodes.size());
 		std::transform(begin(nodes), end(nodes), begin(hull0ClipNodes), [&](const bsp30::Node& n) {
 			bsp30::ClipNode cn;
@@ -328,20 +333,67 @@ void Bsp::LoadHulls() {
 			}
 			return cn;
 		});
+	}
 
-		auto& hull = hulls[0];
+	// prepare model 0
+	auto& model0 = models.emplace_back();
+	{
+		auto& hull = model0.hulls[0];
 		hull.clipnodes = hull0ClipNodes.data();
 		hull.firstclipnode = 0;
 		hull.lastclipnode = hull0ClipNodes.size() - 1;
 		hull.planes = planes.data();
 
 	}
-	for (auto i : {1, 2}) {
-		auto& hull = hulls[i];
+	for (auto i : {1, 2, 3}) {
+		auto& hull = model0.hulls[i];
 		hull.clipnodes = clipNodes.data();
 		hull.firstclipnode = 0;
 		hull.lastclipnode = clipNodes.size() - 1;
 		hull.planes = planes.data();
+	}
+
+	{
+		auto& hull = model0.hulls[1];
+		hull.clipMins[0] = -16;
+		hull.clipMins[1] = -16;
+		hull.clipMins[2] = -36;
+		hull.clipMaxs[0] = 16;
+		hull.clipMaxs[1] = 16;
+		hull.clipMaxs[2] = 36;
+	}
+	{
+		auto& hull = model0.hulls[2];
+		hull.clipMins[0] = -32;
+		hull.clipMins[1] = -32;
+		hull.clipMins[2] = -32;
+		hull.clipMaxs[0] = 32;
+		hull.clipMaxs[1] = 32;
+		hull.clipMaxs[2] = 32;
+	}
+	{
+		auto& hull = model0.hulls[3];
+		hull.clipMins[0] = -16;
+		hull.clipMins[1] = -16;
+		hull.clipMins[2] = -18;
+		hull.clipMaxs[0] = 16;
+		hull.clipMaxs[1] = 16;
+		hull.clipMaxs[2] = 18;
+	}
+
+	// sub models after model 0
+	for (auto i = 0; i < submodels.size(); i++) {
+		if (i != 0)
+			models.push_back(models.back()); // start with a copy of the last one
+		assert(models.size() == i + 1);
+
+		auto& mod = models.back();
+		(bsp30::Model&)mod = submodels[i];
+		mod.hulls[0].firstclipnode = mod.headNodesIndex[0];
+		for (int j = 1; j < bsp30::MAX_MAP_HULLS; j++) {
+			mod.hulls[j].firstclipnode = mod.headNodesIndex[j];
+			mod.hulls[j].lastclipnode = clipNodes.size() - 1;
+		}
 	}
 }
 
@@ -363,7 +415,6 @@ auto IsBrushEntity(const Entity& e) -> bool {
 }
 
 void Bsp::ParseEntities(const std::string& entitiesString) {
-	// Loop for each entity and parse it. count number of solid and special pEntities
 	std::size_t pos = 0;
 	while (true) {
 		pos = entitiesString.find('{', pos);
@@ -371,28 +422,9 @@ void Bsp::ParseEntities(const std::string& entitiesString) {
 			break;
 
 		auto end = entitiesString.find('}', pos);
-		auto& e = entities.emplace_back(entitiesString.substr(pos + 1, end - pos - 1));
+		entities.emplace_back(entitiesString.substr(pos + 1, end - pos - 1));
 		pos = end + 1;
-
-		if (IsBrushEntity(e)) {
-			brushEntities.push_back(static_cast<unsigned int>(entities.size() - 1));
-
-			// if entity has property "origin" apply to model struct for rendering
-			if (auto szOrigin = e.findProperty("origin")) {
-				int iModel = std::atoi(&e.findProperty("model")->c_str()[1]);
-				sscanf(szOrigin->c_str(), "%f %f %f", &models[iModel].origin.x, &models[iModel].origin.y, &models[iModel].origin.z);
-			}
-		} else
-			specialEntities.push_back(static_cast<unsigned int>(entities.size() - 1));
 	}
-
-	// order brush entities so that those with RENDER_MODE_TEXTURE are at the back
-	std::partition(begin(brushEntities), end(brushEntities), [this](unsigned int i) {
-		if (auto szRenderMode1 = entities[i].findProperty("rendermode"))
-			if (static_cast<bsp30::RenderMode>(std::stoi(*szRenderMode1)) == bsp30::RENDER_MODE_TEXTURE)
-				return false;
-		return true;
-	});
 }
 
 void Bsp::CountVisLeafs(int iNode, int& count) {
@@ -487,7 +519,6 @@ Bsp::Bsp(const fs::path& filename) {
 	edges.resize(header.lump[bsp30::LumpType::LUMP_EDGES].length / sizeof(bsp30::Edge));
 	vertices.resize(header.lump[bsp30::LumpType::LUMP_VERTEXES].length / sizeof(bsp30::Vertex));
 	planes.resize(header.lump[bsp30::LumpType::LUMP_PLANES].length / sizeof(bsp30::Plane));
-	models.resize(header.lump[bsp30::LumpType::LUMP_MODELS].length / sizeof(bsp30::Model));
 
 	// =================================================================
 	// Seek to and read in the data
@@ -520,8 +551,7 @@ Bsp::Bsp(const fs::path& filename) {
 	file.seekg(header.lump[bsp30::LumpType::LUMP_PLANES].offset);
 	readVector(file, planes);
 
-	file.seekg(header.lump[bsp30::LumpType::LUMP_MODELS].offset);
-	readVector(file, models);
+	LoadModels(file);
 
 	// ===========================
 	// Entity Operations
@@ -605,8 +635,28 @@ Bsp::Bsp(const fs::path& filename) {
 
 	file.close();
 
-	// hulls
-	LoadHulls();
+	// create brush and special entities
+	for (auto& e : entities) {
+		if (IsBrushEntity(e)) {
+			brushEntities.push_back(static_cast<unsigned int>(&e - &entities[0]));
+
+			// if entity has property "origin" apply to model struct for rendering
+			if (auto szOrigin = e.findProperty("origin")) {
+				const int iModel = std::atoi(&e.findProperty("model")->c_str()[1]);
+				auto& origin = models[iModel].origin; // TODO
+				sscanf(szOrigin->c_str(), "%f %f %f", &origin.x, &origin.y, &origin.z);
+			}
+		} else
+			specialEntities.push_back(static_cast<unsigned int>(&e - &entities[0]));
+	}
+
+	// order brush entities so that those with RENDER_MODE_TEXTURE are at the back
+	std::partition(begin(brushEntities), end(brushEntities), [this](unsigned int i) {
+		if (auto szRenderMode1 = entities[i].findProperty("rendermode"))
+			if (static_cast<bsp30::RenderMode>(std::stoi(*szRenderMode1)) == bsp30::RENDER_MODE_TEXTURE)
+				return false;
+		return true;
+	});
 
 	std::clog << "FINISHED LOADING BSP\n";
 }

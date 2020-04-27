@@ -26,6 +26,12 @@ struct Hull {
 	bsp30::Plane* planes;
 	int firstclipnode;
 	int lastclipnode;
+	glm::vec3 clipMins;
+	glm::vec3 clipMaxs;
+};
+
+struct Model : bsp30::Model {
+	std::array<Hull, bsp30::MAX_MAP_HULLS> hulls;
 };
 
 class Bsp {
@@ -49,7 +55,6 @@ public:
 	std::vector<bsp30::Plane> planes;             // Stores the planes
 	std::vector<bsp30::Face> faces;               // Stores the faces
 	std::vector<bsp30::ClipNode> clipNodes;
-	std::vector<bsp30::Model> models;                   // Stores the models
 	bsp30::TextureHeader textureHeader{};               // Stores the texture header
 	std::vector<bsp30::MipTex> mipTextures;             // Stores the miptextures
 	std::vector<bsp30::MipTexOffset> mipTextureOffsets; // Stores the miptexture offsets
@@ -69,7 +74,7 @@ public:
 	std::vector<Image> m_lightmaps;
 
 	std::vector<bsp30::ClipNode> hull0ClipNodes;
-	std::array<Hull, bsp30::MAX_MAP_HULLS> hulls;
+	std::vector<Model> models;
 
 private:
 	void LoadWadFiles(std::string wadStr);                                      // Loads and prepares the wad files for further texture loading
@@ -79,7 +84,7 @@ private:
 	auto LoadDecalTexture(const char* name) -> std::optional<MipmapTexture>;
 	void LoadDecals();
 	void LoadLightMaps(const std::vector<std::uint8_t>& pLightMapData); // Loads lightmaps and calculates extends and coordinates
-	void LoadHulls();
+	void LoadModels(std::ifstream& file);
 
 	void ParseEntities(const std::string& entitiesString); // Parses the entity lump of the bsp file into single entity classes
 

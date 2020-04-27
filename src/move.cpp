@@ -22,6 +22,20 @@ namespace {
 	constexpr auto stopEpsilon = 0.1f;
 	constexpr auto bunnyJumpMaxSpeedFactor = 1.7f;
 	constexpr auto deadViewHeight = -8;
+	constexpr auto MAX_CLIMB_SPEED = 200.0f;
+	constexpr auto PLAYER_DUCKING_MULTIPLIER = 0.333f;
+
+	constexpr glm::vec3 player_mins[bsp30::MAX_MAP_HULLS] = {
+		{-16.0f, -16.0f, -36.0f},
+		{-16.0f, -16.0f, -18.0f},
+		{0.0f, 0.0f, 0.0f},
+		{-32.0f, -32.0f, -32.0f}};
+
+	constexpr glm::vec3 player_maxs[bsp30::MAX_MAP_HULLS] = {
+		{16.0f, 16.0f, 36.0f},
+		{16.0f, 16.0f, 18.0f},
+		{0.0f, 0.0f, 0.0f},
+		{32.0f, 32.0f, 32.0f}};
 
 	struct Trace {
 		bool allsolid;   // if true, plane is not valid
@@ -532,7 +546,7 @@ namespace {
 			glm::vec3 start, stop;
 			start[0] = stop[0] = pmove.origin[0] + vel[0] / speed * 16;
 			start[1] = stop[1] = pmove.origin[1] + vel[1] / speed * 16;
-			start[2] = pmove.origin[2] + 0; //pmove.player_mins[pmove.usehull][2];
+			start[2] = pmove.origin[2] + player_mins[pmove.usehull][2];
 			stop[2] = start[2] - 34;
 
 			const auto trace = playerTrace(hull, start, stop);
@@ -573,6 +587,148 @@ namespace {
 		if (pmove.angles.y > 180.0f)
 			pmove.angles.y -= 360.0f;
 	}
+
+	auto hullForBsp(PlayerMove& pmove, const Model& model, glm::vec3& offset) -> const Hull& {
+		const auto& hull = [&]() -> const Hull& {
+			switch (pmove.usehull) {
+				case 1: return model.hulls[3];
+				case 2: return model.hulls[0];
+				case 3: return model.hulls[2];
+				default: return model.hulls[1];
+			}
+		}();
+		offset = hull.clipMins - player_mins[pmove.usehull];
+		offset += model.origin;
+		return hull;
+	}
+
+	auto ladder(PlayerMove& pmove) -> const Model* {
+		for (auto* ladder : pmove.ladders) {
+			glm::vec3 test{};
+			const auto& hull = hullForBsp(pmove, *ladder, test);
+			test = pmove.origin - test;
+			if (hullPointContents(hull, hull.firstclipnode, test) == bsp30::CONTENTS_EMPTY)
+				continue;
+			return ladder;
+		}
+		return nullptr;
+	}
+
+	int linkContents(const PlayerMove& pmove, glm::vec3 p, int* pIndex) {
+		for (const auto* model : pmove.physents) {
+			//if (pmove.physents[i].solid || model == NULL)
+			//	continue;
+
+			const auto test = p - model->origin;
+			if (hullPointContents(model->hulls[0], model->hulls[0].firstclipnode, test) != bsp30::CONTENTS_EMPTY) {
+				// TODO
+				//if (pIndex)
+				//	*pIndex = pe->info;
+				//return pe->skin;
+			}
+		}
+
+		return -1;
+	}
+
+	int pointContents(const Hull& hull, const PlayerMove& pmove, glm::vec3 p, int* truecontents) {
+		//if ((int)pmove->physents[0].model != -208) {
+		int entityContents = hullPointContents(hull, hull.firstclipnode, p);
+		if (truecontents)
+			*truecontents = entityContents;
+		if (entityContents > -9 || entityContents < -14) {
+			if (entityContents == -2)
+				return entityContents;
+		} else {
+			entityContents = -3;
+		}
+		int cont = linkContents(pmove, p, nullptr);
+		if (cont != -1)
+			return cont;
+		return entityContents;
+		//}
+		if (truecontents)
+			*truecontents = -1;
+		return -2;
+	}
+
+	float traceModel(PlayerMove& pmove, const Model& pEnt, glm::vec3 start, glm::vec3 end, Trace& trace) {
+		glm::vec3 offset{};
+		const int saveHull = pmove.usehull;
+		pmove.usehull = 2;
+		const auto& hull = hullForBsp(pmove, pEnt, offset);
+		pmove.usehull = saveHull;
+
+		recursiveHullCheck(hull, hull.firstclipnode, 0.0, 1.0, start - offset, end - offset, trace);
+		return trace.fraction;
+	}
+
+	void ladderMove(const Hull& hull, PlayerMove& pmove, const Model& ladder) {
+		if (pmove.movetype == MoveType::noclip)
+			return;
+
+		const auto ladderCenter = (ladder.lower + ladder.upper) * 0.5f;
+
+		pmove.movetype = MoveType::fly;
+
+		// convert movement to be relative to the ladder
+		glm::vec3 floor = pmove.origin;
+		floor[2] += player_mins[pmove.usehull][2] - 1;
+
+		const bool onFloor = pointContents(hull, pmove, floor, nullptr) == bsp30::CONTENTS_SOLID;
+
+		pmove.gravity = 0;
+		Trace trace{};
+		traceModel(pmove, ladder, pmove.origin, ladderCenter, trace);
+		if (trace.fraction != 1.0) {
+			float flSpeed = std::min(maxSpeed, MAX_CLIMB_SPEED);
+			if (flSpeed > maxSpeed)
+				flSpeed = maxSpeed;
+
+			glm::vec3 vpn, v_right, up;
+			angleVectors(pmove.angles, vpn, v_right, up);
+
+			if (pmove.flags & FL_DUCKING)
+				flSpeed *= PLAYER_DUCKING_MULTIPLIER;
+
+			float forward = 0;
+			if (pmove.cmd.buttons & IN_BACK)
+				forward -= flSpeed;
+			if (pmove.cmd.buttons & IN_FORWARD)
+				forward += flSpeed;
+			float right = 0;
+			if (pmove.cmd.buttons & IN_MOVELEFT)
+				right -= flSpeed;
+			if (pmove.cmd.buttons & IN_MOVERIGHT)
+				right += flSpeed;
+
+			if (pmove.cmd.buttons & IN_JUMP) {
+				pmove.movetype = MoveType::walk;
+				pmove.velocity = trace.plane.normal * 270.0f;
+			} else {
+				if (forward != 0 || right != 0) {
+					auto velocity = vpn * forward + right * v_right;
+
+					// perpendicular in the ladder plane
+					const auto perp = glm::normalize(glm::cross(glm::vec3{0, 0, 1}, trace.plane.normal));
+
+					// decompose velocity into ladder plane
+					float normal = glm::dot(velocity, trace.plane.normal);
+					// velocity into the face of the ladder
+					const auto cross = trace.plane.normal * normal;
+					// player's additional velocity
+					const auto lateral = velocity - cross;
+
+					// turns the velocity into the face of the ladder into velocity that is roughly vertically perpendicular to the face of the ladder.
+					const auto tmp = glm::cross(trace.plane.normal, perp);
+					pmove.velocity = lateral - normal * tmp;
+					if (onFloor && normal > 0) // on ground moving away from the ladder
+						pmove.velocity += MAX_CLIMB_SPEED * trace.plane.normal;
+				} else
+					pmove.velocity = {};
+			}
+		}
+	}
 }
 
 void playerMove(const Hull& hull, PlayerMove& pmove) {
@@ -580,10 +736,34 @@ void playerMove(const Hull& hull, PlayerMove& pmove) {
 	pmove.frametime = pmove.cmd.frameTime;
 	angleVectors(pmove.angles, pmove.forward, pmove.right, pmove.up);
 	catagorizePosition(hull, pmove);
+
+	const Model* ladder = nullptr;
+	if (!pmove.dead)
+		ladder = ::ladder(pmove);
+
+	if (!pmove.dead) {
+		if (ladder)
+			ladderMove(hull, pmove, *ladder);
+		else if (pmove.movetype != MoveType::walk && pmove.movetype != MoveType::noclip)
+			// Clear ladder stuff unless player is noclipping it will be set immediately again next frame if necessary
+			pmove.movetype = MoveType::walk;
+	}
+
 	switch (pmove.movetype) {
 		case MoveType::noclip:
 			noClip(pmove);
 			break;
+		case MoveType::fly:
+			if (pmove.cmd.buttons & IN_JUMP) {
+				if (!ladder)
+					jump(pmove);
+			} else {
+				pmove.oldbuttons &= ~IN_JUMP;
+			}
+
+			flyMove(hull, pmove);
+			break;
+
 		case MoveType::walk:
 			if (!inWater(pmove))
 				addCorrectGravity(pmove);

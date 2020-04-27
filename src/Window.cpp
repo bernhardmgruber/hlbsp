@@ -29,6 +29,13 @@ Window::Window(render::IPlatform& platform, Bsp& bsp)
 	: GlfwWindow(WINDOW_CAPTION, platform), camera(pmove), hud(camera, timer), bsp(bsp), m_platform(platform) {
 
 	pmove.friction = 4;
+	for (auto* ladder : bsp.FindEntities("func_ladder")) {
+		if (auto* modelStr = ladder->findProperty("model")) {
+			const auto modelIndex = std::stoi(modelStr->substr(1));
+			const auto& model = bsp.models.at(modelIndex);
+			pmove.ladders.push_back(&model);
+		}
+	}
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -68,14 +75,22 @@ auto Window::createMove() -> UserCommand {
 	}
 	//if (glfwGetKey(handle(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
 	//	cmd.upmove -= cl_downspeed;
-	if (glfwGetKey(handle(), GLFW_KEY_W) == GLFW_PRESS)
+	if (glfwGetKey(handle(), GLFW_KEY_W) == GLFW_PRESS) {
 		cmd.forwardmove += cl_forwardspeed;
-	if (glfwGetKey(handle(), GLFW_KEY_S) == GLFW_PRESS)
+		cmd.buttons |= IN_FORWARD;
+	}
+	if (glfwGetKey(handle(), GLFW_KEY_S) == GLFW_PRESS) {
 		cmd.forwardmove -= cl_forwardspeed;
-	if (glfwGetKey(handle(), GLFW_KEY_A) == GLFW_PRESS)
+		cmd.buttons |= IN_BACK;
+	}
+	if (glfwGetKey(handle(), GLFW_KEY_A) == GLFW_PRESS) {
 		cmd.sidemove -= cl_sidespeed;
-	if (glfwGetKey(handle(), GLFW_KEY_D) == GLFW_PRESS)
+		cmd.buttons |= IN_MOVELEFT;
+	}
+	if (glfwGetKey(handle(), GLFW_KEY_D) == GLFW_PRESS) {
 		cmd.sidemove += cl_sidespeed;
+		cmd.buttons |= IN_MOVERIGHT;
+	}
 
 	return cmd;
 }
@@ -115,7 +130,8 @@ void Window::update() {
 
 	pmove.cmd = cmd;
 	pmove.movetype = static_cast<MoveType>(global::moveType);
-	playerMove(bsp.hulls[global::hullIndex], pmove);
+	pmove.usehull = global::hullIndex;
+	playerMove(bsp.models[0].hulls[global::hullIndex], pmove);
 }
 
 void Window::draw() {
