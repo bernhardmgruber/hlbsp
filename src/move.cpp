@@ -745,7 +745,6 @@ void playerMove(const Hull& hull, PlayerMove& pmove) {
 		if (ladder)
 			ladderMove(hull, pmove, *ladder);
 		else if (pmove.movetype != MoveType::walk && pmove.movetype != MoveType::noclip)
-			// Clear ladder stuff unless player is noclipping it will be set immediately again next frame if necessary
 			pmove.movetype = MoveType::walk;
 	}
 
@@ -754,13 +753,12 @@ void playerMove(const Hull& hull, PlayerMove& pmove) {
 			noClip(pmove);
 			break;
 		case MoveType::fly:
+			//PM_CheckWater();
 			if (pmove.cmd.buttons & IN_JUMP) {
 				if (!ladder)
 					jump(pmove);
-			} else {
+			} else
 				pmove.oldbuttons &= ~IN_JUMP;
-			}
-
 			flyMove(hull, pmove);
 			break;
 
@@ -771,9 +769,8 @@ void playerMove(const Hull& hull, PlayerMove& pmove) {
 			} else {
 				// not under water
 				if (pmove.cmd.buttons & IN_JUMP) {
-					//					if (!pLadder) {
-					jump(pmove);
-					//					}
+					if (!ladder)
+						jump(pmove);
 				} else
 					pmove.oldbuttons &= ~IN_JUMP;
 

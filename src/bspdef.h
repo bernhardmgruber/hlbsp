@@ -192,7 +192,7 @@ namespace bsp30 {
 		glm::vec3 lower, upper;                  // Defines bounding box
 		glm::vec3 origin;                        // Coordinates to move the coordinate system before drawing the model
 		int32_t headNodesIndex[MAX_MAP_HULLS]{}; // Index into nodes array
-		int32_t visLeaves{};                     // No idea
+		int32_t visLeaves{};                     // No idea, sometimes called numleafs in HLDS
 		int32_t firstFace{}, faceCount{};        // Index and count into face array
 	};
 
