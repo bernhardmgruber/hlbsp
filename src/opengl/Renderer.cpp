@@ -99,8 +99,8 @@ namespace render::opengl {
 #ifndef NDEBUG
 		// error callback
 		if (GLEW_ARB_debug_output) {
-			glDebugMessageCallback(static_cast<GLDEBUGPROC>(debugCallback), nullptr);
-			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+			//glDebugMessageCallback(static_cast<GLDEBUGPROC>(debugCallback), nullptr);
+			//glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		}
 #endif
 
