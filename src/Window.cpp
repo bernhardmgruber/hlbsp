@@ -36,6 +36,7 @@ Window::Window(render::IPlatform& platform, Bsp& bsp)
 			pmove.ladders.push_back(&model);
 		}
 	}
+	pmove.physents.push_back(&bsp.models.front()); // add at least the bsp model, TODO add other entities as well
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -131,7 +132,7 @@ void Window::update() {
 	pmove.cmd = cmd;
 	pmove.movetype = static_cast<MoveType>(global::moveType);
 	pmove.usehull = global::hullIndex;
-	playerMove(bsp.models[0].hulls[global::hullIndex], pmove);
+	playerMove(pmove);
 }
 
 void Window::draw() {

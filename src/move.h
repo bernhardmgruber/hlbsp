@@ -57,4 +57,4 @@ struct PlayerMove {
 	std::vector<const Model*> ladders; // called moveents in pm_shared.c
 };
 
-void playerMove(const Hull& hull, PlayerMove& pmove);
+void playerMove(PlayerMove& pmove);

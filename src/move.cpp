@@ -132,12 +132,31 @@ namespace {
 		return false;
 	}
 
-	auto playerTrace(const Hull& hull, glm::vec3 start, glm::vec3 end) {
+	auto hullForBsp(PlayerMove& pmove, const Model& model, glm::vec3& offset) -> const Hull& {
+		const auto& hull = [&]() -> const Hull& {
+			switch (pmove.usehull) {
+				case 1: return model.hulls[3];
+				case 2: return model.hulls[0];
+				case 3: return model.hulls[2];
+				default: return model.hulls[1];
+			}
+		}();
+		offset = hull.clipMins - player_mins[pmove.usehull];
+		offset += model.origin;
+		return hull;
+	}
+
+	auto playerTrace(PlayerMove& pmove, glm::vec3 start, glm::vec3 end) {
+		// TODO: this is currently only built to support 1 physent (which is the map without other entities)
 		Trace t{};
 		t.fraction = 1;
 		t.allsolid = true;
 		t.endpos = end;
-		recursiveHullCheck(hull, hull.firstclipnode, 0, 1, start, end, t);
+		for (const auto* pe : pmove.physents) {
+			glm::vec3 offset;
+			const auto& hull = hullForBsp(pmove, *pe, offset);
+			recursiveHullCheck(hull, hull.firstclipnode, 0, 1, start - offset, end - offset, t);
+		}
 		return t;
 	}
 
@@ -162,7 +181,7 @@ namespace {
 		pmove.velocity = {};
 	}
 
-	void flyMove(const Hull& hull, PlayerMove& pmove) {
+	void flyMove(PlayerMove& pmove) {
 		constexpr auto maxBumps = 4;
 
 		auto originalVelocity = pmove.velocity;
@@ -175,7 +194,7 @@ namespace {
 				break;
 
 			const auto end = pmove.origin + timeLeft * pmove.velocity;
-			const Trace trace = playerTrace(hull, pmove.origin, end);
+			const Trace trace = playerTrace(pmove, pmove.origin, end);
 
 			if (trace.allsolid) {
 				pmove.velocity = {};
@@ -268,7 +287,7 @@ namespace {
 		return v;
 	}
 
-	void walkMove(const Hull& hull, PlayerMove& pmove) {
+	void walkMove(PlayerMove& pmove) {
 		const auto& fmove = pmove.cmd.forwardmove;
 		const auto& smove = pmove.cmd.sidemove;
 
@@ -303,7 +322,7 @@ namespace {
 		dest[0] += pmove.velocity[0] * pmove.frametime;
 		dest[1] += pmove.velocity[1] * pmove.frametime;
 
-		auto trace = playerTrace(hull, pmove.origin, dest);
+		auto trace = playerTrace(pmove, pmove.origin, dest);
 		if (trace.fraction == 1) {
 			pmove.origin = trace.endpos;
 			return;
@@ -319,7 +338,7 @@ namespace {
 		// try sliding forward both on ground and up 16 pixels. take the move that goes the farthest
 		auto original = pmove.origin;
 		auto originalvel = pmove.velocity;
-		flyMove(hull, pmove);
+		flyMove(pmove);
 
 		auto down = pmove.origin;
 		auto downvel = pmove.velocity;
@@ -330,17 +349,17 @@ namespace {
 		dest = pmove.origin;
 		dest[2] += movevars_stepsize;
 
-		trace = playerTrace(hull, pmove.origin, dest);
+		trace = playerTrace(pmove, pmove.origin, dest);
 		// if we started okay and made it part of the way at least, copy the results to the movement start position and then run another move try.
 		if (!trace.startsolid && !trace.allsolid)
 			pmove.origin = trace.endpos;
 
-		flyMove(hull, pmove);
+		flyMove(pmove);
 
 		// try going back down the stepheight
 		dest = pmove.origin;
 		dest[2] -= movevars_stepsize;
-		trace = playerTrace(hull, pmove.origin, dest);
+		trace = playerTrace(pmove, pmove.origin, dest);
 
 		// if we are not on the ground any more then use the original movement attempt
 		if (trace.plane.normal[2] < 0.7)
@@ -487,7 +506,7 @@ namespace {
 		pmove.velocity += accelspeed * wishdir;
 	}
 
-	void airMove(const Hull& hull, PlayerMove& pmove) {
+	void airMove(PlayerMove& pmove) {
 		pmove.forward[2] = 0;
 		pmove.right[2] = 0;
 		pmove.forward = glm::normalize(pmove.forward);
@@ -504,10 +523,10 @@ namespace {
 
 		const auto wishdir = normalizeIfNonZero(wishvel);
 		airAccelerate(pmove, wishdir, wishspeed, movevars_airaccelerate);
-		flyMove(hull, pmove);
+		flyMove(pmove);
 	}
 
-	void catagorizePosition(const Hull& hull, PlayerMove& pmove) {
+	void catagorizePosition(PlayerMove& pmove) {
 		//PM_CheckWater();
 
 		if (pmove.velocity[2] > 180) {
@@ -517,7 +536,7 @@ namespace {
 
 		auto point = pmove.origin;
 		point.z -= 2;
-		const auto tr = playerTrace(hull, pmove.origin, point);
+		const auto tr = playerTrace(pmove, pmove.origin, point);
 		// if we hit a steep plane, we are not on ground
 		if (tr.plane.normal[2] < 0.7)
 			pmove.onground = -1;
@@ -531,7 +550,7 @@ namespace {
 		}
 	}
 
-	void friction(const Hull& hull, PlayerMove& pmove) {
+	void friction(PlayerMove& pmove) {
 		if (pmove.waterjumptime)
 			return;
 
@@ -549,7 +568,7 @@ namespace {
 			start[2] = pmove.origin[2] + player_mins[pmove.usehull][2];
 			stop[2] = start[2] - 34;
 
-			const auto trace = playerTrace(hull, start, stop);
+			const auto trace = playerTrace(pmove, start, stop);
 
 			float friction = movevars_friction;
 			if (trace.fraction == 1.0)
@@ -588,20 +607,6 @@ namespace {
 			pmove.angles.y -= 360.0f;
 	}
 
-	auto hullForBsp(PlayerMove& pmove, const Model& model, glm::vec3& offset) -> const Hull& {
-		const auto& hull = [&]() -> const Hull& {
-			switch (pmove.usehull) {
-				case 1: return model.hulls[3];
-				case 2: return model.hulls[0];
-				case 3: return model.hulls[2];
-				default: return model.hulls[1];
-			}
-		}();
-		offset = hull.clipMins - player_mins[pmove.usehull];
-		offset += model.origin;
-		return hull;
-	}
-
 	auto ladder(PlayerMove& pmove) -> const Model* {
 		for (auto* ladder : pmove.ladders) {
 			glm::vec3 test{};
@@ -631,7 +636,8 @@ namespace {
 		return -1;
 	}
 
-	int pointContents(const Hull& hull, const PlayerMove& pmove, glm::vec3 p, int* truecontents) {
+	int pointContents(const PlayerMove& pmove, glm::vec3 p, int* truecontents) {
+		const auto& hull = pmove.physents[0]->hulls[0];
 		//if ((int)pmove->physents[0].model != -208) {
 		int entityContents = hullPointContents(hull, hull.firstclipnode, p);
 		if (truecontents)
@@ -663,7 +669,7 @@ namespace {
 		return trace.fraction;
 	}
 
-	void ladderMove(const Hull& hull, PlayerMove& pmove, const Model& ladder) {
+	void ladderMove(PlayerMove& pmove, const Model& ladder) {
 		if (pmove.movetype == MoveType::noclip)
 			return;
 
@@ -675,7 +681,7 @@ namespace {
 		glm::vec3 floor = pmove.origin;
 		floor[2] += player_mins[pmove.usehull][2] - 1;
 
-		const bool onFloor = pointContents(hull, pmove, floor, nullptr) == bsp30::CONTENTS_SOLID;
+		const bool onFloor = pointContents(pmove, floor, nullptr) == bsp30::CONTENTS_SOLID;
 
 		pmove.gravity = 0;
 		Trace trace{};
@@ -731,11 +737,11 @@ namespace {
 	}
 }
 
-void playerMove(const Hull& hull, PlayerMove& pmove) {
+void playerMove(PlayerMove& pmove) {
 	checkParamters(pmove);
 	pmove.frametime = pmove.cmd.frameTime;
 	angleVectors(pmove.angles, pmove.forward, pmove.right, pmove.up);
-	catagorizePosition(hull, pmove);
+	catagorizePosition(pmove);
 
 	const Model* ladder = nullptr;
 	if (!pmove.dead)
@@ -743,7 +749,7 @@ void playerMove(const Hull& hull, PlayerMove& pmove) {
 
 	if (!pmove.dead) {
 		if (ladder)
-			ladderMove(hull, pmove, *ladder);
+			ladderMove(pmove, *ladder);
 		else if (pmove.movetype != MoveType::walk && pmove.movetype != MoveType::noclip)
 			pmove.movetype = MoveType::walk;
 	}
@@ -759,7 +765,7 @@ void playerMove(const Hull& hull, PlayerMove& pmove) {
 					jump(pmove);
 			} else
 				pmove.oldbuttons &= ~IN_JUMP;
-			flyMove(hull, pmove);
+			flyMove(pmove);
 			break;
 
 		case MoveType::walk:
@@ -776,15 +782,15 @@ void playerMove(const Hull& hull, PlayerMove& pmove) {
 
 				if (pmove.onground != -1) {
 					pmove.velocity[2] = 0;
-					friction(hull, pmove);
+					friction(pmove);
 				}
 				checkVelocity(pmove);
 
 				if (pmove.onground != -1)
-					walkMove(hull, pmove);
+					walkMove(pmove);
 				else
-					airMove(hull, pmove);
-				catagorizePosition(hull, pmove);
+					airMove(pmove);
+				catagorizePosition(pmove);
 				checkVelocity(pmove);
 
 				if (!inWater(pmove))
